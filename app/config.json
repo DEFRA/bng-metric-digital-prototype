@@ -1,5 +1,5 @@
 {
-  "serviceName": "bng-metric-digital-prototype",
+  "serviceName": "BNG Metric",
   "plugins": {
     "govuk-frontend": {
       "rebrand": true
