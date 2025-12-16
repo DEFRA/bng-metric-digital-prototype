@@ -6,6 +6,7 @@
 // Load environment variables from .env file
 require('dotenv').config()
 
+const { ProxyAgent } = require('undici')
 const govukPrototypeKit = require('govuk-prototype-kit')
 const router = govukPrototypeKit.requests.setupRouter()
 
