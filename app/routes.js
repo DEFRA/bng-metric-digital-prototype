@@ -34,7 +34,7 @@ router.get('/api/os/tiles/style', async function (req, res) {
   const osUrl = `https://api.os.uk/maps/vector/ngd/ota/v1/collections/${collectionId}/styles/3857?key=${apiKey}`
   
   try {
-    const response = await fetch(osUrl)
+    const response = await proxyFetch(osUrl, { method: 'GET' })
     
     if (!response.ok) {
       console.error(`OS NGD API error: ${response.status} ${response.statusText}`)
@@ -90,7 +90,7 @@ router.get('/api/os/tiles/:collection/:z/:y/:x', async function (req, res) {
   console.log(`OS URL: ${osUrl.replace(apiKey, 'REDACTED')}`)
   
   try {
-    const response = await fetch(osUrl)
+    const response = await proxyFetch(osUrl, { method: 'GET' })
     
     if (!response.ok) {
       console.error(`OS NGD Tiles API error: ${response.status} ${response.statusText} for tile ${z}/${y}/${x}`)
@@ -146,7 +146,7 @@ router.get('/api/os/features/:collection/items', async function (req, res) {
   const osUrl = `https://api.os.uk/features/ngd/ofa/v1/collections/${collection}/items?${params.toString()}`
   
   try {
-    const response = await fetch(osUrl)
+    const response = await proxyFetch(osUrl, { method: 'GET' })
     
     if (!response.ok) {
       const errorText = await response.text()
@@ -195,3 +195,21 @@ router.get('/api/habitat-parcels', function(req, res) {
   const parcels = req.session.data['habitatParcels'] || null;
   res.json(parcels);
 });
+
+
+async function proxyFetch(url, options) {
+  const proxyUrlConfig = process.env.HTTP_PROXY
+
+  if (!proxyUrlConfig) {
+    return await fetch(url, options)
+  }
+
+  return await fetch(url, {
+    ...options,
+    dispatcher: new ProxyAgent({
+      uri: proxyUrlConfig,
+      keepAliveTimeout: 10,
+      keepAliveMaxTimeout: 10
+    })
+  })
+}
