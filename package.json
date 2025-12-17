@@ -18,7 +18,9 @@
     "govuk-prototype-kit": "13.18.1",
     "ol": "^10.7.0",
     "ol-mapbox-style": "^13.1.1",
-    "undici": "7.16.0"
+    "undici": "7.16.0",
+    "multer": "^1.4.5-lts.1",
+    "shpjs": "^6.1.0"
   },
   "devDependencies": {
     "prettier": "3.6.2"
