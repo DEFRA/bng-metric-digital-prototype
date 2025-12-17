@@ -40,93 +40,9 @@ async function getShp() {
 
 const upload = multer({ storage: multer.memoryStorage() })
 
-// Helper: reproject GeoJSON geometry coordinates from WGS84 to EPSG:27700
-function reprojectGeometryTo27700(geometry) {
-  if (!geometry || !geometry.type || !geometry.coordinates) {
-    return geometry;
-  }
-
-  const projectCoord = (coord) => {
-    // shpjs outputs lon/lat in WGS84
-    return proj4('EPSG:4326', 'EPSG:27700', coord);
-  };
-
-  const mapCoords = (coords, depth) => {
-    if (depth === 0) {
-      return projectCoord(coords);
-    }
-    return coords.map((c) => mapCoords(c, depth - 1));
-  };
-
-  let depth = 0;
-  switch (geometry.type) {
-    case 'Point':
-      depth = 0;
-      break;
-    case 'MultiPoint':
-    case 'LineString':
-      depth = 1;
-      break;
-    case 'MultiLineString':
-    case 'Polygon':
-      depth = 2;
-      break;
-    case 'MultiPolygon':
-      depth = 3;
-      break;
-    default:
-      return geometry;
-  }
-
-  return {
-    ...geometry,
-    coordinates: mapCoords(geometry.coordinates, depth)
-  };
-}
-
-// Helper: reproject a GeoJSON Feature / FeatureCollection to EPSG:27700
-function reprojectGeoJSONTo27700(geojson) {
-  if (!geojson || !geojson.type) {
-    return geojson;
-  }
-
-  if (geojson.type === 'FeatureCollection') {
-    const features = (geojson.features || []).map((f) => ({
-      ...f,
-      geometry: reprojectGeometryTo27700(f.geometry)
-    }));
-    return {
-      ...geojson,
-      features,
-      crs: {
-        type: 'name',
-        properties: { name: 'EPSG:27700' }
-      }
-    };
-  }
-
-  if (geojson.type === 'Feature') {
-    return {
-      ...geojson,
-      geometry: reprojectGeometryTo27700(geojson.geometry),
-      crs: {
-        type: 'name',
-        properties: { name: 'EPSG:27700' }
-      }
-    };
-  }
-
-  // Geometry object
-  return {
-    type: 'Feature',
-    geometry: reprojectGeometryTo27700(geojson),
-    properties: {},
-    crs: {
-      type: 'name',
-      properties: { name: 'EPSG:27700' }
-    }
-  };
-}
+// Note: proj4 and EPSG:27700 definition kept for potential future use
+// Currently, shpjs automatically converts shapefiles to WGS84 (EPSG:4326)
+// and we pass this through to the frontend which handles projection to EPSG:3857 for display
 
 // Add your routes here
 
@@ -326,15 +242,14 @@ router.post("/api/convert", upload.single("file"), async (req, res) => {
     const arrayBuffer = buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength);
 
     const shp = await getShp();
-    const geojson = await shp(arrayBuffer); // shpjs parses zipped shapefiles (typically to WGS84)
+    // shpjs automatically converts shapefiles to WGS84 (EPSG:4326)
+    // Frontend will handle projection to EPSG:3857 for display on the map
+    const geojson = await shp(arrayBuffer);
     if (!geojson || !geojson.features || !geojson.features.length) {
       return res.status(400).json({ detail: "No features found in the archive" });
     }
 
-    // Reproject back to British National Grid (EPSG:27700) for downstream use
-    const geojson27700 = reprojectGeoJSONTo27700(geojson);
-
-    res.json(geojson27700);
+    res.json(geojson);
   } catch (err) {
     console.error(err);
     res.status(400).json({ detail: "Could not read shapefile contents" });
