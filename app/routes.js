@@ -56,7 +56,8 @@ router.get('/test-wfs', function (req, res) {
 // keeping the API key secure on the server side
 
 // Tiles Style Endpoint - proxies OS NGD Vector Tile Styles API
-router.get('/api/os/tiles/style', async function (req, res) {
+// Supports both EPSG:27700 (British National Grid) and EPSG:3857 (Web Mercator)
+router.get('/api/os/tiles/style/:crs?', async function (req, res) {
   const apiKey = process.env.OS_PROJECT_API_KEY
   
   if (!apiKey) {
@@ -64,9 +65,13 @@ router.get('/api/os/tiles/style', async function (req, res) {
     return res.status(500).json({ error: 'API key not configured' })
   }
   
-  // Use ngd-base collection with EPSG:3857 (Web Mercator)
+  // Use EPSG:27700 (British National Grid) by default for better alignment
+  // Fall back to 3857 if explicitly requested
+  const crs = req.params.crs || '27700';
   const collectionId = 'ngd-base';
-  const osUrl = `https://api.os.uk/maps/vector/ngd/ota/v1/collections/${collectionId}/styles/3857?key=${apiKey}`
+  const osUrl = `https://api.os.uk/maps/vector/ngd/ota/v1/collections/${collectionId}/styles/${crs}?key=${apiKey}`
+  
+  console.log(`Fetching style for CRS: ${crs}`);
   
   try {
     const response = await proxyFetch(osUrl, { method: 'GET' })
@@ -110,7 +115,9 @@ router.get('/api/os/tiles/style', async function (req, res) {
 
 // Tiles Endpoint - proxies OS NGD Vector Tile requests
 // OGC API Tiles standard uses {z}/{y}/{x} order (TileMatrix/TileRow/TileCol)
-router.get('/api/os/tiles/:collection/:z/:y/:x', async function (req, res) {
+// Supports optional CRS parameter: /api/os/tiles/:collection/:crs/:z/:y/:x
+// Default CRS is 27700 (British National Grid) for better alignment with WFS features
+router.get('/api/os/tiles/:collection/:crs/:z/:y/:x', async function (req, res) {
   const apiKey = process.env.OS_PROJECT_API_KEY
   
   if (!apiKey) {
@@ -118,10 +125,10 @@ router.get('/api/os/tiles/:collection/:z/:y/:x', async function (req, res) {
     return res.status(500).json({ error: 'API key not configured' })
   }
   
-  const { collection, z, y, x } = req.params
-  const osUrl = `https://api.os.uk/maps/vector/ngd/ota/v1/collections/${collection}/tiles/3857/${z}/${y}/${x}?key=${apiKey}`
+  const { collection, crs, z, y, x } = req.params
+  const osUrl = `https://api.os.uk/maps/vector/ngd/ota/v1/collections/${collection}/tiles/${crs}/${z}/${y}/${x}?key=${apiKey}`
   
-  console.log(`Fetching tile: ${collection}/${z}/${y}/${x} (TileMatrix/TileRow/TileCol)`)
+  console.log(`Fetching tile: ${collection}/${crs}/${z}/${y}/${x} (CRS/TileMatrix/TileRow/TileCol)`)
   console.log(`OS URL: ${osUrl.replace(apiKey, 'REDACTED')}`)
   
   try {

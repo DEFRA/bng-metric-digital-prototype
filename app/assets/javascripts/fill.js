@@ -210,6 +210,10 @@
    * Debug function to log available polygon features
    */
   function debugAvailablePolygons() {
+    // Check current zoom level
+    const zoom = map.getView().getZoom();
+    console.log(`📊 Current zoom level: ${zoom.toFixed(1)}`);
+
     let snapSource = null;
     if (window.SnapDrawing && window.SnapDrawing.getSnapIndexSource) {
       snapSource = window.SnapDrawing.getSnapIndexSource();
@@ -225,6 +229,14 @@
 
     const features = snapSource.getFeatures();
     console.log(`📊 Total features in snap index: ${features.length}`);
+
+    // If features are still loading, notify the user
+    if (features.length === 0 && zoom >= 14) {
+      console.log('⏳ WFS features may still be loading...');
+      if (onError) {
+        onError('Loading OS map features... Please wait a moment before clicking.', 'info');
+      }
+    }
 
     // Count features by geometry type and layer
     const stats = {
