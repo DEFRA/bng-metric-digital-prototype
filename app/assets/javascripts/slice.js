@@ -203,8 +203,11 @@
 
     const coordinate = evt.coordinate;
     
-    // Find snap point on boundary (vertex or edge)
-    const snapInfo = findSnapPoint(coordinate);
+    // Find snap point - if we have a start point, look specifically on the source polygon
+    // This ensures hover shows correctly on shared edges between parcels
+    const snapInfo = startPoint 
+      ? findSnapPointOnSourcePolygon(coordinate) 
+      : findSnapPoint(coordinate);
 
     // Remove old hover marker
     if (hoverMarkerFeature) {
@@ -254,10 +257,11 @@
     if (!sliceMode) return;
 
     const coordinate = evt.coordinate;
-    const snapInfo = findSnapPoint(coordinate);
 
     if (!startPoint) {
       // First click - select start point
+      const snapInfo = findSnapPoint(coordinate);
+      
       if (!snapInfo) {
         showStatus('Please click on a boundary or parcel edge.', 'warning');
         return;
@@ -284,20 +288,14 @@
 
     } else {
       // Second click - complete the slice
+      // IMPORTANT: When looking for the end point, we specifically check the SOURCE polygon
+      // This handles the case where two parcels share an edge - we want to find the point
+      // on the polygon we're slicing, not the neighboring polygon
+      const snapInfo = findSnapPointOnSourcePolygon(coordinate);
+      
       if (!snapInfo) {
-        showStatus('Please click on the same polygon to complete the slice.', 'warning');
-        return;
-      }
-
-      // Must be on the same polygon type and index
-      if (snapInfo.sourceType !== sourceType) {
-        const targetDesc = sourceType === 'boundary' ? 'boundary' : `Parcel ${sourceParcelIndex + 1}`;
-        showStatus(`End point must be on the same ${targetDesc}.`, 'warning');
-        return;
-      }
-
-      if (sourceType === 'parcel' && snapInfo.parcelIndex !== sourceParcelIndex) {
-        showStatus(`End point must be on Parcel ${sourceParcelIndex + 1}.`, 'warning');
+        const targetDesc = sourceType === 'boundary' ? 'red-line boundary' : `Parcel ${sourceParcelIndex + 1}`;
+        showStatus(`Please click on the ${targetDesc} to complete the slice.`, 'warning');
         return;
       }
 
@@ -311,6 +309,60 @@
       console.log('✂️ End point - isVertex:', snapInfo.isVertex, 'edgeIndex:', snapInfo.edgeIndex);
       executeSlice(startPoint, snapInfo);
     }
+  }
+
+  /**
+   * Find snap point specifically on the source polygon (the one being sliced)
+   * This is used for the second click to avoid confusion with neighboring parcels that share edges
+   */
+  function findSnapPointOnSourcePolygon(coordinate) {
+    const resolution = map.getView().getResolution();
+    const tolerance = SNAP_TOLERANCE_PX * resolution;
+
+    let result = null;
+    let minDist = Infinity;
+
+    // Use the stored sourceCoords from when we captured the start point
+    const coords = sourceCoords;
+    if (!coords || coords.length < 3) {
+      return null;
+    }
+
+    // Check vertices first (higher priority)
+    for (let i = 0; i < coords.length - 1; i++) {
+      const dist = getDistance(coordinate, coords[i]);
+      if (dist < tolerance && dist < minDist) {
+        minDist = dist;
+        result = {
+          coordinate: coords[i],
+          edgeIndex: i,
+          isVertex: true,
+          sourceType: sourceType,
+          parcelIndex: sourceParcelIndex,
+          polygonCoords: coords
+        };
+      }
+    }
+
+    // Check edges
+    for (let i = 0; i < coords.length - 1; i++) {
+      const closest = closestPointOnSegment(coordinate, coords[i], coords[i + 1]);
+      const dist = getDistance(coordinate, closest);
+      
+      if (dist < tolerance && dist < minDist) {
+        minDist = dist;
+        result = {
+          coordinate: closest,
+          edgeIndex: i,
+          isVertex: false,
+          sourceType: sourceType,
+          parcelIndex: sourceParcelIndex,
+          polygonCoords: coords
+        };
+      }
+    }
+
+    return result;
   }
 
   /**

@@ -675,6 +675,11 @@
       return;
     }
 
+    // If slice mode is active, let slice tool handle pointer move
+    if (window.SliceTool && window.SliceTool.isSliceMode && window.SliceTool.isSliceMode()) {
+      return;
+    }
+
     const coordinate = evt.coordinate;
     const snapResult = findSnapPoint(coordinate);
     let snapCoord = snapResult.coordinate;
@@ -1154,6 +1159,11 @@
       return;
     }
 
+    // If slice mode is active, don't interfere with slice tool
+    if (window.SliceTool && window.SliceTool.isSliceMode && window.SliceTool.isSliceMode()) {
+      return;
+    }
+
     // If not drawing, check for parcel selection click (habitat-parcels mode only)
     if (!isDrawing && currentMode === 'habitat-parcels' && editingParcelIndex < 0) {
       handleParcelSelectionClick(evt);
@@ -1539,6 +1549,11 @@
    * Handle pointer down - start dragging vertex
    */
   function handlePointerDown(evt) {
+    // If slice mode is active, don't interfere with slice tool
+    if (window.SliceTool && window.SliceTool.isSliceMode && window.SliceTool.isSliceMode()) {
+      return;
+    }
+
     // Allow editing if polygon is complete (red-line boundary mode) or if editing a parcel
     const canEdit = (polygonComplete && !isDrawing) || (editingParcelIndex >= 0);
     
