@@ -97,6 +97,9 @@ window.GOVUKPrototypeKit.documentReady(() => {
           })
         });
 
+        // Expose map instance globally for other modules (e.g. upload-boundary)
+        window.appMap = map;
+
         console.log('✓ Map initialized');
 
         // Set up zoom level display

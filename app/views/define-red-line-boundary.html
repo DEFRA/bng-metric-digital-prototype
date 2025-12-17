@@ -16,7 +16,24 @@
 {% block mapAttributes %}data-mode="red-line-boundary"{% endblock %}
 
 {% block leftPanelContent %}
-  <h2 class="govuk-heading-m">Drawing Controls</h2>
+  <h2 class="govuk-heading-m">Upload red line boundary</h2>
+
+  <form class="govuk-form-group" id="upload-boundary-form" enctype="multipart/form-data">
+    <fieldset class="govuk-fieldset">
+      <legend class="govuk-fieldset__legend govuk-fieldset__legend--s">
+        Upload a boundary as a .zip shapefile
+      </legend>
+      <div class="govuk-hint">
+        The .zip must contain an ESRI Shapefile in British National Grid (EPSG:27700).
+      </div>
+      <input class="govuk-file-upload" id="redline-zip" name="file" type="file" accept=".zip">
+    </fieldset>
+    <button class="govuk-button govuk-!-margin-top-2" data-module="govuk-button" type="submit">
+      Upload and show on map
+    </button>
+  </form>
+
+  <h2 class="govuk-heading-m govuk-!-margin-top-4">Drawing Controls</h2>
   
   <ul class="map-controls-list">
     <li>
