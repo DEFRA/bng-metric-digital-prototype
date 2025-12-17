@@ -1,7 +1,7 @@
 //
-// Upload red line boundary from zipped shapefile (EPSG:27700)
-// Keeps geometry in British National Grid for processing,
-// and transforms only to the map projection (EPSG:3857) for display.
+// Upload red line boundary from zipped shapefile
+// Backend converts shapefile (typically EPSG:27700) to WGS84 (EPSG:4326) using shpjs
+// Frontend transforms from EPSG:4326 to EPSG:3857 (Web Mercator) for map display
 //
 
 (function(window) {
@@ -60,8 +60,8 @@
           return;
         }
 
-        const geojson27700 = await response.json();
-        handleGeoJSONResult(geojson27700);
+        const geojson4326 = await response.json();
+        handleGeoJSONResult(geojson4326);
       } catch (error) {
         console.error('Error uploading boundary zip:', error);
         showStatusSafe('There was a problem uploading the file. Please try again.', 'error');
@@ -74,16 +74,17 @@
     });
   });
 
-  function handleGeoJSONResult(geojson27700) {
-    if (!geojson27700) {
+  function handleGeoJSONResult(geojson4326) {
+    if (!geojson4326) {
       showStatusSafe('No features were returned from the uploaded file.', 'error');
       return;
     }
 
     const format = new ol.format.GeoJSON();
-    const features = format.readFeatures(geojson27700, {
-      dataProjection: 'EPSG:27700',
-      featureProjection: 'EPSG:27700'
+    // Read features from WGS84 (EPSG:4326) and convert directly to map projection (EPSG:3857)
+    const features = format.readFeatures(geojson4326, {
+      dataProjection: 'EPSG:4326',
+      featureProjection: 'EPSG:3857'
     });
 
     if (!features || !features.length) {
@@ -92,24 +93,21 @@
     }
 
     // Use the first polygon / multipolygon feature as the red line boundary
-    const feature27700 = features[0];
-    let geom27700 = feature27700.getGeometry();
+    const feature3857 = features[0];
+    let geom3857 = feature3857.getGeometry();
 
-    if (!geom27700) {
+    if (!geom3857) {
       showStatusSafe('The first feature has no geometry.', 'error');
       return;
     }
 
     // If MultiPolygon, take the first polygon
-    if (geom27700.getType && geom27700.getType() === 'MultiPolygon') {
-      const polys = geom27700.getPolygons();
+    if (geom3857.getType && geom3857.getType() === 'MultiPolygon') {
+      const polys = geom3857.getPolygons();
       if (polys && polys.length > 0) {
-        geom27700 = polys[0];
+        geom3857 = polys[0];
       }
     }
-
-    // 1) Clone and transform to map projection (EPSG:3857) for display
-    const geom3857 = geom27700.clone().transform('EPSG:27700', 'EPSG:3857');
 
     // Extract coordinates for SnapDrawing (expects EPSG:3857)
     const coords3857 = geom3857.getCoordinates && geom3857.getCoordinates()[0];
@@ -136,22 +134,16 @@
       });
     }
 
-    // 2) Also provide a WGS84 (EPSG:4326) GeoJSON version for downstream use
+    // Store WGS84 (EPSG:4326) GeoJSON version for downstream use
     try {
-      const geom4326 = geom27700.clone().transform('EPSG:27700', 'EPSG:4326');
-      const feature4326 = new ol.Feature({ geometry: geom4326 });
-      const geojson4326 = format.writeFeatureObject(feature4326, {
-        dataProjection: 'EPSG:4326',
-        featureProjection: 'EPSG:4326'
-      });
       window.uploadedRedlineBoundaryEPSG4326 = geojson4326;
-      console.log('✓ Uploaded boundary converted to EPSG:4326 and stored on window.uploadedRedlineBoundaryEPSG4326');
+      console.log('✓ Uploaded boundary stored in EPSG:4326 on window.uploadedRedlineBoundaryEPSG4326');
     } catch (e) {
-      console.error('Error converting uploaded boundary to EPSG:4326:', e);
+      console.error('Error storing uploaded boundary:', e);
     }
 
-    // Note: We deliberately keep the underlying geometry in EPSG:27700 for calculations.
-    // Display uses EPSG:3857, and WGS84 (EPSG:4326) is available via window.uploadedRedlineBoundaryEPSG4326.
+    // Geometry is now in EPSG:3857 for map display
+    // WGS84 (EPSG:4326) is available via window.uploadedRedlineBoundaryEPSG4326
     showStatusSafe('Boundary uploaded and displayed on the map.', 'success');
   }
 
