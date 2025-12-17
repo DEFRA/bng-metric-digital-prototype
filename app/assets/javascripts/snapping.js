@@ -141,6 +141,7 @@
   let fetchTimeout = null;
   let lastFetchExtent = null;
   let isFetching = false;
+  let pendingFetches = 0;
 
   // Callbacks
   let onPolygonComplete = null;
@@ -534,6 +535,21 @@
   }
 
   /**
+   * Show or hide the OS features loading indicator
+   * @param {boolean} show - Whether to show or hide the indicator
+   */
+  function setLoadingIndicatorVisible(show) {
+    const indicator = document.getElementById('os-features-loading');
+    if (indicator) {
+      if (show) {
+        indicator.classList.add('visible');
+      } else {
+        indicator.classList.remove('visible');
+      }
+    }
+  }
+
+  /**
    * Throttled fetch for snap data
    */
   function throttledFetchSnapData() {
@@ -555,6 +571,7 @@
     if (zoom < MIN_ZOOM_FOR_SNAP) {
       console.log(`⚠️  Zoom too low (${zoom.toFixed(1)} < ${MIN_ZOOM_FOR_SNAP}) - snapping disabled`);
       snapIndexSource.clear();
+      setLoadingIndicatorVisible(false);
       return;
     }
 
@@ -570,6 +587,7 @@
 
     lastFetchExtent = extent;
     isFetching = true;
+    setLoadingIndicatorVisible(true);
 
     try {
       snapIndexSource.clear();
@@ -595,6 +613,7 @@
       console.error('❌ Error fetching snap data:', error);
     } finally {
       isFetching = false;
+      setLoadingIndicatorVisible(false);
     }
   }
 
