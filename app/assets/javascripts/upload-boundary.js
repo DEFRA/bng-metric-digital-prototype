@@ -1,11 +1,16 @@
 //
 // Upload red line boundary from zipped shapefile
 // Backend converts shapefile (typically EPSG:27700) to WGS84 (EPSG:4326) using shpjs
-// Frontend transforms from EPSG:4326 to EPSG:3857 (Web Mercator) for map display
+// Frontend transforms from EPSG:4326 to the map's CRS (EPSG:27700 or EPSG:3857)
 //
 
 (function(window) {
   'use strict';
+
+  // Get the map's CRS (defaults to EPSG:27700 for best alignment)
+  function getMapCRS() {
+    return window.appMapCRS || 'EPSG:27700';
+  }
 
   window.GOVUKPrototypeKit.documentReady(() => {
     const form = document.getElementById('upload-boundary-form');
@@ -80,11 +85,13 @@
       return;
     }
 
+    const mapCRS = getMapCRS();
     const format = new ol.format.GeoJSON();
-    // Read features from WGS84 (EPSG:4326) and convert directly to map projection (EPSG:3857)
+    
+    // Read features from WGS84 (EPSG:4326) and convert to map projection
     const features = format.readFeatures(geojson4326, {
       dataProjection: 'EPSG:4326',
-      featureProjection: 'EPSG:3857'
+      featureProjection: mapCRS
     });
 
     if (!features || !features.length) {
@@ -93,31 +100,31 @@
     }
 
     // Use the first polygon / multipolygon feature as the red line boundary
-    const feature3857 = features[0];
-    let geom3857 = feature3857.getGeometry();
+    const featureMapCRS = features[0];
+    let geomMapCRS = featureMapCRS.getGeometry();
 
-    if (!geom3857) {
+    if (!geomMapCRS) {
       showStatusSafe('The first feature has no geometry.', 'error');
       return;
     }
 
     // If MultiPolygon, take the first polygon
-    if (geom3857.getType && geom3857.getType() === 'MultiPolygon') {
-      const polys = geom3857.getPolygons();
+    if (geomMapCRS.getType && geomMapCRS.getType() === 'MultiPolygon') {
+      const polys = geomMapCRS.getPolygons();
       if (polys && polys.length > 0) {
-        geom3857 = polys[0];
+        geomMapCRS = polys[0];
       }
     }
 
-    // Extract coordinates for SnapDrawing (expects EPSG:3857)
-    const coords3857 = geom3857.getCoordinates && geom3857.getCoordinates()[0];
-    if (!coords3857 || coords3857.length < 4) {
+    // Extract coordinates for SnapDrawing (in map's CRS)
+    const coordsMapCRS = geomMapCRS.getCoordinates && geomMapCRS.getCoordinates()[0];
+    if (!coordsMapCRS || coordsMapCRS.length < 4) {
       showStatusSafe('The uploaded boundary is not a valid polygon.', 'error');
       return;
     }
 
     if (window.SnapDrawing && window.SnapDrawing.setPolygonFromCoordinates) {
-      const success = window.SnapDrawing.setPolygonFromCoordinates(coords3857);
+      const success = window.SnapDrawing.setPolygonFromCoordinates(coordsMapCRS);
       if (!success) {
         showStatusSafe('Could not set the uploaded boundary on the map.', 'error');
         return;
@@ -126,10 +133,10 @@
 
     // Zoom map to boundary
     const map = window.appMap;
-    if (map && geom3857.getExtent) {
-      map.getView().fit(geom3857.getExtent(), {
+    if (map && geomMapCRS.getExtent) {
+      map.getView().fit(geomMapCRS.getExtent(), {
         padding: [50, 50, 50, 50],
-        maxZoom: 17,
+        maxZoom: 15,
         duration: 600
       });
     }
@@ -137,13 +144,11 @@
     // Store WGS84 (EPSG:4326) GeoJSON version for downstream use
     try {
       window.uploadedRedlineBoundaryEPSG4326 = geojson4326;
-      console.log('✓ Uploaded boundary stored in EPSG:4326 on window.uploadedRedlineBoundaryEPSG4326');
+      console.log(`✓ Uploaded boundary stored in EPSG:4326, displayed in ${mapCRS}`);
     } catch (e) {
       console.error('Error storing uploaded boundary:', e);
     }
 
-    // Geometry is now in EPSG:3857 for map display
-    // WGS84 (EPSG:4326) is available via window.uploadedRedlineBoundaryEPSG4326
     showStatusSafe('Boundary uploaded and displayed on the map.', 'success');
   }
 

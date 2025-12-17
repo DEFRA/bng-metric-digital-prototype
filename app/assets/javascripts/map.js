@@ -2,6 +2,9 @@
 // OpenLayers map initialization for Ordnance Survey Vector Tiles
 // Supports two modes: 'red-line-boundary' and 'habitat-parcels'
 //
+// IMPORTANT: Uses EPSG:27700 (British National Grid) for both tiles AND features
+// This eliminates coordinate transformation precision issues that caused misalignment
+//
 
 window.GOVUKPrototypeKit.documentReady(() => {
   // Only initialize if we're on a map page
@@ -17,26 +20,27 @@ window.GOVUKPrototypeKit.documentReady(() => {
   console.log('=== Map Initialization ===');
   console.log('Mode:', mode);
   console.log('Boundary URL:', boundaryUrl);
+  console.log('Using EPSG:27700 (British National Grid) for tiles and features');
 
-  // Define the UK extent in EPSG:3857
-  const ukExtent = ol.proj.transformExtent(
-    [ -10.76418, 49.528423, 1.9134116, 61.331151 ], 
-    'EPSG:4326', 
-    'EPSG:3857'
-  );
+  // Define the UK extent in EPSG:27700 (British National Grid)
+  // BNG coordinates: roughly -100000 to 700000 (easting), 0 to 1300000 (northing)
+  const ukExtent = [-238375.0, 0.0, 900000.0, 1376256.0];
 
-  // England center coordinates
-  const englandCenter = ol.proj.fromLonLat([-1.5, 52.5]);
+  // England center coordinates in EPSG:27700
+  // Approximately central England (near Birmingham)
+  const englandCenter = [400000, 310000];
 
-  // Fetch Tile Matrix Set and Style for NGD tiles
+  // Fetch Tile Matrix Set and Style for NGD tiles using EPSG:27700
   const collectionId = 'ngd-base';
-  const tmsUrl = `https://api.os.uk/maps/vector/ngd/ota/v1/tilematrixsets/3857`;
-  const styleUrl = '/api/os/tiles/style';
+  const crs = '27700';
+  const tmsUrl = `https://api.os.uk/maps/vector/ngd/ota/v1/tilematrixsets/${crs}`;
+  const styleUrl = `/api/os/tiles/style/${crs}`;
 
   Promise.all([fetch(tmsUrl), fetch(styleUrl)])
     .then(responses => Promise.all(responses.map(res => res.json())))
     .then(([tms, glStyle]) => {
-      console.log('✓ TMS and style loaded');
+      console.log('✓ TMS and style loaded for EPSG:27700');
+      console.log('TMS resolutions:', tms.tileMatrices.map(m => m.cellSize));
 
       // Create tile grid from TMS
       const tileGrid = new ol.tilegrid.TileGrid({
@@ -54,11 +58,12 @@ window.GOVUKPrototypeKit.documentReady(() => {
       // Create the vector tile layer with VectorTile source
       // The tile URL is proxied through our backend to add the API key securely
       // OGC API Tiles uses {z}/{y}/{x} order (TileMatrix/TileRow/TileCol)
+      // URL includes CRS: /api/os/tiles/{collection}/{crs}/{z}/{y}/{x}
       const vectorTileLayer = new ol.layer.VectorTile({
         source: new ol.source.VectorTile({
           format: formatMvt,
-          url: `/api/os/tiles/${collectionId}/{z}/{y}/{x}`,
-          projection: 'EPSG:3857',
+          url: `/api/os/tiles/${collectionId}/${crs}/{z}/{y}/{x}`,
+          projection: 'EPSG:27700',
           tileGrid: tileGrid
         }),
         declutter: true
@@ -80,17 +85,17 @@ window.GOVUKPrototypeKit.documentReady(() => {
       ).then(() => {
         console.log('✓ Style applied to layer');
 
-        // Initialize the map object
+        // Initialize the map object with EPSG:27700 projection
         const map = new ol.Map({
           target: "map",
           layers: [ vectorTileLayer ],
           view: new ol.View({
-            projection: 'EPSG:3857',
+            projection: 'EPSG:27700',
             extent: ukExtent,
             center: englandCenter,
             zoom: 7,
-            minZoom: 6,
-            maxZoom: 19,
+            minZoom: 0,
+            maxZoom: 16,
             resolutions: tileGrid.getResolutions(),
             constrainResolution: true,
             smoothResolutionConstraint: true
@@ -99,8 +104,17 @@ window.GOVUKPrototypeKit.documentReady(() => {
 
         // Expose map instance globally for other modules (e.g. upload-boundary)
         window.appMap = map;
+        
+        // Expose vector tile layer globally for snapping/fill modules
+        // This allows direct access to vector tile features for precise alignment
+        window.appVectorTileLayer = vectorTileLayer;
+        
+        // Expose the CRS being used
+        window.appMapCRS = 'EPSG:27700';
 
-        console.log('✓ Map initialized');
+        console.log('✓ Map initialized with EPSG:27700');
+        console.log('✓ Vector tile layer exposed for snapping');
+        console.log('✓ Same CRS for tiles and features = perfect alignment');
 
         // Set up zoom level display
         setupZoomDisplay(map);
@@ -572,28 +586,29 @@ function setupUIControls(mode) {
         if (geojson) {
           // Convert to EPSG:4326 for standard GeoJSON
           const format = new ol.format.GeoJSON();
+          const mapCrs = window.appMapCRS || 'EPSG:27700';
           let exportData;
 
           if (geojson.type === 'FeatureCollection') {
             const features = geojson.features.map(f => {
               const feature = format.readFeature(f, {
-                dataProjection: 'EPSG:3857',
-                featureProjection: 'EPSG:3857'
+                dataProjection: mapCrs,
+                featureProjection: mapCrs
               });
               return format.writeFeatureObject(feature, {
                 dataProjection: 'EPSG:4326',
-                featureProjection: 'EPSG:3857'
+                featureProjection: mapCrs
               });
             });
             exportData = { type: 'FeatureCollection', features: features };
           } else {
             const feature = format.readFeature(geojson, {
-              dataProjection: 'EPSG:3857',
-              featureProjection: 'EPSG:3857'
+              dataProjection: mapCrs,
+              featureProjection: mapCrs
             });
             exportData = format.writeFeatureObject(feature, {
               dataProjection: 'EPSG:4326',
-              featureProjection: 'EPSG:3857'
+              featureProjection: mapCrs
             });
           }
 

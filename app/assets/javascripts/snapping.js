@@ -60,7 +60,9 @@
   const FETCH_THROTTLE_MS = 300;
   const SNAP_TOLERANCE_PX = 25;  // Increased for better snapping UX
   const CLOSE_TOLERANCE_PX = 10;
-  const SIMPLIFY_TOLERANCE = 0.25;
+  // IMPORTANT: Set to 0 to prevent geometry simplification which causes misalignment
+  // The original value of 0.25 was causing 1-2m offset between snapping and displayed tiles
+  const SIMPLIFY_TOLERANCE = 0;
   const MAX_FEATURES_PER_REQUEST = 100;
 
   // Snap type tracking for visual feedback
@@ -176,6 +178,17 @@
     console.log('Map:', map);
     console.log('Using backend proxy for OS API');
     console.log('Layers to fetch:', SNAP_LAYERS);
+    
+    // Log the CRS being used
+    const mapCrs = window.appMapCRS || 'EPSG:27700';
+    console.log('Map CRS:', mapCrs);
+    
+    if (mapCrs === 'EPSG:27700') {
+      console.log('✓ Using native EPSG:27700 - NO coordinate transformation needed!');
+      console.log('✓ Tiles and WFS features use same CRS = perfect alignment');
+    } else {
+      console.log('⚠️ Map uses EPSG:3857 - coordinate transformation required');
+    }
 
     // Check if EPSG:27700 is registered
     const epsg27700 = ol.proj.get('EPSG:27700');
@@ -453,16 +466,17 @@
 
     try {
       const format = new ol.format.GeoJSON();
+      const mapCrs = window.appMapCRS || 'EPSG:27700';
       
-      // Determine source projection from GeoJSON CRS or default to EPSG:3857
-      let dataProjection = 'EPSG:3857';
+      // Determine source projection from GeoJSON CRS or default to map's CRS
+      let dataProjection = mapCrs;
       if (geojson.crs && geojson.crs.properties && geojson.crs.properties.name) {
         dataProjection = geojson.crs.properties.name;
       }
 
       const feature = format.readFeature(geojson, {
         dataProjection: dataProjection,
-        featureProjection: 'EPSG:3857'
+        featureProjection: mapCrs
       });
 
       feature.set('type', 'boundary');
@@ -487,10 +501,12 @@
       });
 
       // Zoom to boundary extent with padding
+      // IMPORTANT: Ensure minimum zoom of 14 so WFS features are loaded for fill tool
       const extent = boundaryPolygon.getExtent();
       map.getView().fit(extent, {
         padding: [50, 50, 50, 50],
         duration: 500,
+        minZoom: MIN_ZOOM_FOR_SNAP,  // Ensure WFS features are loaded
         maxZoom: 16
       });
 
@@ -619,21 +635,32 @@
 
   /**
    * Fetch a single layer's data with pagination
+   * NOTE: Map is in EPSG:27700, WFS returns EPSG:27700 - NO TRANSFORMATION NEEDED
    */
   async function fetchLayerData(collectionId, extent) {
     const features = [];
     let offset = 0;
     let hasMore = true;
 
-    let minCoord, maxCoord, bbox;
+    // Determine map projection - if EPSG:27700, no transformation needed
+    const mapCrs = window.appMapCRS || 'EPSG:27700';
+    const isNativeBNG = mapCrs === 'EPSG:27700';
     
-    try {
-      minCoord = ol.proj.transform([extent[0], extent[1]], 'EPSG:3857', 'EPSG:27700');
-      maxCoord = ol.proj.transform([extent[2], extent[3]], 'EPSG:3857', 'EPSG:27700');
-      bbox = `${minCoord[0]},${minCoord[1]},${maxCoord[0]},${maxCoord[1]}`;
-    } catch (error) {
-      console.error(`❌ Failed to transform coordinates for ${collectionId}:`, error);
-      return [];
+    let bbox;
+    
+    if (isNativeBNG) {
+      // Map is in EPSG:27700 - use extent directly (no transformation!)
+      bbox = `${extent[0]},${extent[1]},${extent[2]},${extent[3]}`;
+    } else {
+      // Map is in EPSG:3857 - transform extent to EPSG:27700 for the WFS query
+      try {
+        const minCoord = ol.proj.transform([extent[0], extent[1]], 'EPSG:3857', 'EPSG:27700');
+        const maxCoord = ol.proj.transform([extent[2], extent[3]], 'EPSG:3857', 'EPSG:27700');
+        bbox = `${minCoord[0]},${minCoord[1]},${maxCoord[0]},${maxCoord[1]}`;
+      } catch (error) {
+        console.error(`❌ Failed to transform coordinates for ${collectionId}:`, error);
+        return [];
+      }
     }
 
     while (hasMore && offset < 1000) {
@@ -654,16 +681,23 @@
         
         if (geojson.features && geojson.features.length > 0) {
           const format = new ol.format.GeoJSON();
+          
+          // Read features - if map is EPSG:27700, NO TRANSFORMATION (perfect alignment!)
+          // If map is EPSG:3857, transform from 27700 to 3857
           const olFeatures = format.readFeatures(geojson, {
             dataProjection: 'EPSG:27700',
-            featureProjection: 'EPSG:3857'
+            featureProjection: mapCrs
           });
 
           olFeatures.forEach(feature => {
             const geom = feature.getGeometry();
             if (geom) {
-              const simplified = geom.simplify(SIMPLIFY_TOLERANCE);
-              feature.setGeometry(simplified);
+              // Only simplify if SIMPLIFY_TOLERANCE > 0
+              // Setting to 0 preserves full precision for perfect alignment
+              if (SIMPLIFY_TOLERANCE > 0) {
+                const simplified = geom.simplify(SIMPLIFY_TOLERANCE);
+                feature.setGeometry(simplified);
+              }
               feature.set('layerType', collectionId);
             }
           });
@@ -1497,6 +1531,7 @@
       coords.push([...first]);
     }
 
+    const mapCrs = window.appMapCRS || 'EPSG:27700';
     return {
       type: 'Feature',
       geometry: {
@@ -1507,7 +1542,7 @@
       crs: {
         type: 'name',
         properties: {
-          name: 'EPSG:3857'
+          name: mapCrs
         }
       }
     };
@@ -1518,6 +1553,7 @@
    * @returns {Object} GeoJSON FeatureCollection
    */
   function getHabitatParcelsGeoJSON() {
+    const mapCrs = window.appMapCRS || 'EPSG:27700';
     const features = habitatParcels.map((parcel, index) => {
       const coords = [...parcel.coords];
       const first = coords[0];
@@ -1558,7 +1594,7 @@
       crs: {
         type: 'name',
         properties: {
-          name: 'EPSG:3857'
+          name: mapCrs
         }
       }
     };
@@ -2621,12 +2657,12 @@
   function getSnapIndexInfo() {
     const features = snapIndexSource.getFeatures();
     const layerTypes = {};
-    
+
     features.forEach(f => {
       const type = f.get('layerType');
       layerTypes[type] = (layerTypes[type] || 0) + 1;
     });
-    
+
     return {
       totalFeatures: features.length,
       byLayer: layerTypes,
