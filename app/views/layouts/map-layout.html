@@ -64,11 +64,12 @@
     ol.proj.proj4.register(proj4);
     console.log('✓ EPSG:27700 projection registered');
   </script>
-  <script src="/public/javascripts/validation.js"></script>
-  <script src="/public/javascripts/slice.js"></script>
-  <script src="/public/javascripts/fill.js"></script>
-  <script src="/public/javascripts/snapping.js"></script>
-  <script src="/public/javascripts/habitat-attribution.js"></script>
+  <script src="/public/javascripts/defra-map-lib/event-emitter.js"></script>
+  <script src="/public/javascripts/defra-map-lib/geometry-validation.js"></script>
+  <script src="/public/javascripts/defra-map-lib/defra-map-client.js"></script>
+  <script src="/public/javascripts/defra-map-lib/defra-map-client.snapping.js"></script>
+  <script src="/public/javascripts/defra-map-lib/defra-map-client.fill.js"></script>
+  <script src="/public/javascripts/defra-map-lib/defra-map-client.slice.js"></script>
+  <script src="/public/javascripts/defra-map-lib/defra-map-client.controls.js"></script>
   <script src="/public/javascripts/map.js"></script>
-  <script src="/public/javascripts/upload-boundary.js"></script>
 {% endblock %}

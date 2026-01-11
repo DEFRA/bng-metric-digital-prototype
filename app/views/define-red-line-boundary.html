@@ -13,68 +13,20 @@
   }) }}
 {% endblock %}
 
-{% block mapAttributes %}data-mode="red-line-boundary"{% endblock %}
+{% block mapAttributes %}data-mode="red-line-boundary" data-map-tools="draw,fill-boundary" data-map-snapping-toggles="os"{% endblock %}
 
 {% block leftPanelContent %}
-  <h2 class="govuk-heading-m">Upload red line boundary</h2>
-
-  <form class="govuk-form-group" id="upload-boundary-form" enctype="multipart/form-data">
-    <fieldset class="govuk-fieldset">
-      <legend class="govuk-fieldset__legend govuk-fieldset__legend--s">
-        Upload a boundary as a .zip shapefile
-      </legend>
-      <div class="govuk-hint">
-        The .zip must contain an ESRI Shapefile (any common projection will be converted automatically).
-      </div>
-      <input class="govuk-file-upload" id="redline-zip" name="file" type="file" accept=".zip">
-    </fieldset>
-    <button class="govuk-button govuk-!-margin-top-2" data-module="govuk-button" type="submit">
-      Upload and show on map
-    </button>
-  </form>
 
   <h2 class="govuk-heading-m govuk-!-margin-top-4">Drawing Controls</h2>
   
   <ul class="map-controls-list">
-    <li>
-      <a href="#" id="start-drawing" data-action="start">Draw Polygon</a>
-    </li>
-    <li>
-      <a href="#" id="start-fill" data-action="fill">Fill Polygon</a>
-    </li>
-    <li style="display: none;">
-      <a href="#" id="cancel-drawing" data-action="cancel">Cancel Drawing</a>
-    </li>
-    <li style="display: none;">
-      <a href="#" id="cancel-fill" data-action="cancel-fill">Cancel Fill</a>
-    </li>
-    <li style="display: none;">
-      <a href="#" id="confirm-fill" data-action="confirm-fill">Confirm Selection</a>
-    </li>
     <li style="display: none;">
       <a href="#" id="clear-polygon" data-action="clear">Clear Polygon</a>
     </li>
     <li>
       <a href="#" id="save-boundary" class="disabled" data-action="save">Save Boundary</a>
     </li>
-    <li>
-      <a href="#" id="export-geojson" data-action="export">Export GeoJSON</a>
-    </li>
   </ul>
-  
-  <div class="govuk-form-group govuk-!-margin-top-4">
-    <div class="govuk-checkboxes govuk-checkboxes--small">
-      <div class="govuk-checkboxes__item">
-        <input class="govuk-checkboxes__input" id="snap-enabled" name="snap-enabled" type="checkbox" checked>
-        <label class="govuk-label govuk-checkboxes__label" for="snap-enabled">
-          Enable snapping to features
-        </label>
-      </div>
-    </div>
-    <div class="govuk-hint govuk-!-margin-top-2">
-      When enabled, vertices snap to buildings, roads, and other features
-    </div>
-  </div>
 
   <hr class="govuk-section-break govuk-section-break--visible govuk-!-margin-top-4 govuk-!-margin-bottom-4">
 

@@ -23,6 +23,133 @@
   }
 }
 
+// In-map controls overlay rendered by DefraMapClient
+.defra-map-controls {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 600;
+  pointer-events: none; // allow map interaction by default
+}
+
+.defra-map-controls__panel {
+  pointer-events: auto;
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid #b1b4b6;
+  border-radius: 6px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
+  padding: 10px;
+  min-width: 220px;
+  max-width: none;
+  width: max-content;
+}
+
+.defra-map-controls__row {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 8px;
+  margin-bottom: 10px;
+  overflow-x: auto;
+}
+
+.defra-map-controls__button {
+  border: 1px solid #1d70b8;
+  background: #ffffff;
+  color: #1d70b8;
+  padding: 6px 10px;
+  border-radius: 4px;
+  font-size: 14px;
+  cursor: pointer;
+  line-height: 1.2;
+}
+
+.defra-map-controls__button:hover {
+  background: #f3f2f1;
+}
+
+.defra-map-controls__button:focus {
+  outline: 3px solid #ffdd00;
+  outline-offset: 1px;
+}
+
+.defra-map-controls__button--primary {
+  background: #1d70b8;
+  color: #ffffff;
+}
+
+.defra-map-controls__button--primary:hover {
+  background: #003078;
+}
+
+.defra-map-controls__button--warning {
+  border-color: #d4351c;
+  color: #d4351c;
+}
+
+.defra-map-controls__button--warning:hover {
+  background: #fef7e5;
+}
+
+.defra-map-controls__snap-panel {
+  border-top: 1px solid #b1b4b6;
+  padding-top: 8px;
+}
+
+.defra-map-controls__snap-title {
+  font-size: 12px;
+  font-weight: bold;
+  color: #505a5f;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.defra-map-controls__snap-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.defra-map-controls__toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  border: 1px solid #1d70b8;
+  background: transparent;
+  color: #1d70b8;
+  padding: 6px 10px;
+  border-radius: 4px;
+  font-size: 14px;
+  cursor: pointer;
+  line-height: 1.2;
+  text-align: left;
+}
+
+.defra-map-controls__toggle--inline {
+  width: auto;
+  text-align: center;
+  flex: 0 0 auto;
+}
+
+.defra-map-controls__toggle:hover {
+  background: #f3f2f1;
+}
+
+.defra-map-controls__toggle:focus {
+  outline: 3px solid #ffdd00;
+  outline-offset: 1px;
+}
+
+.defra-map-controls__toggle--on {
+  background: #1d70b8;
+  color: #ffffff;
+}
+
+.defra-map-controls__toggle--on:hover {
+  background: #003078;
+}
+
 // GOV.UK header alignment for map pages
 .govuk-header__container {
   margin: 0;

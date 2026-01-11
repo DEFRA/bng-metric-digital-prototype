@@ -1,10 +1,5 @@
 {% extends "layouts/map-layout.html" %}
 {% from "govuk/components/back-link/macro.njk" import govukBackLink %}
-{% from "govuk/components/select/macro.njk" import govukSelect %}
-{% from "govuk/components/radios/macro.njk" import govukRadios %}
-{% from "govuk/components/textarea/macro.njk" import govukTextarea %}
-{% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
-{% from "govuk/components/warning-text/macro.njk" import govukWarningText %}
 
 {% set pageName="On-site Habitat Baseline Map" %}
 
@@ -18,85 +13,16 @@
   }) }}
 {% endblock %}
 
-{% block mapAttributes %}data-mode="habitat-parcels" data-boundary-url="/api/red-line-boundary"{% endblock %}
+{% block mapAttributes %}data-mode="habitat-parcels" data-boundary-url="/api/red-line-boundary" data-map-tools="draw,fill-parcels,slice" data-map-snapping-toggles="os,boundary-vertices,boundary-edges,parcel-vertices,parcel-edges"{% endblock %}
 
 {% block leftPanelContent %}
   <h2 class="govuk-heading-m">Drawing Controls</h2>
   
   <ul class="map-controls-list">
     <li>
-      <a href="#" id="start-drawing" data-action="add">Draw Parcel</a>
-    </li>
-    <li>
-      <a href="#" id="start-fill-parcel" data-action="fill-parcel">Fill Parcel</a>
-    </li>
-    <li style="display: none;">
-      <a href="#" id="cancel-drawing" data-action="cancel">Cancel Drawing</a>
-    </li>
-    <li style="display: none;">
-      <a href="#" id="finish-fill-parcel" data-action="finish-fill-parcel">Finish Fill</a>
-    </li>
-    <li>
-      <a href="#" id="start-slice" data-action="slice">Slice</a>
-    </li>
-    <li style="display: none;">
-      <a href="#" id="cancel-slice" data-action="cancel-slice">Cancel Slice</a>
-    </li>
-    <li>
       <a href="#" id="save-parcels" class="disabled" data-action="save">Save Parcels</a>
     </li>
   </ul>
-  
-  <div class="govuk-form-group govuk-!-margin-top-4">
-    <fieldset class="govuk-fieldset">
-      <legend class="govuk-fieldset__legend govuk-fieldset__legend--s">
-        Snapping options
-      </legend>
-      <div class="govuk-checkboxes govuk-checkboxes--small">
-        <div class="govuk-checkboxes__item">
-          <input class="govuk-checkboxes__input" id="snap-enabled" name="snap-enabled" type="checkbox" checked>
-          <label class="govuk-label govuk-checkboxes__label" for="snap-enabled">
-            Snap to OS features
-          </label>
-        </div>
-      </div>
-      <hr class="govuk-section-break govuk-section-break--visible govuk-!-margin-top-2 govuk-!-margin-bottom-2">
-      <p class="govuk-label govuk-label--s govuk-!-margin-bottom-2">Boundary snapping:</p>
-      <div class="govuk-checkboxes govuk-checkboxes--small">
-        <div class="govuk-checkboxes__item">
-          <input class="govuk-checkboxes__input" id="snap-boundary-vertices" name="snap-boundary-vertices" type="checkbox" checked>
-          <label class="govuk-label govuk-checkboxes__label" for="snap-boundary-vertices">
-            Snap to boundary corners
-          </label>
-        </div>
-        <div class="govuk-checkboxes__item">
-          <input class="govuk-checkboxes__input" id="snap-boundary-edges" name="snap-boundary-edges" type="checkbox" checked>
-          <label class="govuk-label govuk-checkboxes__label" for="snap-boundary-edges">
-            Snap to boundary edges
-          </label>
-        </div>
-      </div>
-      <hr class="govuk-section-break govuk-section-break--visible govuk-!-margin-top-2 govuk-!-margin-bottom-2">
-      <p class="govuk-label govuk-label--s govuk-!-margin-bottom-2">Parcel snapping:</p>
-      <div class="govuk-checkboxes govuk-checkboxes--small">
-        <div class="govuk-checkboxes__item">
-          <input class="govuk-checkboxes__input" id="snap-parcel-vertices" name="snap-parcel-vertices" type="checkbox" checked>
-          <label class="govuk-label govuk-checkboxes__label" for="snap-parcel-vertices">
-            Snap to parcel corners
-          </label>
-        </div>
-        <div class="govuk-checkboxes__item">
-          <input class="govuk-checkboxes__input" id="snap-parcel-edges" name="snap-parcel-edges" type="checkbox" checked>
-          <label class="govuk-label govuk-checkboxes__label" for="snap-parcel-edges">
-            Snap to parcel edges
-          </label>
-        </div>
-      </div>
-    </fieldset>
-    <div class="govuk-hint govuk-!-margin-top-2">
-      Toggle individual snap types to isolate specific targets
-    </div>
-  </div>
 
   <hr class="govuk-section-break govuk-section-break--visible govuk-!-margin-top-4 govuk-!-margin-bottom-4">
 
@@ -171,166 +97,6 @@
   </div>
 
   <hr class="govuk-section-break govuk-section-break--visible govuk-!-margin-top-4 govuk-!-margin-bottom-4">
-
-  <!-- Habitat Attribution Panel -->
-  <div id="habitat-attribution-panel">
-    <h3 class="govuk-heading-s">Baseline Habitat Data</h3>
-    
-    <!-- No selection message -->
-    <div id="no-selection-message" class="govuk-inset-text">
-      Select a habitat parcel to assign baseline habitat data
-    </div>
-
-    <!-- Attribution form (hidden until parcel selected) -->
-    <div id="attribution-form" style="display: none;">
-      
-      <!-- Selected parcel header -->
-      <p class="govuk-body govuk-!-margin-bottom-3">
-        <strong id="selected-parcel-header">Parcel 1</strong>
-        <button type="button" class="govuk-link" id="deselect-parcel-btn" style="margin-left: 10px; border: none; background: none; cursor: pointer; color: #1d70b8;">
-          Deselect
-        </button>
-      </p>
-
-      <!-- Validation error summary -->
-      <div id="validation-summary" class="govuk-error-summary" data-module="govuk-error-summary" style="display: none;">
-        <div role="alert">
-          <h2 class="govuk-error-summary__title">
-            Missing required information
-          </h2>
-          <div class="govuk-error-summary__body">
-            <ul class="govuk-list govuk-error-summary__list">
-            </ul>
-          </div>
-        </div>
-      </div>
-
-      <!-- Irreplaceable habitat warning banner -->
-      <div id="irreplaceable-warning" class="govuk-warning-text govuk-!-margin-bottom-4" style="display: none;">
-        <span class="govuk-warning-text__icon" aria-hidden="true">!</span>
-        <strong class="govuk-warning-text__text">
-          <span class="govuk-visually-hidden">Warning</span>
-          Irreplaceable habitats are excluded from BNG calculations and require bespoke compensation.
-        </strong>
-      </div>
-
-      <!-- Broad Habitat Type -->
-      <div class="govuk-form-group">
-        <label class="govuk-label govuk-label--s" for="broad-habitat">
-          Broad Habitat Type
-        </label>
-        <select class="govuk-select" id="broad-habitat" name="broad-habitat">
-          <option value="">Select broad habitat</option>
-          <option value="Cropland">Cropland</option>
-          <option value="Grassland">Grassland</option>
-          <option value="Heathland and shrub">Heathland and shrub</option>
-          <option value="Woodland and forest">Woodland and forest</option>
-          <option value="Lakes">Lakes</option>
-          <option value="Sparsely vegetated land">Sparsely vegetated land</option>
-          <option value="Urban">Urban</option>
-          <option value="Individual trees">Individual trees</option>
-          <option value="Intertidal sediment">Intertidal sediment</option>
-          <option value="Intertidal hard structures">Intertidal hard structures</option>
-        </select>
-      </div>
-
-      <!-- Habitat Type -->
-      <div class="govuk-form-group">
-        <label class="govuk-label govuk-label--s" for="habitat-type">
-          Habitat Type
-        </label>
-        <select class="govuk-select" id="habitat-type" name="habitat-type" disabled>
-          <option value="">Select habitat type</option>
-        </select>
-      </div>
-
-      <!-- Irreplaceable Habitat -->
-      <div class="govuk-form-group">
-        <fieldset class="govuk-fieldset">
-          <legend class="govuk-fieldset__legend govuk-fieldset__legend--s">
-            Irreplaceable Habitat?
-          </legend>
-          <div class="govuk-radios govuk-radios--small govuk-radios--inline">
-            <div class="govuk-radios__item">
-              <input class="govuk-radios__input" id="irreplaceable-yes" name="irreplaceable" type="radio" value="yes">
-              <label class="govuk-label govuk-radios__label" for="irreplaceable-yes">
-                Yes
-              </label>
-            </div>
-            <div class="govuk-radios__item">
-              <input class="govuk-radios__input" id="irreplaceable-no" name="irreplaceable" type="radio" value="no" checked>
-              <label class="govuk-label govuk-radios__label" for="irreplaceable-no">
-                No
-              </label>
-            </div>
-          </div>
-        </fieldset>
-      </div>
-
-      <!-- Area (read-only) -->
-      <div class="govuk-form-group">
-        <label class="govuk-label govuk-label--s">
-          Area (hectares)
-        </label>
-        <p class="govuk-body" style="font-weight: bold;">
-          <span id="parcel-area-readonly">--</span> ha
-        </p>
-      </div>
-
-      <!-- Distinctiveness (read-only metadata) -->
-      <div class="govuk-form-group">
-        <label class="govuk-label govuk-label--s">
-          Distinctiveness
-        </label>
-        <p class="govuk-body">
-          <span id="distinctiveness-display" class="govuk-tag govuk-tag--grey">Not set</span>
-        </p>
-      </div>
-
-      <!-- Condition -->
-      <div class="govuk-form-group">
-        <label class="govuk-label govuk-label--s" for="condition">
-          Condition
-        </label>
-        <div id="condition-hint" class="govuk-hint" style="display: none;">
-          Intermediate condition categories require ecological justification.
-        </div>
-        <select class="govuk-select" id="condition" name="condition" disabled>
-          <option value="">Select condition</option>
-          <option value="Good">Good</option>
-          <option value="Fairly Good">Fairly good</option>
-          <option value="Moderate">Moderate</option>
-          <option value="Fairly Poor">Fairly poor</option>
-          <option value="Poor">Poor</option>
-          <option value="N/A - Other">N/A - Other</option>
-        </select>
-      </div>
-
-      <!-- Strategic Significance -->
-      <div class="govuk-form-group">
-        <label class="govuk-label govuk-label--s" for="strategic-significance">
-          Strategic Significance
-        </label>
-        <select class="govuk-select" id="strategic-significance" name="strategic-significance">
-          <option value="Low">Low Strategic Significance</option>
-          <option value="Medium">Medium Strategic Significance</option>
-          <option value="High">High Strategic Significance</option>
-        </select>
-      </div>
-
-      <!-- User Comments -->
-      <div class="govuk-form-group">
-        <label class="govuk-label govuk-label--s" for="user-comments">
-          User Comments
-        </label>
-        <div id="comments-hint" class="govuk-hint">
-          Required for irreplaceable habitats. Use this space to provide additional context or justification.
-        </div>
-        <textarea class="govuk-textarea" id="user-comments" name="user-comments" rows="3"></textarea>
-      </div>
-
-    </div>
-  </div>
 
   <hr class="govuk-section-break govuk-section-break--visible govuk-!-margin-top-4 govuk-!-margin-bottom-4">
 
