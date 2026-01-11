@@ -1,0 +1,26 @@
+## 1. Implementation
+- [ ] 1.1 Create a new independent client folder for the mapping library under `app/assets/javascripts/` (including developer documentation within that folder).
+- [ ] 1.2 Implement a single public parent class (global constructor) that:
+  - Accepts config for tile/style URLs and backend endpoints.
+  - Exposes event hooks and public methods for drawing, fill, slice, zoom, and selection.
+  - Exposes read-only area measurement(s) in **square meters**.
+- [ ] 1.3 Port generic logic from:
+  - `app/assets/javascripts/snapping.js`
+  - `app/assets/javascripts/fill.js`
+  - `app/assets/javascripts/slice.js`
+  - `app/assets/javascripts/validation.js`
+  - (map bootstrapping portions of) `app/assets/javascripts/map.js`
+- [ ] 1.4 Remove BNG-specific parcel metadata from the library (no `bng` object shape or habitat attribution coupling).
+- [ ] 1.5 Update BNG pages and layout scripts to use the new library:
+  - `app/views/layouts/map-layout.html`
+  - `app/views/define-red-line-boundary.html`
+  - `app/views/on-site-habitat-baseline.html`
+- [ ] 1.6 Update BNG client scripts that integrate with mapping:
+  - Replace logic in `map.js` with a small page bootstrap that configures the library and hooks DOM controls.
+  - Update `upload-boundary.js` to set boundary via the library API.
+  - Keep `habitat-attribution.js` but wire it via library selection events rather than relying on mapping globals.
+- [ ] 1.7 Remove old mapping scripts from `map-layout.html` once fully migrated (or add a temporary compatibility layer during rollout).
+- [ ] 1.8 Manual smoke test:
+  - Red-line boundary: draw, fill, upload, edit vertices, export, save.
+  - Habitat parcels: load boundary, draw parcels, fill parcels, slice, edit parcel vertices, selection events, validation, save.
+

@@ -196,6 +196,7 @@
   let selectedParcelIndex = -1;
   let onSelectionChange = null;
   let onValidationChange = null;
+  let mapClient = null;
 
   /**
    * Initialize the Habitat Attribution module
@@ -206,6 +207,7 @@
   function init(config = {}) {
     onSelectionChange = config.onSelectionChange || null;
     onValidationChange = config.onValidationChange || null;
+    mapClient = config.mapClient || window.bngMapClient || null;
 
     console.log('=== Habitat Attribution Module Initializing ===');
 
@@ -322,8 +324,8 @@
    * Refresh the parcels list UI (calls SnapDrawing)
    */
   function refreshParcelsList() {
-    if (window.SnapDrawing && window.SnapDrawing.updateParcelsList) {
-      window.SnapDrawing.updateParcelsList();
+    if (typeof window.bngRenderParcelsList === 'function') {
+      window.bngRenderParcelsList();
     }
   }
 
@@ -484,10 +486,13 @@
    */
   function updateParcelProperty(key, value) {
     if (selectedParcelIndex < 0) return;
-
-    if (window.SnapDrawing && window.SnapDrawing.setParcelBngProperty) {
-      window.SnapDrawing.setParcelBngProperty(selectedParcelIndex, key, value);
+    if (!mapClient || typeof mapClient.getParcelMeta !== 'function' || typeof mapClient.setParcelMeta !== 'function') {
+      return;
     }
+
+    const existing = mapClient.getParcelMeta(selectedParcelIndex) || getDefaultBngData();
+    existing[key] = value;
+    mapClient.setParcelMeta(selectedParcelIndex, existing);
   }
 
   /**
@@ -554,11 +559,6 @@
 
     console.log(`Parcel ${index + 1} selected for attribution`);
 
-    // Notify SnapDrawing to highlight the parcel on the map
-    if (window.SnapDrawing && window.SnapDrawing.highlightParcel) {
-      window.SnapDrawing.highlightParcel(index);
-    }
-
     // Render the form with parcel data
     renderForm();
 
@@ -573,15 +573,9 @@
   function deselectParcel() {
     if (selectedParcelIndex < 0) return;
 
-    const previousIndex = selectedParcelIndex;
     selectedParcelIndex = -1;
 
     console.log('Parcel deselected');
-
-    // Notify SnapDrawing to remove highlight
-    if (window.SnapDrawing && window.SnapDrawing.unhighlightParcel) {
-      window.SnapDrawing.unhighlightParcel(previousIndex);
-    }
 
     // Render empty form state
     renderForm();
@@ -625,16 +619,12 @@
     let bngData = null;
     let areaHectares = 0;
 
-    if (window.SnapDrawing && window.SnapDrawing.getParcelBngProperties) {
-      bngData = window.SnapDrawing.getParcelBngProperties(selectedParcelIndex);
+    if (mapClient && typeof mapClient.getParcelMeta === 'function') {
+      bngData = mapClient.getParcelMeta(selectedParcelIndex);
     }
 
-    if (window.SnapDrawing && window.SnapDrawing.getHabitatParcels) {
-      const parcels = window.SnapDrawing.getHabitatParcels();
-      if (parcels[selectedParcelIndex]) {
-        const geom = parcels[selectedParcelIndex].feature.getGeometry();
-        areaHectares = geom.getArea() / 10000;
-      }
+    if (mapClient && typeof mapClient.getParcelAreaSqm === 'function') {
+      areaHectares = mapClient.getParcelAreaSqm(selectedParcelIndex) / 10000;
     }
 
     // Initialize BNG data if not present
@@ -766,16 +756,12 @@
     let bngData = null;
     let areaHectares = 0;
 
-    if (window.SnapDrawing && window.SnapDrawing.getParcelBngProperties) {
-      bngData = window.SnapDrawing.getParcelBngProperties(index);
+    if (mapClient && typeof mapClient.getParcelMeta === 'function') {
+      bngData = mapClient.getParcelMeta(index);
     }
 
-    if (window.SnapDrawing && window.SnapDrawing.getHabitatParcels) {
-      const parcels = window.SnapDrawing.getHabitatParcels();
-      if (parcels[index]) {
-        const geom = parcels[index].feature.getGeometry();
-        areaHectares = geom.getArea() / 10000;
-      }
+    if (mapClient && typeof mapClient.getParcelAreaSqm === 'function') {
+      areaHectares = mapClient.getParcelAreaSqm(index) / 10000;
     }
 
     if (!bngData) {
@@ -829,19 +815,19 @@
     const results = [];
     let allValid = true;
 
-    if (window.SnapDrawing && window.SnapDrawing.getHabitatParcels) {
-      const parcels = window.SnapDrawing.getHabitatParcels();
-      
-      for (let i = 0; i < parcels.length; i++) {
-        const result = validateParcel(i);
-        results.push({
-          parcelIndex: i,
-          valid: result.valid,
-          errors: result.errors
-        });
-        if (!result.valid) {
-          allValid = false;
-        }
+    const parcelCount = mapClient && typeof mapClient.getParcelCount === 'function'
+      ? mapClient.getParcelCount()
+      : 0;
+
+    for (let i = 0; i < parcelCount; i++) {
+      const result = validateParcel(i);
+      results.push({
+        parcelIndex: i,
+        valid: result.valid,
+        errors: result.errors
+      });
+      if (!result.valid) {
+        allValid = false;
       }
     }
 

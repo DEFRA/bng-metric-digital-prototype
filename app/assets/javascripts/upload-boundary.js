@@ -123,18 +123,30 @@
       return;
     }
 
-    if (window.SnapDrawing && window.SnapDrawing.setPolygonFromCoordinates) {
-      const success = window.SnapDrawing.setPolygonFromCoordinates(coordsMapCRS);
+    const applyBoundaryToClient = function() {
+      if (!window.bngMapClient || typeof window.bngMapClient.setBoundaryFromCoordinates !== 'function') {
+        return false;
+      }
+      const success = window.bngMapClient.setBoundaryFromCoordinates(coordsMapCRS);
       if (!success) {
         showStatusSafe('Could not set the uploaded boundary on the map.', 'error');
-        return;
+        return false;
       }
+      return true;
+    };
+
+    if (!applyBoundaryToClient()) {
+      // Map client not ready yet; wait for bootstrap to signal readiness.
+      const onReady = function() {
+        window.removeEventListener('bng-map-client-ready', onReady);
+        applyBoundaryToClient();
+      };
+      window.addEventListener('bng-map-client-ready', onReady);
     }
 
     // Zoom map to boundary
-    const map = window.appMap;
-    if (map && geomMapCRS.getExtent) {
-      map.getView().fit(geomMapCRS.getExtent(), {
+    if (window.bngMapClient && typeof window.bngMapClient.zoomToExtent === 'function' && geomMapCRS.getExtent) {
+      window.bngMapClient.zoomToExtent(geomMapCRS.getExtent(), {
         padding: [50, 50, 50, 50],
         maxZoom: 15,
         duration: 600
