@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@v10.6.0/ol.css" />
 {% endblock %}
 
-{% block header %}
+{% block header %}  
   {{ govukHeader() }}
 {% endblock %}
 
@@ -16,39 +16,63 @@
 {% endblock %}
 
 {% block main %}
-<div class="map-layout-container">
-  <!-- Left Panel: Controls -->
-  <div class="map-panel-left">
+<div class="map-page-shell">
+  <div class="govuk-width-container map-back-link-container">
     {% block backLink %}
     {{ govukBackLink({
       href: "/"
     }) }}
     {% endblock %}
-    
-    <h2 class="govuk-heading-s govuk-!-margin-top-3">BNG metric</h2>
-    
-    <hr class="govuk-section-break govuk-section-break--visible govuk-!-margin-top-2 govuk-!-margin-bottom-4">
-    
-    {% block leftPanelContent %}
-    <!-- Child templates override this with controls, buttons, etc. -->
-    {% endblock %}
   </div>
 
-  <!-- Center: Map -->
-  <div class="map-panel-center">
-    <div id="map" class="os-map-container" {% block mapAttributes %}{% endblock %}></div>
-    <!-- OS Features loading indicator -->
-    <div id="os-features-loading" class="os-features-loading" aria-live="polite">
-      <span class="loading-spinner" aria-hidden="true"></span>
-      <span class="loading-text">Loading map features...</span>
+  <div class="map-layout-container map-layout-container--fullscreen">
+    <!-- Map container (now full screen) -->
+    <div class="map-panel-center">
+      <div id="map" class="os-map-container" {% block mapAttributes %}{% endblock %}></div>
+      
+      <!-- OS Features loading indicator -->
+      <div id="os-features-loading" class="os-features-loading" aria-live="polite">
+        <span class="loading-spinner" aria-hidden="true"></span>
+        <span class="loading-text">Loading map features...</span>
+      </div>
+      
+      <!-- Bottom center area display (populated by JS) -->
+      <div id="map-area-display" class="map-area-display" style="display: none;">
+        {% block mapAreaDisplay %}{% endblock %}
+      </div>
+      
+      <!-- Status message overlay -->
+      <div id="status-message" class="govuk-notification-banner govuk-!-margin-top-4" role="region" aria-labelledby="status-title" style="display: none;">
+        <div class="govuk-notification-banner__header">
+          <h2 class="govuk-notification-banner__title" id="status-title">
+            Information
+          </h2>
+        </div>
+        <div class="govuk-notification-banner__content">
+          <p class="govuk-notification-banner__heading" id="status-text">
+            Status message
+          </p>
+        </div>
+      </div>
     </div>
   </div>
 
-  <!-- Right Panel: Info -->
-  <div class="map-panel-right">
-    {% block rightPanelContent %}
-    <!-- Child templates override this with area displays, help text, etc. -->
-    {% endblock %}
+  </div>
+</div>
+
+<!-- Help Modal -->
+<div id="help-modal" class="defra-modal" aria-hidden="true" role="dialog" aria-labelledby="help-modal-title" aria-modal="true">
+  <div class="defra-modal__overlay" data-close-modal></div>
+  <div class="defra-modal__container">
+    <div class="defra-modal__header">
+      <h2 class="defra-modal__title" id="help-modal-title">Help</h2>
+      <button type="button" class="defra-modal__close" aria-label="Close help" data-close-modal>
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+      </button>
+    </div>
+    <div class="defra-modal__content" id="help-modal-content">
+      {% block helpContent %}{% endblock %}
+    </div>
   </div>
 </div>
 {% endblock %}
@@ -64,11 +88,14 @@
     ol.proj.proj4.register(proj4);
     console.log('✓ EPSG:27700 projection registered');
   </script>
-  <script src="/public/javascripts/validation.js"></script>
-  <script src="/public/javascripts/slice.js"></script>
-  <script src="/public/javascripts/fill.js"></script>
-  <script src="/public/javascripts/snapping.js"></script>
-  <script src="/public/javascripts/habitat-attribution.js"></script>
-  <script src="/public/javascripts/map.js"></script>
-  <script src="/public/javascripts/upload-boundary.js"></script>
+  <script src="/public/javascripts/defra-map-lib/event-emitter.js"></script>
+  <script src="/public/javascripts/defra-map-lib/geometry-validation.js"></script>
+  <script src="/public/javascripts/defra-map-lib/defra-map-client.js"></script>
+  <script src="/public/javascripts/defra-map-lib/defra-map-client.snapping.js"></script>
+  <script src="/public/javascripts/defra-map-lib/defra-map-client.fill.js"></script>
+  <script src="/public/javascripts/defra-map-lib/defra-map-client.slice.js"></script>
+  <script src="/public/javascripts/defra-map-lib/defra-map-client.controls.js"></script>
+  {% block mapScript %}
+  <!-- Child templates should override this block to include their specific map script -->
+  {% endblock %}
 {% endblock %}

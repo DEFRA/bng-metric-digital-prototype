@@ -12,6 +12,8 @@ const router = govukPrototypeKit.requests.setupRouter()
 
 const multer = require('multer')
 const proj4 = require('proj4')
+const Database = require('better-sqlite3')
+const wkx = require('wkx')
 
 // Define British National Grid (EPSG:27700) for server-side reprojection
 proj4.defs(
@@ -279,4 +281,345 @@ async function proxyFetch(url, options) {
       keepAliveMaxTimeout: 10
     })
   })
+}
+
+// ============================================
+// On-Site Baseline Journey Routes
+// ============================================
+
+// Upload Choice Page - GET
+router.get('/on-site-baseline/start', function(req, res) {
+  res.render('on-site-baseline/start', {
+    error: req.query.error || null
+  });
+});
+
+// Upload Choice Page - POST
+router.post('/on-site-baseline/start', function(req, res) {
+  const uploadChoice = req.body.uploadChoice;
+  
+  if (!uploadChoice) {
+    return res.redirect('/on-site-baseline/start?error=Select how you want to add your habitat data');
+  }
+  
+  // Store the choice in session
+  req.session.data['uploadChoice'] = uploadChoice;
+  
+  // Route based on selection
+  switch (uploadChoice) {
+    case 'single-file':
+      return res.redirect('/on-site-baseline/upload-single-file');
+    case 'separate-files':
+      // Future implementation
+      return res.redirect('/on-site-baseline/upload-boundary');
+    case 'no-files':
+      // Future implementation
+      return res.redirect('/on-site-baseline/draw-map');
+    default:
+      return res.redirect('/on-site-baseline/start?error=Invalid selection');
+  }
+});
+
+// Upload Single File Page - GET
+router.get('/on-site-baseline/upload-single-file', function(req, res) {
+  res.render('on-site-baseline/upload-single-file', {
+    error: req.query.error || null
+  });
+});
+
+// Upload Single File Page - POST (handles GeoPackage upload)
+router.post('/on-site-baseline/upload-single-file', upload.single('fileUpload'), function(req, res) {
+  if (!req.file) {
+    return res.redirect('/on-site-baseline/upload-single-file?error=Select a file to upload');
+  }
+  
+  const originalName = req.file.originalname.toLowerCase();
+  if (!originalName.endsWith('.gpkg')) {
+    return res.redirect('/on-site-baseline/upload-single-file?error=Upload a GeoPackage (.gpkg) file');
+  }
+  
+  try {
+    // Parse the GeoPackage file
+    const gpkgData = parseGeoPackage(req.file.buffer);
+    
+    if (!gpkgData.layers || gpkgData.layers.length === 0) {
+      return res.redirect('/on-site-baseline/upload-single-file?error=No layers found in the GeoPackage file');
+    }
+    
+    // Store parsed data in session
+    req.session.data['uploadedFiles'] = {
+      habitatFile: {
+        originalName: req.file.originalname,
+        mimeType: req.file.mimetype,
+        size: req.file.size,
+        storageKey: `upload-${Date.now()}`
+      }
+    };
+    
+    req.session.data['geopackageLayers'] = gpkgData.layers;
+    req.session.data['geopackageGeometries'] = gpkgData.geometries;
+    
+    // Redirect to confirm page
+    res.redirect('/on-site-baseline/confirm-layers');
+  } catch (err) {
+    console.error('GeoPackage parsing error:', err);
+    return res.redirect('/on-site-baseline/upload-single-file?error=Could not read the GeoPackage file. Please check the file is valid.');
+  }
+});
+
+// Confirm Layers Page - GET
+router.get('/on-site-baseline/confirm-layers', function(req, res) {
+  const layers = req.session.data['geopackageLayers'] || [];
+  const geometries = req.session.data['geopackageGeometries'] || {};
+  const uploadedFiles = req.session.data['uploadedFiles'] || {};
+  
+  // Find boundary and parcel layers (heuristic based on layer names)
+  let siteBoundary = layers.find(l => 
+    l.name.toLowerCase().includes('boundary') || 
+    l.name.toLowerCase().includes('red_line') ||
+    l.name.toLowerCase().includes('redline')
+  ) || layers[0];
+  
+  let habitatParcels = layers.find(l => 
+    l.name.toLowerCase().includes('parcel') || 
+    l.name.toLowerCase().includes('habitat')
+  ) || (layers.length > 1 ? layers[1] : layers[0]);
+  
+  // Calculate areas in hectares
+  const boundaryAreaHa = siteBoundary ? (siteBoundary.totalAreaSqm / 10000).toFixed(2) : 0;
+  const parcelsAreaHa = habitatParcels ? (habitatParcels.totalAreaSqm / 10000).toFixed(2) : 0;
+  
+  // Build view data
+  const viewData = {
+    uploadSummary: {
+      layerCountMessage: `File uploaded – ${layers.length} layer${layers.length !== 1 ? 's' : ''} found`
+    },
+    layers: {
+      siteBoundary: {
+        polygonCount: siteBoundary ? siteBoundary.featureCount : 0,
+        areaHa: boundaryAreaHa,
+        layerName: siteBoundary ? siteBoundary.name : 'Not found'
+      },
+      habitatParcels: {
+        polygonCount: habitatParcels ? habitatParcels.featureCount : 0,
+        areaHa: parcelsAreaHa,
+        layerName: habitatParcels ? habitatParcels.name : 'Not found'
+      }
+    },
+    coverage: {
+      isFull: true // Simplified for prototype
+    },
+    location: {
+      // Mock data for prototype
+      lpaName: '<LPA Name>',
+      nationalCharacterArea: '<National Character Area>',
+      lnrsName: '<LNRS Name>'
+    },
+    geometries: geometries,
+    boundaryLayerName: siteBoundary ? siteBoundary.name : null,
+    parcelsLayerName: habitatParcels ? habitatParcels.name : null
+  };
+  
+  res.render('on-site-baseline/confirm-layers', viewData);
+});
+
+// Confirm Layers Page - POST
+router.post('/on-site-baseline/confirm-layers', function(req, res) {
+  // Mark layers as confirmed
+  req.session.data['layersConfirmed'] = true;
+  
+  // Redirect to habitats summary (future implementation)
+  res.redirect('/on-site-baseline/habitats-summary');
+});
+
+// Habitats Summary placeholder page
+router.get('/on-site-baseline/habitats-summary', function(req, res) {
+  const layers = req.session.data['geopackageLayers'] || [];
+  const uploadedFiles = req.session.data['uploadedFiles'] || {};
+  
+  res.render('on-site-baseline/habitats-summary', {
+    layers: layers,
+    uploadedFiles: uploadedFiles
+  });
+});
+
+// API endpoint for getting parsed geometries (for map display)
+router.get('/api/on-site-baseline/geometries', function(req, res) {
+  const geometries = req.session.data['geopackageGeometries'] || {};
+  res.json(geometries);
+});
+
+// ============================================
+// GeoPackage Parsing Helper Function
+// ============================================
+
+function parseGeoPackage(buffer) {
+  // Create a temporary file path for better-sqlite3
+  const fs = require('fs');
+  const os = require('os');
+  const path = require('path');
+  
+  const tempDir = os.tmpdir();
+  const tempFile = path.join(tempDir, `gpkg-${Date.now()}.gpkg`);
+  
+  try {
+    // Write buffer to temp file
+    fs.writeFileSync(tempFile, buffer);
+    
+    // Open the GeoPackage database
+    const db = new Database(tempFile, { readonly: true });
+    
+    // Query gpkg_contents for available layers
+    const contentsQuery = db.prepare(`
+      SELECT table_name, data_type, identifier, description, srs_id
+      FROM gpkg_contents
+      WHERE data_type = 'features'
+    `);
+    const contents = contentsQuery.all();
+    
+    // Query gpkg_geometry_columns for geometry info
+    const geomColsQuery = db.prepare(`
+      SELECT table_name, column_name, geometry_type_name, srs_id
+      FROM gpkg_geometry_columns
+    `);
+    const geomCols = geomColsQuery.all();
+    
+    // Create a map of geometry columns
+    const geomColMap = {};
+    geomCols.forEach(gc => {
+      geomColMap[gc.table_name] = {
+        columnName: gc.column_name,
+        geometryType: gc.geometry_type_name,
+        srsId: gc.srs_id
+      };
+    });
+    
+    const layers = [];
+    const geometries = {};
+    
+    // Process each layer
+    contents.forEach(layer => {
+      const tableName = layer.table_name;
+      const geomInfo = geomColMap[tableName];
+      
+      if (!geomInfo) return;
+      
+      const geomCol = geomInfo.columnName;
+      
+      // Count features and get geometries
+      const countQuery = db.prepare(`SELECT COUNT(*) as count FROM "${tableName}"`);
+      const countResult = countQuery.get();
+      const featureCount = countResult.count;
+      
+      // Get all geometries from the layer
+      const featuresQuery = db.prepare(`SELECT "${geomCol}" as geom FROM "${tableName}" WHERE "${geomCol}" IS NOT NULL`);
+      const features = featuresQuery.all();
+      
+      let totalAreaSqm = 0;
+      const geoJsonFeatures = [];
+      
+      features.forEach((row, index) => {
+        if (row.geom) {
+          try {
+            // Parse WKB geometry using wkx
+            const geomBuffer = Buffer.isBuffer(row.geom) ? row.geom : Buffer.from(row.geom);
+            
+            // GeoPackage uses standard WKB with optional envelope
+            // Check for GeoPackage WKB header (starts with 'GP')
+            let wkbBuffer = geomBuffer;
+            if (geomBuffer.length > 8 && geomBuffer[0] === 0x47 && geomBuffer[1] === 0x50) {
+              // GeoPackage WKB - skip the header
+              const flags = geomBuffer[3];
+              const envelopeType = (flags >> 1) & 0x07;
+              let headerSize = 8; // Base header
+              
+              // Add envelope size based on type
+              const envelopeSizes = [0, 32, 48, 48, 64];
+              if (envelopeType > 0 && envelopeType < envelopeSizes.length) {
+                headerSize += envelopeSizes[envelopeType];
+              }
+              
+              wkbBuffer = geomBuffer.slice(headerSize);
+            }
+            
+            const geometry = wkx.Geometry.parse(wkbBuffer);
+            const geoJson = geometry.toGeoJSON();
+            
+            // Calculate area for polygons (rough approximation in sq meters)
+            if (geoJson.type === 'Polygon' || geoJson.type === 'MultiPolygon') {
+              const area = calculatePolygonArea(geoJson);
+              totalAreaSqm += area;
+            }
+            
+            geoJsonFeatures.push({
+              type: 'Feature',
+              properties: { index: index },
+              geometry: geoJson
+            });
+          } catch (geomErr) {
+            console.warn(`Could not parse geometry in ${tableName}:`, geomErr.message);
+          }
+        }
+      });
+      
+      layers.push({
+        name: tableName,
+        identifier: layer.identifier || tableName,
+        description: layer.description,
+        geometryType: geomInfo.geometryType,
+        srsId: geomInfo.srsId,
+        featureCount: featureCount,
+        totalAreaSqm: totalAreaSqm
+      });
+      
+      geometries[tableName] = {
+        type: 'FeatureCollection',
+        features: geoJsonFeatures
+      };
+    });
+    
+    db.close();
+    
+    // Clean up temp file
+    fs.unlinkSync(tempFile);
+    
+    return { layers, geometries };
+    
+  } catch (err) {
+    // Clean up temp file on error
+    try {
+      require('fs').unlinkSync(tempFile);
+    } catch (cleanupErr) {
+      // Ignore cleanup errors
+    }
+    throw err;
+  }
+}
+
+// Simple polygon area calculation (for projected coordinates in meters)
+function calculatePolygonArea(geoJson) {
+  if (geoJson.type === 'Polygon') {
+    return calculateRingArea(geoJson.coordinates[0]);
+  } else if (geoJson.type === 'MultiPolygon') {
+    let totalArea = 0;
+    geoJson.coordinates.forEach(polygon => {
+      totalArea += calculateRingArea(polygon[0]);
+    });
+    return totalArea;
+  }
+  return 0;
+}
+
+function calculateRingArea(ring) {
+  // Shoelace formula for polygon area
+  let area = 0;
+  const n = ring.length;
+  
+  for (let i = 0; i < n - 1; i++) {
+    const j = (i + 1) % n;
+    area += ring[i][0] * ring[j][1];
+    area -= ring[j][0] * ring[i][1];
+  }
+  
+  return Math.abs(area / 2);
 }
