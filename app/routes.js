@@ -38,7 +38,13 @@ async function getShp() {
   return shpPromise;
 }
 
-const upload = multer({ storage: multer.memoryStorage() })
+// Configure multer with 50MB file size limit
+const upload = multer({ 
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 50 * 1024 * 1024 // 50MB in bytes
+  }
+})
 
 // Note: proj4 and EPSG:27700 definition kept for potential future use
 // Currently, shpjs automatically converts shapefiles to WGS84 (EPSG:4326)
@@ -238,7 +244,95 @@ router.get('/api/habitat-parcels', function(req, res) {
   res.json(parcels);
 });
 
-router.post("/api/convert", upload.single("file"), async (req, res) => {
+// Validate polygon is within England using ArcGIS REST service
+router.post("/api/validate-england", async (req, res) => {
+  try {
+    const { geometry } = req.body; // Esri JSON geometry object
+    
+    if (!geometry || !geometry.rings) {
+      return res.status(400).json({ 
+        valid: false, 
+        error: "Invalid geometry format. Expected Esri JSON format." 
+      });
+    }
+
+    // ArcGIS REST query endpoint
+    //const arcgisUrl = 'https://services1.arcgis.com/ESMARspQHYMw9BZ9/arcgis/rest/services/Countries_December_2022_GB_BFE/FeatureServer/0/query';
+    const arcgisUrl = 'https://services1.arcgis.com/ESMARspQHYMw9BZ9/arcgis/rest/services/Countries_December_2024_Boundaries_UK_BFE/FeatureServer/0/query';
+
+    // Build POST body with form-encoded data
+    const formData = new URLSearchParams();
+    //formData.append('where', "CTRY24NM = 'England'");
+    //formData.append('layerDefs', '%7B%220%22%3A%22CTRY24NM%3D%27England%27%22%7D');
+    formData.append('layerDefs', '{"0":"CTRY24NM=\'England\'"}');
+    formData.append('geometry', JSON.stringify(geometry));
+    formData.append('geometryType', 'esriGeometryPolygon');
+    formData.append('spatialRel', 'esriSpatialRelIntersects');
+    formData.append('resultType', 'standard');
+    formData.append('featureEncoding', 'esriDefault');
+    formData.append('applyVCSProjection', 'false');
+    formData.append('returnCountOnly', 'true');
+    formData.append('f', 'json');
+
+    const response = await proxyFetch(arcgisUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded'
+      },
+      body: formData.toString()
+    });
+
+    if (!response.ok) {
+      console.error(`ArcGIS API error: ${response.status} ${response.statusText}`);
+      const errorText = await response.text();
+      console.error('Error details:', errorText);
+      return res.status(500).json({ 
+        valid: false, 
+        error: 'Error validating polygon with England boundary service.' 
+      });
+    }
+
+    const data = await response.json();
+    
+    // Check if there's an error in the response
+    if (data.error) {
+      console.error('ArcGIS API returned error:', data.error);
+      return res.status(500).json({ 
+        valid: false, 
+        error: 'Error validating polygon: ' + (data.error.message || 'Unknown error')
+      });
+    }
+
+    // If count > 0, the polygon intersects with England
+    const count = data.count || 0;
+    const isValid = count > 0;
+
+    res.json({ 
+      valid: isValid, 
+      count: count,
+      error: isValid ? null : 'The uploaded boundary does not intersect with England. Please upload a boundary that is within England.'
+    });
+  } catch (error) {
+    console.error('Error validating polygon within England:', error);
+    res.status(500).json({ 
+      valid: false, 
+      error: 'Error validating polygon: ' + error.message 
+    });
+  }
+});
+
+router.post("/api/convert", (req, res, next) => {
+  upload.single("file")(req, res, (err) => {
+    if (err) {
+      // Handle multer errors, including file size limit
+      if (err.code === 'LIMIT_FILE_SIZE') {
+        return res.status(400).json({ detail: "File size exceeds the maximum allowed size of 50MB" });
+      }
+      return res.status(400).json({ detail: "File upload error: " + err.message });
+    }
+    next();
+  });
+}, async (req, res) => {
   try {
     if (!req.file || !req.file.originalname.toLowerCase().endsWith(".zip")) {
       return res.status(400).json({ detail: "Upload must be a .zip file containing a shapefile" });
