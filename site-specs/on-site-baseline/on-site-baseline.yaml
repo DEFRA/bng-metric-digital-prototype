@@ -1,0 +1,31 @@
+# ON SITE BASELINE SPECIFICATION
+
+start: upload-choice
+
+pages:
+  upload-choice:
+    route: /on-site-baseline/start
+    next:
+      single-file: upload-single
+      separate-files: upload-boundary
+      no-files: draw-map
+
+  upload-single:
+    route: /on-site-baseline/upload-single-file
+    next: confirm-layers
+
+  confirm-layers:
+    route: /on-site-baseline/confirm-layers
+    next: habitats-summary
+
+  # upload-boundary:
+  #   route: /on-site-baseline/upload-boundary
+  #   next: confirm-boundary
+
+  # confirm-boundary:
+  #   route: /on-site-baseline/confirm-boundary
+  #   next: upload-parcels
+
+  # upload-parcels:
+  #   route: /on-site-baseline/upload-parcels
+  #   next: check-parcels

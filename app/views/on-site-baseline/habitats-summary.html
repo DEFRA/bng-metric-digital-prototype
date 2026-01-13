@@ -1,0 +1,100 @@
+{% extends "layouts/main.html" %}
+
+{% from "govuk/components/summary-list/macro.njk" import govukSummaryList %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/notification-banner/macro.njk" import govukNotificationBanner %}
+
+{% set pageName = "Habitat data uploaded" %}
+
+{% block pageTitle %}{{ pageName }} – {{ serviceName }} – GOV.UK{% endblock %}
+
+{% block content %}
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+
+    {% set bannerHtml %}
+      <p class="govuk-notification-banner__heading">Your habitat data has been uploaded successfully.</p>
+    {% endset %}
+
+    {{ govukNotificationBanner({
+      type: "success",
+      titleText: "Success",
+      html: bannerHtml
+    }) }}
+
+    <h1 class="govuk-heading-l">{{ pageName }}</h1>
+
+    <p class="govuk-body">
+      You have successfully uploaded your site boundary and habitat parcels.
+    </p>
+
+    <h2 class="govuk-heading-m">What happens next</h2>
+
+    <p class="govuk-body">
+      In the full journey, you would now:
+    </p>
+
+    <ul class="govuk-list govuk-list--bullet">
+      <li>Review each habitat parcel</li>
+      <li>Assign habitat types and conditions</li>
+      <li>Calculate the baseline biodiversity units</li>
+    </ul>
+
+    <p class="govuk-body govuk-!-margin-top-6">
+      <strong>This is the end of the prototype journey.</strong>
+    </p>
+
+    <h2 class="govuk-heading-m">Uploaded file details</h2>
+
+    {% if uploadedFiles.habitatFile %}
+      {{ govukSummaryList({
+        rows: [
+          {
+            key: {
+              text: "File name"
+            },
+            value: {
+              text: uploadedFiles.habitatFile.originalName
+            }
+          },
+          {
+            key: {
+              text: "File size"
+            },
+            value: {
+              text: (uploadedFiles.habitatFile.size / 1024) | round(1) + " KB"
+            }
+          },
+          {
+            key: {
+              text: "Layers found"
+            },
+            value: {
+              text: layers | length
+            }
+          }
+        ]
+      }) }}
+    {% endif %}
+
+    <h2 class="govuk-heading-m">Layers in file</h2>
+
+    {% if layers and layers.length > 0 %}
+      <ul class="govuk-list govuk-list--bullet">
+        {% for layer in layers %}
+          <li>{{ layer.name }} ({{ layer.featureCount }} features, {{ (layer.totalAreaSqm / 10000) | round(2) }} ha)</li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="govuk-body">No layers found.</p>
+    {% endif %}
+
+    {{ govukButton({
+      text: "Start again",
+      href: "/on-site-baseline/start",
+      classes: "govuk-button--secondary"
+    }) }}
+
+  </div>
+</div>
+{% endblock %}

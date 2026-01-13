@@ -1,0 +1,77 @@
+{% extends "layouts/main.html" %}
+
+{% from "govuk/components/file-upload/macro.njk" import govukFileUpload %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/details/macro.njk" import govukDetails %}
+{% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
+
+{% set pageName = "Upload your habitat data" %}
+
+{% block pageTitle %}{{ pageName }} – {{ serviceName }} – GOV.UK{% endblock %}
+
+{% block content %}
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+
+    {% if error %}
+      {{ govukErrorSummary({
+        titleText: "There is a problem",
+        errorList: [
+          {
+            text: error,
+            href: "#fileUpload"
+          }
+        ]
+      }) }}
+    {% endif %}
+
+    <span class="govuk-caption-l">On-site baseline</span>
+    <h1 class="govuk-heading-l">{{ pageName }}</h1>
+
+    <p class="govuk-body">
+      Upload a GIS file containing your site boundary and habitat parcels.
+    </p>
+
+    <p class="govuk-body">
+      We'll identify the layers in your file and look up location information automatically.
+    </p>
+
+    {{ govukDetails({
+      summaryText: "What layers should my file contain?",
+      html: '
+        <p class="govuk-body">Your file should include:</p>
+        <ul class="govuk-list govuk-list--bullet">
+          <li>A polygon for your site boundary (red line boundary)</li>
+          <li>Polygons for each habitat parcel within the site</li>
+        </ul>
+        <p class="govuk-body">We\'ll ask you to confirm which layer is which after uploading.</p>
+      '
+    }) }}
+
+    <form method="post" action="/on-site-baseline/upload-single-file" enctype="multipart/form-data" novalidate>
+
+      {{ govukFileUpload({
+        id: "fileUpload",
+        name: "fileUpload",
+        label: {
+          text: "Upload a file",
+          classes: "govuk-label--m"
+        },
+        hint: {
+          text: "GeoPackage (.gpkg)"
+        },
+        errorMessage: error if error else undefined,
+        attributes: {
+          accept: ".gpkg"
+        }
+      }) }}
+
+      {{ govukButton({
+        text: "Upload file"
+      }) }}
+
+    </form>
+
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,79 @@
+{% extends "layouts/main.html" %}
+
+{% from "govuk/components/radios/macro.njk" import govukRadios %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
+
+{% set pageName = "How do you want to add your habitat data?" %}
+
+{% block pageTitle %}{{ pageName }} – {{ serviceName }} – GOV.UK{% endblock %}
+
+{% block content %}
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+
+    {% if error %}
+      {{ govukErrorSummary({
+        titleText: "There is a problem",
+        errorList: [
+          {
+            text: error,
+            href: "#uploadChoice"
+          }
+        ]
+      }) }}
+    {% endif %}
+
+    <span class="govuk-caption-l">On-site baseline</span>
+    <h1 class="govuk-heading-l">{{ pageName }}</h1>
+
+    <p class="govuk-body">
+      You need to tell us about the site boundary and the habitat parcels within it.
+    </p>
+
+    <form method="post" action="/on-site-baseline/start" novalidate>
+
+      {{ govukRadios({
+        name: "uploadChoice",
+        fieldset: {
+          legend: {
+            text: "What GIS files do you have?",
+            isPageHeading: false,
+            classes: "govuk-fieldset__legend--m"
+          }
+        },
+        items: [
+          {
+            value: "single-file",
+            text: "I have one file with boundary and habitat parcels",
+            hint: {
+              text: "A single GIS file or project containing both your site boundary and habitat parcel layers."
+            }
+          },
+          {
+            value: "separate-files",
+            text: "I have separate files for boundary and parcels",
+            hint: {
+              text: "Your red line boundary and habitat parcels are in different GIS files."
+            }
+          },
+          {
+            value: "no-files",
+            text: "I don't have GIS files",
+            hint: {
+              text: "You can draw the boundary and habitat parcels on a map."
+            }
+          }
+        ],
+        errorMessage: error if error else undefined
+      }) }}
+
+      {{ govukButton({
+        text: "Continue"
+      }) }}
+
+    </form>
+
+  </div>
+</div>
+{% endblock %}
