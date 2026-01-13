@@ -23,131 +23,568 @@
   }
 }
 
-// In-map controls overlay rendered by DefraMapClient
+// In-map controls overlay rendered by DefraMapClient - Hamburger Menu Style
 .defra-map-controls {
   position: absolute;
   top: 12px;
   right: 12px;
   z-index: 600;
-  pointer-events: none; // allow map interaction by default
+  pointer-events: none;
 }
 
-.defra-map-controls__panel {
+// Hamburger button
+.defra-map-controls__hamburger {
   pointer-events: auto;
-  background: rgba(255, 255, 255, 0.96);
-  border: 1px solid #b1b4b6;
-  border-radius: 6px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
-  padding: 10px;
-  min-width: 220px;
-  max-width: none;
-  width: max-content;
-}
-
-.defra-map-controls__row {
   display: flex;
-  flex-wrap: nowrap;
-  gap: 8px;
-  margin-bottom: 10px;
-  overflow-x: auto;
-}
-
-.defra-map-controls__button {
-  border: 1px solid #1d70b8;
-  background: #ffffff;
-  color: #1d70b8;
-  padding: 6px 10px;
-  border-radius: 4px;
-  font-size: 14px;
-  cursor: pointer;
-  line-height: 1.2;
-}
-
-.defra-map-controls__button:hover {
-  background: #f3f2f1;
-}
-
-.defra-map-controls__button:focus {
-  outline: 3px solid #ffdd00;
-  outline-offset: 1px;
-}
-
-.defra-map-controls__button--primary {
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
   background: #1d70b8;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
   color: #ffffff;
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.25);
+  transition: background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+
+  &:hover {
+    background: #003078;
+    transform: scale(1.05);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  }
+
+  &:focus {
+    outline: 3px solid #ffdd00;
+    outline-offset: 2px;
+  }
+
+  &--active {
+    background: #003078;
+  }
+
+  svg {
+    width: 24px;
+    height: 24px;
+  }
 }
 
-.defra-map-controls__button--primary:hover {
-  background: #003078;
+// Drawer panel
+.defra-map-controls__drawer {
+  pointer-events: auto;
+  position: absolute;
+  top: 56px;
+  right: 0;
+  background: #ffffff;
+  border: 1px solid #b1b4b6;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  min-width: 260px;
+  max-width: 320px;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-10px) scale(0.95);
+  transform-origin: top right;
+  transition: opacity 0.25s ease, visibility 0.25s ease, transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+
+  &--open {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0) scale(1);
+  }
 }
 
-.defra-map-controls__button--warning {
-  border-color: #d4351c;
-  color: #d4351c;
-}
-
-.defra-map-controls__button--warning:hover {
-  background: #fef7e5;
-}
-
-.defra-map-controls__snap-panel {
-  border-top: 1px solid #b1b4b6;
-  padding-top: 8px;
-}
-
-.defra-map-controls__snap-title {
-  font-size: 12px;
-  font-weight: bold;
-  color: #505a5f;
-  margin-bottom: 6px;
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
-}
-
-.defra-map-controls__snap-list {
+// Drawer header
+.defra-map-controls__drawer-header {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-bottom: 1px solid #b1b4b6;
+  background: #f3f2f1;
+  border-radius: 8px 8px 0 0;
 }
 
-.defra-map-controls__toggle {
+.defra-map-controls__drawer-title {
+  flex: 1;
+  font-size: 16px;
+  font-weight: 700;
+  color: #0b0c0c;
+  white-space: nowrap;
+}
+
+// Close button
+.defra-map-controls__close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  color: #505a5f;
+  transition: background 0.15s ease, color 0.15s ease;
+
+  &:hover {
+    background: #d4351c;
+    color: #ffffff;
+  }
+
+  &:focus {
+    outline: 3px solid #ffdd00;
+    outline-offset: 1px;
+  }
+
+  svg {
+    width: 20px;
+    height: 20px;
+  }
+}
+
+// Zoom warning
+.defra-map-controls__zoom-warning {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: #fef7e5;
+  border-bottom: 1px solid #f47738;
+  color: #6e5303;
+  font-size: 13px;
+  font-weight: 500;
+  transition: max-height 0.25s ease, padding 0.25s ease, opacity 0.25s ease;
+  max-height: 60px;
+  overflow: hidden;
+
+  &--hidden {
+    max-height: 0;
+    padding: 0 14px;
+    opacity: 0;
+    border-bottom: none;
+  }
+}
+
+.defra-map-controls__zoom-warning-icon {
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+// Drawer content
+.defra-map-controls__drawer-content {
+  padding: 14px;
+  transition: opacity 0.2s ease;
+
+  &--disabled {
+    opacity: 0.5;
+    pointer-events: none;
+  }
+}
+
+// Section styling
+.defra-map-controls__section {
+  margin-bottom: 14px;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+
+  &--snapping {
+    border-top: 1px solid #b1b4b6;
+    padding-top: 14px;
+  }
+}
+
+.defra-map-controls__section-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #505a5f;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 10px;
+}
+
+// Tool button row
+.defra-map-controls__tool-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 4px 0;
+  min-height: 48px;
+}
+
+// Icon buttons for tools
+.defra-map-controls__icon-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 100%;
-  border: 1px solid #1d70b8;
-  background: transparent;
-  color: #1d70b8;
-  padding: 6px 10px;
-  border-radius: 4px;
-  font-size: 14px;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  background: #ffffff;
+  border: 2px solid #1d70b8;
+  border-radius: 8px;
   cursor: pointer;
-  line-height: 1.2;
+  color: #1d70b8;
+  padding: 0;
+  flex-shrink: 0;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.15s ease;
+
+  &:hover:not(:disabled) {
+    background: #1d70b8;
+    color: #ffffff;
+    transform: scale(1.05);
+  }
+
+  &:focus {
+    outline: 3px solid #ffdd00;
+    outline-offset: 2px;
+  }
+
+  &--primary {
+    background: #00703c;
+    border-color: #00703c;
+    color: #ffffff;
+
+    &:hover:not(:disabled) {
+      background: #005a30;
+      border-color: #005a30;
+    }
+  }
+
+  &--warning {
+    border-color: #d4351c;
+    color: #d4351c;
+
+    &:hover:not(:disabled) {
+      background: #d4351c;
+      color: #ffffff;
+    }
+  }
+
+  &--disabled,
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+    border-color: #b1b4b6;
+    color: #505a5f;
+    background: #f3f2f1;
+
+    &:hover {
+      background: #f3f2f1;
+      color: #505a5f;
+      transform: none;
+    }
+  }
+
+  svg {
+    width: 22px;
+    height: 22px;
+    display: block;
+  }
+}
+
+// Snap toggle buttons
+.defra-map-controls__snap-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.defra-map-controls__snap-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  background: #ffffff;
+  border: 2px solid #b1b4b6;
+  border-radius: 6px;
+  cursor: pointer;
+  color: #0b0c0c;
+  font-size: 13px;
   text-align: left;
+  transition: background 0.15s ease, border-color 0.15s ease;
+
+  &:hover:not(:disabled) {
+    background: #f3f2f1;
+    border-color: #1d70b8;
+  }
+
+  &:focus {
+    outline: 3px solid #ffdd00;
+    outline-offset: 1px;
+  }
+
+  &--disabled,
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
 }
 
-.defra-map-controls__toggle--inline {
-  width: auto;
-  text-align: center;
-  flex: 0 0 auto;
-}
-
-.defra-map-controls__toggle:hover {
+.defra-map-controls__snap-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
   background: #f3f2f1;
+  border-radius: 4px;
+  color: #505a5f;
+  flex-shrink: 0;
+  transition: background 0.15s ease, color 0.15s ease;
+
+  svg {
+    width: 18px;
+    height: 18px;
+  }
 }
 
-.defra-map-controls__toggle:focus {
-  outline: 3px solid #ffdd00;
-  outline-offset: 1px;
+.defra-map-controls__snap-label {
+  flex: 1;
+  font-weight: 500;
 }
 
-.defra-map-controls__toggle--on {
+// Toggle on state for snap buttons
+.defra-map-controls__toggle--on.defra-map-controls__snap-btn {
   background: #1d70b8;
+  border-color: #1d70b8;
   color: #ffffff;
+
+  .defra-map-controls__snap-icon {
+    background: rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+  }
+
+  &:hover:not(:disabled) {
+    background: #003078;
+    border-color: #003078;
+  }
 }
 
-.defra-map-controls__toggle--on:hover {
-  background: #003078;
+// Actions section in drawer
+.defra-map-controls__section--actions {
+  border-top: 1px solid #b1b4b6;
+  padding-top: 14px;
+}
+
+.defra-map-controls__actions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.defra-map-controls__action-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 12px 14px;
+  background: #ffffff;
+  border: 2px solid #1d70b8;
+  border-radius: 6px;
+  cursor: pointer;
+  color: #1d70b8;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: left;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+
+  &:hover:not(:disabled) {
+    background: #1d70b8;
+    color: #ffffff;
+    
+    .defra-map-controls__action-icon {
+      color: #ffffff;
+    }
+  }
+
+  &:focus {
+    outline: 3px solid #ffdd00;
+    outline-offset: 1px;
+  }
+
+  &--save {
+    background: #00703c;
+    border-color: #00703c;
+    color: #ffffff;
+
+    .defra-map-controls__action-icon {
+      color: #ffffff;
+    }
+
+    &:hover:not(:disabled) {
+      background: #005a30;
+      border-color: #005a30;
+    }
+  }
+
+  &--disabled,
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background: #f3f2f1;
+    border-color: #b1b4b6;
+    color: #505a5f;
+
+    .defra-map-controls__action-icon {
+      color: #505a5f;
+    }
+
+    &:hover {
+      background: #f3f2f1;
+      color: #505a5f;
+    }
+  }
+}
+
+.defra-map-controls__action-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: #1d70b8;
+  transition: color 0.15s ease;
+
+  svg {
+    width: 20px;
+    height: 20px;
+  }
+}
+
+.defra-map-controls__action-label {
+  flex: 1;
+}
+
+// Help Modal
+.defra-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.25s ease, visibility 0.25s ease;
+
+  &--open {
+    opacity: 1;
+    visibility: visible;
+  }
+}
+
+.defra-modal__overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  cursor: pointer;
+}
+
+.defra-modal__container {
+  position: relative;
+  background: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+  max-width: 640px;
+  max-height: 80vh;
+  width: 90%;
+  display: flex;
+  flex-direction: column;
+  transform: translateY(-20px) scale(0.95);
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+
+  .defra-modal--open & {
+    transform: translateY(0) scale(1);
+  }
+}
+
+.defra-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid #b1b4b6;
+  background: #f3f2f1;
+  border-radius: 8px 8px 0 0;
+}
+
+.defra-modal__title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #0b0c0c;
+  margin: 0;
+}
+
+.defra-modal__close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  color: #505a5f;
+  transition: background 0.15s ease, color 0.15s ease;
+
+  &:hover {
+    background: #d4351c;
+    color: #ffffff;
+  }
+
+  &:focus {
+    outline: 3px solid #ffdd00;
+    outline-offset: 1px;
+  }
+
+  svg {
+    width: 24px;
+    height: 24px;
+  }
+}
+
+.defra-modal__content {
+  padding: 20px;
+  overflow-y: auto;
+  flex: 1;
+  
+  // GOV.UK styles inside modal
+  .govuk-body,
+  .govuk-body-s {
+    margin-bottom: 15px;
+  }
+  
+  .govuk-heading-s {
+    margin-top: 20px;
+    margin-bottom: 10px;
+  }
+  
+  .govuk-list {
+    margin-bottom: 15px;
+  }
+  
+  .govuk-inset-text {
+    margin-top: 15px;
+    margin-bottom: 15px;
+  }
+}
+
+// Body class when modal is open
+.defra-modal-open {
+  overflow: hidden;
 }
 
 // GOV.UK header alignment for map pages
@@ -166,31 +603,20 @@
   margin-right: 0;
 }
 
-// Map layout - full width 3-column design
+// Map layout - fullscreen design (mobile optimised)
 .map-layout-container {
   display: flex;
   height: calc(100vh - 60px); // Full height minus GOV.UK header (60px)
   width: 100%;
   margin: 0;
   padding: 0;
-}
 
-.map-panel-left {
-  width: 240px;
-  padding: 20px;
-  overflow-y: auto;
-  background: #ffffff;
-  flex-shrink: 0;
-  border-right: 1px solid #b1b4b6;
-}
-
-.map-panel-right {
-  width: 340px;
-  padding: 20px;
-  overflow-y: auto;
-  background: #ffffff;
-  flex-shrink: 0;
-  border-left: 1px solid #b1b4b6;
+  &--fullscreen {
+    .map-panel-center {
+      flex: 1;
+      width: 100%;
+    }
+  }
 }
 
 .map-panel-center {
@@ -203,6 +629,93 @@
     height: 100%;
     border: none;
     margin: 0;
+  }
+}
+
+// Bottom center area display overlay
+.map-area-display {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 500;
+  background: rgba(255, 255, 255, 0.95);
+  padding: 12px 20px;
+  border-radius: 8px;
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.2);
+  text-align: center;
+  min-width: 200px;
+  max-width: 90%;
+  
+  .map-area-display__title {
+    font-size: 12px;
+    font-weight: 700;
+    color: #505a5f;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 4px;
+  }
+  
+  .map-area-display__value {
+    font-size: 24px;
+    font-weight: 700;
+    color: #0b0c0c;
+    margin-bottom: 2px;
+    
+    &--primary {
+      color: #1d70b8;
+    }
+    
+    &--error {
+      color: #d4351c;
+    }
+    
+    &--success {
+      color: #00703c;
+    }
+  }
+  
+  .map-area-display__unit {
+    font-size: 14px;
+    font-weight: 400;
+    color: #505a5f;
+  }
+  
+  .map-area-display__row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 20px;
+    padding: 6px 0;
+    border-bottom: 1px solid #b1b4b6;
+    
+    &:last-child {
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+    
+    &:first-child {
+      padding-top: 0;
+    }
+  }
+  
+  .map-area-display__label {
+    font-size: 13px;
+    color: #505a5f;
+  }
+  
+  .map-area-display__data {
+    font-size: 16px;
+    font-weight: 700;
+    color: #0b0c0c;
+    
+    &--warning {
+      color: #d4351c;
+    }
+    
+    &--success {
+      color: #00703c;
+    }
   }
 }
 
@@ -345,29 +858,38 @@
 
 // Status message - fixed position overlay with GOV.UK notification banner
 #status-message {
-  position: fixed;
-  top: 80px;  // Below GOV.UK header
+  position: absolute;
+  top: 70px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 1000;
-  max-width: 600px;
+  max-width: 500px;
   width: auto;
   margin: 0;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border-radius: 4px;
+  overflow: hidden;
   
   // Ensure visibility on all backgrounds
   .govuk-notification-banner__header {
     border-bottom: 1px solid #1d70b8;
+    padding: 8px 12px;
+  }
+  
+  .govuk-notification-banner__title {
+    font-size: 14px;
   }
   
   .govuk-notification-banner__content {
     background-color: #ffffff;
+    padding: 10px 12px;
   }
 
   // Ensure proper contrast and readability
   .govuk-notification-banner__heading {
     margin-bottom: 0;
     font-weight: 400;
+    font-size: 14px;
   }
   
   // Success state (optional - can be applied dynamically)
