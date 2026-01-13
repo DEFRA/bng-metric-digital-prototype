@@ -30,6 +30,7 @@
   right: 12px;
   z-index: 600;
   pointer-events: none;
+  font-family: "GDS Transport", "Helvetica Neue", Arial, sans-serif;
 }
 
 // Hamburger button
@@ -604,12 +605,20 @@
 }
 
 // Map layout - fullscreen design (mobile optimised)
+.map-page-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100vh - 60px);
+  width: 100%;
+}
+
 .map-layout-container {
   display: flex;
-  height: calc(100vh - 60px); // Full height minus GOV.UK header (60px)
+  flex: 1;
   width: 100%;
   margin: 0;
   padding: 0;
+  min-height: 0;
 
   &--fullscreen {
     .map-panel-center {
@@ -623,6 +632,7 @@
   flex: 1;
   position: relative;
   overflow: hidden;
+  min-height: 0;
 
   .os-map-container {
     width: 100%;
@@ -639,6 +649,10 @@
   left: 50%;
   transform: translateX(-50%);
   z-index: 500;
+  font-family: "GDS Transport", "Helvetica Neue", Arial, sans-serif;
+  line-height: 1.4;
+  color: #0b0c0c;
+  letter-spacing: 0.02em;
   background: rgba(255, 255, 255, 0.95);
   padding: 12px 20px;
   border-radius: 8px;

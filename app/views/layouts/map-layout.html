@@ -16,43 +16,47 @@
 {% endblock %}
 
 {% block main %}
-<div class="govuk-width-container">
-  {% block backLink %}
-  {{ govukBackLink({
-    href: "/"
-  }) }}
-  {% endblock %}
-</div>
+<div class="map-page-shell">
+  <div class="govuk-width-container map-back-link-container">
+    {% block backLink %}
+    {{ govukBackLink({
+      href: "/"
+    }) }}
+    {% endblock %}
+  </div>
 
-<div class="map-layout-container map-layout-container--fullscreen">
-  <!-- Map container (now full screen) -->
-  <div class="map-panel-center">
-    <div id="map" class="os-map-container" {% block mapAttributes %}{% endblock %}></div>
-    
-    <!-- OS Features loading indicator -->
-    <div id="os-features-loading" class="os-features-loading" aria-live="polite">
-      <span class="loading-spinner" aria-hidden="true"></span>
-      <span class="loading-text">Loading map features...</span>
-    </div>
-    
-    <!-- Bottom center area display (populated by JS) -->
-    <div id="map-area-display" class="map-area-display" style="display: none;">
-      {% block mapAreaDisplay %}{% endblock %}
-    </div>
-    
-    <!-- Status message overlay -->
-    <div id="status-message" class="govuk-notification-banner govuk-!-margin-top-4" role="region" aria-labelledby="status-title" style="display: none;">
-      <div class="govuk-notification-banner__header">
-        <h2 class="govuk-notification-banner__title" id="status-title">
-          Information
-        </h2>
+  <div class="map-layout-container map-layout-container--fullscreen">
+    <!-- Map container (now full screen) -->
+    <div class="map-panel-center">
+      <div id="map" class="os-map-container" {% block mapAttributes %}{% endblock %}></div>
+      
+      <!-- OS Features loading indicator -->
+      <div id="os-features-loading" class="os-features-loading" aria-live="polite">
+        <span class="loading-spinner" aria-hidden="true"></span>
+        <span class="loading-text">Loading map features...</span>
       </div>
-      <div class="govuk-notification-banner__content">
-        <p class="govuk-notification-banner__heading" id="status-text">
-          Status message
-        </p>
+      
+      <!-- Bottom center area display (populated by JS) -->
+      <div id="map-area-display" class="map-area-display" style="display: none;">
+        {% block mapAreaDisplay %}{% endblock %}
+      </div>
+      
+      <!-- Status message overlay -->
+      <div id="status-message" class="govuk-notification-banner govuk-!-margin-top-4" role="region" aria-labelledby="status-title" style="display: none;">
+        <div class="govuk-notification-banner__header">
+          <h2 class="govuk-notification-banner__title" id="status-title">
+            Information
+          </h2>
+        </div>
+        <div class="govuk-notification-banner__content">
+          <p class="govuk-notification-banner__heading" id="status-text">
+            Status message
+          </p>
+        </div>
       </div>
     </div>
+  </div>
+
   </div>
 </div>
 
