@@ -1755,6 +1755,18 @@
     this._emitter.emit('remove:cancelled', {});
   };
 
+  DefraMapClient.prototype.finishRemove = function() {
+    if (!this._removeActive) return;
+    // Clear hover highlight
+    if (this._removeHoverFeature) {
+      this._removeHoverFeature.set('removeHover', false);
+      this._removeHoverFeature = null;
+    }
+    this._removeActive = false;
+    this._map.getTargetElement().style.cursor = 'default';
+    this._emitter.emit('remove:finished', {});
+  };
+
   // ============================
   // Public API (library info)
   // ============================

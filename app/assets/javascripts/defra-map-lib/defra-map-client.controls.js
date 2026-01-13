@@ -327,9 +327,7 @@
     // Drawer open/close functions
     const openDrawer = () => {
       drawerOpen = true;
-      // Position drawer below the hamburger button
-      const hamburgerRect = hamburgerBtn.getBoundingClientRect();
-      drawer.style.top = `${hamburgerRect.bottom + 8}px`;
+      // Drawer positioning is handled by CSS (absolute positioning relative to controls container)
       drawer.classList.add('defra-map-controls__drawer--open');
       drawer.setAttribute('aria-hidden', 'false');
       hamburgerBtn.setAttribute('aria-expanded', 'true');
@@ -405,6 +403,14 @@
     const showFloatingActions = (toolType) => {
       activeToolType = toolType;
       floatingActions.style.display = 'flex';
+      
+      // Hide cancel button for remove tool (cancel is redundant as removals are immediate)
+      if (toolType === 'remove') {
+        floatingCancelBtn.style.display = 'none';
+      } else {
+        floatingCancelBtn.style.display = 'inline-flex';
+      }
+      
       // Update confirm button state for drawing
       updateFloatingConfirmState();
     };
@@ -477,9 +483,8 @@
         // But we can cancel it
         this.cancelSlice();
       } else if (activeToolType === 'remove') {
-        // Remove doesn't have explicit confirm - it removes on click
-        // Confirm button acts as cancel/finish
-        this.cancelRemove();
+        // Finish remove mode - user is done removing parcels
+        this.finishRemove();
       }
       hideFloatingActions();
       updateButtons();
@@ -697,6 +702,16 @@
       updateButtons();
     });
     this.on('remove:completed', () => {
+      // Check if tool is still active (habitat-parcels mode keeps it active for multiple removals)
+      const dbg = this.getDebugInfo ? this.getDebugInfo() : null;
+      const stillActive = dbg && dbg.remove ? !!dbg.remove.active : false;
+      if (!stillActive) {
+        // Tool auto-deactivated (e.g., boundary removed or all parcels removed)
+        hideFloatingActions();
+      }
+      updateButtons();
+    });
+    this.on('remove:finished', () => {
       hideFloatingActions();
       updateButtons();
     });

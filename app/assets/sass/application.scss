@@ -25,11 +25,17 @@
 }
 
 .map-back-link-container {
-  padding-top: 0.75rem;
-  padding-bottom: 0.75rem;
+  width: min(100%, 100vw);
+  max-width: 100vw;
+  margin: 0;
+  padding: 0.75rem clamp(0.75rem, 4vw, 24px);
+  box-sizing: border-box;
 }
 
 .map-page-header {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
   position: relative;
   display: flex;
   align-items: center;
@@ -58,7 +64,7 @@
   position: absolute;
   top: 12px;
   right: 12px;
-  z-index: 800;
+  z-index: 1000; // Higher than OS branding to ensure menu overlays copyright notice
   pointer-events: none;
   font-family: "GDS Transport", "Helvetica Neue", Arial, sans-serif;
 }
@@ -100,19 +106,19 @@
   }
 }
 
-// Drawer panel
+// Drawer panel - positioned absolute to stay with map container
 .defra-map-controls__drawer {
   pointer-events: auto;
-  position: fixed;
-  top: auto;
-  right: 12px;
+  position: absolute;
+  top: calc(100% + 8px); // Position below the hamburger button
+  right: 0;
   background: #ffffff;
   border: 1px solid #b1b4b6;
   border-radius: 8px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
   min-width: 260px;
   max-width: 320px;
-  max-height: calc(100vh - 120px);
+  max-height: min(480px, calc(100vh - 220px)); // Cap height, accounting for header/footer
   opacity: 0;
   visibility: hidden;
   transform: translateY(-10px) scale(0.95);
@@ -120,12 +126,25 @@
   transition: opacity 0.25s ease, visibility 0.25s ease, transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   flex-direction: column;
-  z-index: 801;
+  z-index: 1001; // Higher than OS branding (typically 100-200)
+  overflow: hidden; // Prevent drawer from overflowing
 
   &--open {
     opacity: 1;
     visibility: visible;
     transform: translateY(0) scale(1);
+  }
+
+  // Mobile-specific adjustments for full accessibility
+  @media (max-width: 640px) {
+    right: -4px; // Align closer to edge on mobile
+    min-width: 240px;
+    max-width: calc(100vw - 24px); // Nearly full width on mobile
+    max-height: min(420px, calc(100vh - 180px)); // Smaller max on mobile
+  }
+
+  @media (max-height: 600px) {
+    max-height: min(320px, calc(100vh - 160px)); // Even smaller for short screens
   }
 }
 
@@ -213,7 +232,7 @@
   transition: opacity 0.2s ease;
   overflow-y: auto;
   flex: 1;
-  max-height: calc(100vh - 200px);
+  min-height: 0; // Required for flex child to scroll properly
 
   &::-webkit-scrollbar {
     width: 6px;
@@ -517,7 +536,7 @@
   position: absolute;
   bottom: 20px;
   right: 20px;
-  z-index: 700;
+  z-index: 900; // Higher than OS branding but below menu controls
   display: flex;
   gap: 10px;
   pointer-events: auto;
@@ -1003,10 +1022,10 @@
 // Status message - fixed position overlay with GOV.UK notification banner
 #status-message {
   position: absolute;
-  top: 70px;
+  top: 12px;
   left: 50%;
   transform: translateX(-50%);
-  z-index: 1000;
+  z-index: 900;
   max-width: 500px;
   width: auto;
   margin: 0;
