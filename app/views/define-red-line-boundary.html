@@ -8,10 +8,15 @@
 {% endblock %}
 
 {% block backLink %}
-  {{ govukBackLink({
-    href: "/",
-    text: "Back"
-  }) }}
+  <div class="map-page-header">
+    <div class="map-page-header__back-link">
+      {{ govukBackLink({
+        href: "/",
+        text: "Back"
+      }) }}
+    </div>
+    <h1 class="map-page-header__title govuk-heading-l">Define red line boundary</h1>
+  </div>
 {% endblock %}
 
 {% block mapAttributes %}{% endblock %}

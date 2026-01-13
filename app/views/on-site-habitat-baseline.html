@@ -8,10 +8,15 @@
 {% endblock %}
 
 {% block backLink %}
-  {{ govukBackLink({
-    href: "/define-red-line-boundary",
-    text: "Back"
-  }) }}
+  <div class="map-page-header">
+    <div class="map-page-header__back-link">
+      {{ govukBackLink({
+        href: "/define-red-line-boundary",
+        text: "Back"
+      }) }}
+    </div>
+    <h1 class="map-page-header__title govuk-heading-l">On-site habitat baseline</h1>
+  </div>
 {% endblock %}
 
 {% block mapAttributes %}{% endblock %}

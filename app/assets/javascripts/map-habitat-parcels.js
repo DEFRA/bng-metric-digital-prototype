@@ -88,7 +88,7 @@ window.GOVUKPrototypeKit.documentReady(() => {
     },
     controls: {
       enabled: true,
-      tools: 'draw,fill-parcels,slice',
+      tools: 'draw,fill-parcels,slice,remove',
       snappingToggles: 'os,boundary-vertices,boundary-edges,parcel-vertices,parcel-edges',
     },
   });
@@ -109,6 +109,10 @@ window.GOVUKPrototypeKit.documentReady(() => {
 
   client.on('fill:message', (e) => {
     showStatus(e.message, e.type || 'info');
+  });
+
+  client.on('fill:cancelled', () => {
+    renderAreaDisplay();
   });
 
   client.on('boundary:loaded', () => {

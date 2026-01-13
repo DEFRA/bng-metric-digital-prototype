@@ -12,6 +12,7 @@
   border: 2px solid #b1b4b6;
   margin-bottom: 20px;
   position: relative;
+  overflow: visible;
 
   // OS branding positioning fix
   .os-api-branding {
@@ -23,12 +24,41 @@
   }
 }
 
+.map-back-link-container {
+  padding-top: 0.75rem;
+  padding-bottom: 0.75rem;
+}
+
+.map-page-header {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+}
+
+.map-page-header__back-link {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.map-page-header__title {
+  margin: 0;
+  font-size: clamp(1rem, 2.5vw, 1.5rem);
+  font-weight: 700;
+  line-height: 1.2;
+  text-align: center;
+  flex: 1;
+}
+
 // In-map controls overlay rendered by DefraMapClient - Hamburger Menu Style
 .defra-map-controls {
   position: absolute;
   top: 12px;
   right: 12px;
-  z-index: 600;
+  z-index: 800;
   pointer-events: none;
   font-family: "GDS Transport", "Helvetica Neue", Arial, sans-serif;
 }
@@ -73,20 +103,24 @@
 // Drawer panel
 .defra-map-controls__drawer {
   pointer-events: auto;
-  position: absolute;
-  top: 56px;
-  right: 0;
+  position: fixed;
+  top: auto;
+  right: 12px;
   background: #ffffff;
   border: 1px solid #b1b4b6;
   border-radius: 8px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
   min-width: 260px;
   max-width: 320px;
+  max-height: calc(100vh - 120px);
   opacity: 0;
   visibility: hidden;
   transform: translateY(-10px) scale(0.95);
   transform-origin: top right;
   transition: opacity 0.25s ease, visibility 0.25s ease, transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  flex-direction: column;
+  z-index: 801;
 
   &--open {
     opacity: 1;
@@ -177,6 +211,22 @@
 .defra-map-controls__drawer-content {
   padding: 14px;
   transition: opacity 0.2s ease;
+  overflow-y: auto;
+  flex: 1;
+  max-height: calc(100vh - 200px);
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #b1b4b6;
+    border-radius: 3px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
 
   &--disabled {
     opacity: 0.5;
@@ -462,6 +512,85 @@
   flex: 1;
 }
 
+// Floating Action Buttons (bottom-right of map)
+.defra-map-floating-actions {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  z-index: 700;
+  display: flex;
+  gap: 10px;
+  pointer-events: auto;
+  font-family: "GDS Transport", "Helvetica Neue", Arial, sans-serif;
+}
+
+.defra-map-floating-actions__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 48px;
+  height: 44px;
+  padding: 0 16px;
+  background: #ffffff;
+  border: 2px solid #1d70b8;
+  border-radius: 22px;
+  cursor: pointer;
+  color: #1d70b8;
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.2);
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+
+  &:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 16px rgba(0, 0, 0, 0.25);
+  }
+
+  &:focus {
+    outline: 3px solid #ffdd00;
+    outline-offset: 2px;
+  }
+
+  svg {
+    width: 22px;
+    height: 22px;
+    display: block;
+  }
+
+  &--cancel {
+    border-color: #d4351c;
+    color: #d4351c;
+    background: #ffffff;
+
+    &:hover:not(:disabled) {
+      background: #d4351c;
+      color: #ffffff;
+    }
+  }
+
+  &--confirm {
+    background: #00703c;
+    border-color: #00703c;
+    color: #ffffff;
+
+    &:hover:not(:disabled) {
+      background: #005a30;
+      border-color: #005a30;
+    }
+  }
+
+  &--disabled,
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+
+    &:hover {
+      transform: none;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    }
+  }
+}
+
 // Help Modal
 .defra-modal {
   position: fixed;
@@ -631,7 +760,7 @@
 .map-panel-center {
   flex: 1;
   position: relative;
-  overflow: hidden;
+  overflow: visible;
   min-height: 0;
 
   .os-map-container {
@@ -639,6 +768,7 @@
     height: 100%;
     border: none;
     margin: 0;
+    overflow: hidden;
   }
 }
 

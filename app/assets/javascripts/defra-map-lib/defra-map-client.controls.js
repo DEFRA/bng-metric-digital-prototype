@@ -2,6 +2,7 @@
 // DefraMapClient in-map controls overlay (prototype augmentation)
 // Renders map-interaction controls *inside* the map container.
 // Includes hamburger menu drawer with icons, zoom-based tool disabling, save button and help modal.
+// Floating action buttons for confirm/cancel appear bottom-right when tools are active.
 //
 
 (function(window) {
@@ -31,7 +32,7 @@
     // Edge snap icon (line with snap point)
     edgeSnap: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12h18"></path><circle cx="12" cy="12" r="3"></circle><path d="M3 3v6"></path><path d="M21 3v6"></path><path d="M3 15v6"></path><path d="M21 15v6"></path></svg>`,
     // Cancel icon
-    cancel: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>`,
+    cancel: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`,
     // Confirm/Check icon
     confirm: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>`,
     // Finish icon
@@ -39,7 +40,9 @@
     // Save icon (floppy disk)
     save: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>`,
     // Help icon (question mark in circle)
-    help: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>`
+    help: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>`,
+    // Trash/Remove icon
+    remove: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>`
   };
 
   function parseCsv(str) {
@@ -166,63 +169,78 @@
     toolRow.className = 'defra-map-controls__tool-row';
     toolsSection.appendChild(toolRow);
 
-    // Draw controls
+    // Draw controls (only the start button in the menu)
     let btnDraw = null;
-    let btnCancelDraw = null;
 
     if (tools.includes('draw')) {
       const drawLabel = cfg.drawLabel || (this._mode === 'habitat-parcels' ? 'Draw parcel' : 'Draw boundary');
       btnDraw = addIconButton(ICONS.draw, drawLabel, 'draw');
-      btnCancelDraw = addIconButton(ICONS.cancel, 'Cancel drawing', 'cancel-draw', 'defra-map-controls__icon-btn--warning');
-      btnCancelDraw.style.display = 'none';
-
       toolRow.appendChild(btnDraw);
-      toolRow.appendChild(btnCancelDraw);
     }
 
-    // Fill boundary controls
+    // Fill boundary controls (only the start button in the menu)
     let btnFillBoundary = null;
-    let btnConfirmFill = null;
-    let btnCancelFill = null;
 
     if (tools.includes('fill-boundary')) {
       btnFillBoundary = addIconButton(ICONS.fill, 'Fill boundary', 'fill-boundary');
-      btnConfirmFill = addIconButton(ICONS.confirm, 'Confirm selection', 'confirm-fill', 'defra-map-controls__icon-btn--primary');
-      btnCancelFill = addIconButton(ICONS.cancel, 'Cancel fill', 'cancel-fill', 'defra-map-controls__icon-btn--warning');
-
-      btnConfirmFill.style.display = 'none';
-      btnCancelFill.style.display = 'none';
-
       toolRow.appendChild(btnFillBoundary);
-      toolRow.appendChild(btnConfirmFill);
-      toolRow.appendChild(btnCancelFill);
     }
 
-    // Fill parcels controls
+    // Fill parcels controls (only the start button in the menu)
     let btnFillParcels = null;
-    let btnFinishFillParcels = null;
 
     if (tools.includes('fill-parcels')) {
       btnFillParcels = addIconButton(ICONS.fill, 'Fill parcel', 'fill-parcels');
-      btnFinishFillParcels = addIconButton(ICONS.finish, 'Finish fill', 'finish-fill-parcels', 'defra-map-controls__icon-btn--warning');
-      btnFinishFillParcels.style.display = 'none';
-
       toolRow.appendChild(btnFillParcels);
-      toolRow.appendChild(btnFinishFillParcels);
     }
 
-    // Slice controls
+    // Slice controls (only the start button in the menu)
     let btnSlice = null;
-    let btnCancelSlice = null;
 
     if (tools.includes('slice')) {
       btnSlice = addIconButton(ICONS.slice, 'Slice polygon', 'slice');
-      btnCancelSlice = addIconButton(ICONS.cancel, 'Cancel slice', 'cancel-slice', 'defra-map-controls__icon-btn--warning');
-      btnCancelSlice.style.display = 'none';
-
       toolRow.appendChild(btnSlice);
-      toolRow.appendChild(btnCancelSlice);
     }
+
+    // Remove polygon controls (only the start button in the menu)
+    let btnRemove = null;
+
+    if (tools.includes('remove')) {
+      const removeLabel = cfg.removeLabel || (this._mode === 'habitat-parcels' ? 'Remove parcel' : 'Remove boundary');
+      btnRemove = addIconButton(ICONS.remove, removeLabel, 'remove', 'defra-map-controls__icon-btn--warning');
+      toolRow.appendChild(btnRemove);
+    }
+
+    // ========================================
+    // Floating Action Buttons (bottom-right)
+    // ========================================
+    const floatingActions = document.createElement('div');
+    floatingActions.className = 'defra-map-floating-actions';
+    floatingActions.setAttribute('role', 'group');
+    floatingActions.setAttribute('aria-label', 'Tool actions');
+    floatingActions.style.display = 'none';
+
+    // Cancel button (lozenge shape with icon)
+    const floatingCancelBtn = document.createElement('button');
+    floatingCancelBtn.type = 'button';
+    floatingCancelBtn.className = 'defra-map-floating-actions__btn defra-map-floating-actions__btn--cancel';
+    floatingCancelBtn.setAttribute('aria-label', 'Cancel');
+    floatingCancelBtn.setAttribute('title', 'Cancel');
+    floatingCancelBtn.innerHTML = ICONS.cancel;
+
+    // Confirm/Accept button (lozenge shape with icon)
+    const floatingConfirmBtn = document.createElement('button');
+    floatingConfirmBtn.type = 'button';
+    floatingConfirmBtn.className = 'defra-map-floating-actions__btn defra-map-floating-actions__btn--confirm';
+    floatingConfirmBtn.setAttribute('aria-label', 'Accept');
+    floatingConfirmBtn.setAttribute('title', 'Accept');
+    floatingConfirmBtn.innerHTML = ICONS.confirm;
+
+    floatingActions.appendChild(floatingCancelBtn);
+    floatingActions.appendChild(floatingConfirmBtn);
+
+    // Track which tool is active for floating buttons
+    let activeToolType = null; // 'draw' | 'fill-boundary' | 'fill-parcels' | 'slice' | 'remove'
 
     // Snapping toggles section
     const snapButtons = {};
@@ -299,14 +317,19 @@
     btnHelp.innerHTML = `<span class="defra-map-controls__action-icon">${ICONS.help}</span><span class="defra-map-controls__action-label">Help</span>`;
     actionsList.appendChild(btnHelp);
 
-    // Attach
+    // Attach controls and floating actions
     target.appendChild(root);
+    target.appendChild(floatingActions);
     this._controlsContainer = root;
+    this._floatingActions = floatingActions;
     this._saveButton = btnSave;
 
     // Drawer open/close functions
     const openDrawer = () => {
       drawerOpen = true;
+      // Position drawer below the hamburger button
+      const hamburgerRect = hamburgerBtn.getBoundingClientRect();
+      drawer.style.top = `${hamburgerRect.bottom + 8}px`;
       drawer.classList.add('defra-map-controls__drawer--open');
       drawer.setAttribute('aria-hidden', 'false');
       hamburgerBtn.setAttribute('aria-expanded', 'true');
@@ -378,6 +401,90 @@
       });
     }
 
+    // Show/hide floating actions based on active tool
+    const showFloatingActions = (toolType) => {
+      activeToolType = toolType;
+      floatingActions.style.display = 'flex';
+      // Update confirm button state for drawing
+      updateFloatingConfirmState();
+    };
+
+    const hideFloatingActions = () => {
+      activeToolType = null;
+      floatingActions.style.display = 'none';
+    };
+
+    const updateFloatingConfirmState = () => {
+      if (activeToolType === 'draw') {
+        // For drawing, enable confirm only if we have at least 3 vertices
+        const canConfirm = this._currentPolygonCoords && this._currentPolygonCoords.length >= 3;
+        floatingConfirmBtn.disabled = !canConfirm;
+        if (canConfirm) {
+          floatingConfirmBtn.classList.remove('defra-map-floating-actions__btn--disabled');
+        } else {
+          floatingConfirmBtn.classList.add('defra-map-floating-actions__btn--disabled');
+        }
+      } else if (activeToolType === 'fill-boundary') {
+        // For fill-boundary, enable confirm only if there's a selection
+        const hasSelection = this._fillSelected && this._fillSelected.length > 0;
+        floatingConfirmBtn.disabled = !hasSelection;
+        if (hasSelection) {
+          floatingConfirmBtn.classList.remove('defra-map-floating-actions__btn--disabled');
+        } else {
+          floatingConfirmBtn.classList.add('defra-map-floating-actions__btn--disabled');
+        }
+      } else {
+        // For other tools, always enable
+        floatingConfirmBtn.disabled = false;
+        floatingConfirmBtn.classList.remove('defra-map-floating-actions__btn--disabled');
+      }
+    };
+
+    // Handle floating action button clicks
+    floatingCancelBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      
+      if (activeToolType === 'draw') {
+        this.cancelDrawing();
+      } else if (activeToolType === 'fill-boundary' || activeToolType === 'fill-parcels') {
+        this.cancelFill();
+      } else if (activeToolType === 'slice') {
+        this.cancelSlice();
+      } else if (activeToolType === 'remove') {
+        this.cancelRemove();
+      }
+      hideFloatingActions();
+      updateButtons();
+    });
+
+    floatingConfirmBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      
+      if (activeToolType === 'draw') {
+        // Auto-close polygon if we have at least 3 points
+        if (this._currentPolygonCoords && this._currentPolygonCoords.length >= 3) {
+          this._closePolygon();
+        }
+      } else if (activeToolType === 'fill-boundary') {
+        const ok = this.confirmFill();
+        if (!ok) return; // Don't hide if confirm failed
+      } else if (activeToolType === 'fill-parcels') {
+        this.cancelFill(); // Finish fill parcels mode
+      } else if (activeToolType === 'slice') {
+        // Slice doesn't have explicit confirm - it confirms on second click
+        // But we can cancel it
+        this.cancelSlice();
+      } else if (activeToolType === 'remove') {
+        // Remove doesn't have explicit confirm - it removes on click
+        // Confirm button acts as cancel/finish
+        this.cancelRemove();
+      }
+      hideFloatingActions();
+      updateButtons();
+    });
+
     // Handle all tool and snap clicks directly on the drawer content
     drawerContent.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -403,7 +510,7 @@
       
       if (!toolsEnabled) return;
 
-      // Handle snap toggle clicks
+      // Handle snap toggle clicks - keep drawer open
       const snapEl = e.target && e.target.closest ? e.target.closest('[data-snap]') : null;
       if (snapEl) {
         e.preventDefault();
@@ -417,10 +524,11 @@
         else if (key === 'parcel-edges') this.setSnapToParcelEdges(!this._snapToParcelEdges);
 
         updateSnapButtons();
+        // Snap toggles keep drawer open
         return;
       }
 
-      // Handle tool action clicks (require zoom)
+      // Handle tool action clicks - close drawer and show floating actions
       if (actionEl) {
         const action = actionEl.getAttribute('data-action');
         
@@ -428,36 +536,37 @@
           if (this._sliceActive) this.cancelSlice();
           if (this._fillActive) this.cancelFill();
           this.startDrawing();
-          updateButtons();
-        } else if (action === 'cancel-draw') {
-          this.cancelDrawing();
+          closeDrawer();
+          showFloatingActions('draw');
           updateButtons();
         } else if (action === 'fill-boundary') {
           if (this._sliceActive) this.cancelSlice();
           if (this._isDrawing) this.cancelDrawing();
           this.startFillBoundary();
-          updateButtons();
-        } else if (action === 'confirm-fill') {
-          const ok = this.confirmFill();
-          if (ok) updateButtons();
-        } else if (action === 'cancel-fill') {
-          this.cancelFill();
+          closeDrawer();
+          showFloatingActions('fill-boundary');
           updateButtons();
         } else if (action === 'fill-parcels') {
           if (this._sliceActive) this.cancelSlice();
           if (this._isDrawing) this.cancelDrawing();
           this.startFillParcels();
-          updateButtons();
-        } else if (action === 'finish-fill-parcels') {
-          this.cancelFill();
+          closeDrawer();
+          showFloatingActions('fill-parcels');
           updateButtons();
         } else if (action === 'slice') {
           if (this._fillActive) this.cancelFill();
           if (this._isDrawing) this.cancelDrawing();
           this.startSlice();
+          closeDrawer();
+          showFloatingActions('slice');
           updateButtons();
-        } else if (action === 'cancel-slice') {
-          this.cancelSlice();
+        } else if (action === 'remove') {
+          if (this._sliceActive) this.cancelSlice();
+          if (this._fillActive) this.cancelFill();
+          if (this._isDrawing) this.cancelDrawing();
+          this.startRemove();
+          closeDrawer();
+          showFloatingActions('remove');
           updateButtons();
         }
       }
@@ -512,29 +621,33 @@
       const fillMode = dbg && dbg.fill ? dbg.fill.mode : null;
       const sliceActive = dbg && dbg.slice ? !!dbg.slice.active : false;
       const isDrawing = dbg && dbg.drawing ? !!dbg.drawing.isDrawing : false;
+      const removeActive = dbg && dbg.remove ? !!dbg.remove.active : false;
 
+      // Update tool button visibility (hide when that tool is active)
       if (btnDraw) {
         btnDraw.style.display = isDrawing ? 'none' : 'inline-flex';
-        if (btnCancelDraw) btnCancelDraw.style.display = isDrawing ? 'inline-flex' : 'none';
       }
 
       if (btnFillBoundary) {
         const isFillBoundary = fillActive && fillMode === 'boundary';
         btnFillBoundary.style.display = isFillBoundary ? 'none' : 'inline-flex';
-        if (btnCancelFill) btnCancelFill.style.display = isFillBoundary ? 'inline-flex' : 'none';
-        if (btnConfirmFill && !isFillBoundary) btnConfirmFill.style.display = 'none';
       }
 
       if (btnFillParcels) {
         const isFillParcels = fillActive && fillMode === 'parcels';
         btnFillParcels.style.display = isFillParcels ? 'none' : 'inline-flex';
-        if (btnFinishFillParcels) btnFinishFillParcels.style.display = isFillParcels ? 'inline-flex' : 'none';
       }
 
       if (btnSlice) {
         btnSlice.style.display = sliceActive ? 'none' : 'inline-flex';
-        if (btnCancelSlice) btnCancelSlice.style.display = sliceActive ? 'inline-flex' : 'none';
       }
+
+      if (btnRemove) {
+        btnRemove.style.display = removeActive ? 'none' : 'inline-flex';
+      }
+
+      // Update floating confirm button state
+      updateFloatingConfirmState();
     };
 
     const updateSnapButtons = () => {
@@ -548,15 +661,45 @@
 
     // Keep buttons in sync with tool state
     this.on('drawing:started', updateButtons);
-    this.on('drawing:cancelled', updateButtons);
-    this.on('drawing:completed', updateButtons);
-    this.on('parcel:added', updateButtons);
+    this.on('drawing:cancelled', () => {
+      hideFloatingActions();
+      updateButtons();
+    });
+    this.on('drawing:completed', () => {
+      hideFloatingActions();
+      updateButtons();
+    });
+    this.on('parcel:added', () => {
+      hideFloatingActions();
+      updateButtons();
+    });
     this.on('fill:started', updateButtons);
-    this.on('fill:cancelled', updateButtons);
-    this.on('fill:confirmed', updateButtons);
+    this.on('fill:cancelled', () => {
+      hideFloatingActions();
+      updateButtons();
+    });
+    this.on('fill:confirmed', () => {
+      hideFloatingActions();
+      updateButtons();
+    });
     this.on('slice:started', updateButtons);
-    this.on('slice:cancelled', updateButtons);
-    this.on('slice:completed', updateButtons);
+    this.on('slice:cancelled', () => {
+      hideFloatingActions();
+      updateButtons();
+    });
+    this.on('slice:completed', () => {
+      hideFloatingActions();
+      updateButtons();
+    });
+    this.on('remove:started', updateButtons);
+    this.on('remove:cancelled', () => {
+      hideFloatingActions();
+      updateButtons();
+    });
+    this.on('remove:completed', () => {
+      hideFloatingActions();
+      updateButtons();
+    });
 
     this.on('snapping:osFeaturesChanged', updateSnapButtons);
     this.on('snapping:boundaryVerticesChanged', updateSnapButtons);
@@ -569,16 +712,15 @@
       updateToolsEnabledState();
     });
 
-    // Confirm button only makes sense for boundary fill + with selection
-    if (btnConfirmFill) {
-      this.on('fill:selectionChanged', (ev) => {
-        const dbg = this.getDebugInfo ? this.getDebugInfo() : null;
-        const fillActive = dbg && dbg.fill ? !!dbg.fill.active : false;
-        const fillMode = dbg && dbg.fill ? dbg.fill.mode : null;
-        const isFillBoundary = fillActive && fillMode === 'boundary';
-        btnConfirmFill.style.display = (isFillBoundary && ev.selectedCount > 0) ? 'inline-flex' : 'none';
-      });
-    }
+    // Update floating confirm button state when fill selection changes
+    this.on('fill:selectionChanged', () => {
+      updateFloatingConfirmState();
+    });
+
+    // Update floating confirm button state when vertices are placed during drawing
+    this.on('sketch:area', () => {
+      updateFloatingConfirmState();
+    });
 
     // Save button state update
     const updateSaveButton = (enabled) => {

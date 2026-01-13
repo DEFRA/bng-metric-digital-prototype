@@ -84,7 +84,7 @@ window.GOVUKPrototypeKit.documentReady(() => {
     },
     controls: {
       enabled: true,
-      tools: 'draw,fill-boundary',
+      tools: 'draw,fill-boundary,remove',
       snappingToggles: 'os',
     },
   });
@@ -114,6 +114,10 @@ window.GOVUKPrototypeKit.documentReady(() => {
     } else if (!client.boundaryAreaSqm || client.boundaryAreaSqm <= 0) {
       hideAreaDisplay();
     }
+  });
+
+  client.on('fill:cancelled', () => {
+    renderBoundaryArea();
   });
 
   client.on('fill:confirmed', (e) => {

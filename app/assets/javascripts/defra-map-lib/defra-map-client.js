@@ -124,6 +124,10 @@
     this._sliceStartMarker = null;
     this._slicePreviewLine = null;
 
+    // Remove mode
+    this._removeActive = false;
+    this._removeHoverFeature = null;
+
     // Config: URLs and OS layers
     this._tiles = this._options.tiles || {};
     this._osFeatures = this._options.osFeatures || {};
@@ -652,6 +656,24 @@
     this._emitter.emit('drawing:cancelled', {});
   };
 
+  /**
+   * Finish drawing by auto-closing the polygon.
+   * If the user has drawn at least 3 points, the polygon will be closed
+   * by connecting the last point back to the first point.
+   */
+  DefraMapClient.prototype.finishDrawing = function() {
+    if (!this._isDrawing) return;
+
+    // Need at least 3 points to form a valid polygon
+    if (this._currentPolygonCoords.length < 3) {
+      this._emitter.emit('validation:error', { message: 'Need at least 3 points to complete a polygon.' });
+      return;
+    }
+
+    // Auto-close the polygon
+    this._closePolygon();
+  };
+
   // Fill methods are implemented in `defra-map-client.fill.js`
   // Slice methods are implemented in `defra-map-client.slice.js`
 
@@ -945,6 +967,20 @@
     }
 
     if (type === 'polygon' || type === 'parcel') {
+      // Check for remove hover state first
+      if (feature.get('removeHover')) {
+        return new ol.style.Style({
+          stroke: new ol.style.Stroke({
+            color: '#d4351c',
+            width: 3,
+            lineDash: [8, 4]
+          }),
+          fill: new ol.style.Fill({
+            color: 'rgba(212, 53, 28, 0.15)'
+          })
+        });
+      }
+
       const colorIndex = feature.get('colorIndex') || 0;
 
       if (this._mode === 'habitat-parcels') {
@@ -1037,6 +1073,11 @@
       return;
     }
 
+    if (this._removeActive) {
+      this._handleRemoveHover(evt);
+      return;
+    }
+
     if (this._sliceActive) {
       this._handleSlicePointerMove(evt);
       return;
@@ -1103,6 +1144,11 @@
   DefraMapClient.prototype._handleClick = function(evt) {
     if (this._isDragging || this._justFinishedDragging) return;
 
+    if (this._removeActive) {
+      this._handleRemoveClick(evt);
+      return;
+    }
+
     if (this._sliceActive) {
       this._handleSliceClick(evt);
       return;
@@ -1120,6 +1166,7 @@
 
     if (!this._isDrawing) return;
 
+    // Allow closing polygon by clicking near first vertex OR using Finish button
     if (this._canClosePolygon && this._currentPolygonCoords.length >= 3) {
       this._closePolygon();
       return;
@@ -1563,6 +1610,80 @@
   };
 
   // ============================
+  // Internal remove
+  // ============================
+
+  DefraMapClient.prototype._handleRemoveClick = function(evt) {
+    if (!this._removeActive) return;
+    
+    if (this._mode === 'red-line-boundary') {
+      // Click on boundary removes it
+      const feature = this._map.forEachFeatureAtPixel(evt.pixel, (f) => f, {
+        layerFilter: (l) => l === this._drawLayer,
+        hitTolerance: 3
+      });
+      if (feature && (feature.get('type') === 'polygon' || feature === this._polygonFeature)) {
+        this.clearBoundary();
+        this._removeActive = false;
+        this._map.getTargetElement().style.cursor = 'default';
+        this._emitter.emit('remove:completed', { type: 'boundary' });
+      }
+    } else if (this._mode === 'habitat-parcels') {
+      // Click on parcel removes it
+      const clickedIndex = this._findParcelAtPixel(evt.pixel);
+      if (clickedIndex >= 0) {
+        this.removeParcel(clickedIndex);
+        // Stay in remove mode to allow removing multiple parcels
+        if (this._habitatParcels.length === 0) {
+          this._removeActive = false;
+          this._map.getTargetElement().style.cursor = 'default';
+        }
+        this._emitter.emit('remove:completed', { type: 'parcel', index: clickedIndex });
+      }
+    }
+  };
+
+  DefraMapClient.prototype._handleRemoveHover = function(evt) {
+    if (!this._removeActive || evt.dragging) return;
+    
+    let hoveredFeature = null;
+    let hoveredIndex = -1;
+    
+    if (this._mode === 'red-line-boundary') {
+      // Check if hovering over the boundary polygon
+      const feature = this._map.forEachFeatureAtPixel(evt.pixel, (f) => f, {
+        layerFilter: (l) => l === this._drawLayer,
+        hitTolerance: 3
+      });
+      if (feature && (feature.get('type') === 'polygon' || feature === this._polygonFeature)) {
+        hoveredFeature = feature;
+      }
+    } else if (this._mode === 'habitat-parcels') {
+      // Check if hovering over a parcel
+      hoveredIndex = this._findParcelAtPixel(evt.pixel);
+      if (hoveredIndex >= 0) {
+        hoveredFeature = this._habitatParcels[hoveredIndex].feature;
+      }
+    }
+    
+    // Update hover state
+    if (this._removeHoverFeature !== hoveredFeature) {
+      // Clear previous hover highlight
+      if (this._removeHoverFeature) {
+        this._removeHoverFeature.set('removeHover', false);
+      }
+      // Set new hover highlight
+      this._removeHoverFeature = hoveredFeature;
+      if (hoveredFeature) {
+        hoveredFeature.set('removeHover', true);
+      }
+    }
+    
+    // Update cursor
+    this._map.getTargetElement().style.cursor = hoveredFeature ? 'pointer' : 'crosshair';
+  };
+
+  // ============================
   // Internal fill
   // Implemented in `defra-map-client.fill.js`
   // ============================
@@ -1598,6 +1719,43 @@
   };
 
   // ============================
+  // Remove mode
+  // ============================
+
+  DefraMapClient.prototype.startRemove = function() {
+    if (this._removeActive) return;
+    if (this._isDrawing) this.cancelDrawing();
+    if (this._fillActive) this.cancelFill();
+    if (this._sliceActive) this.cancelSlice();
+    
+    // Check if there's something to remove
+    if (this._mode === 'red-line-boundary' && !this._polygonComplete) {
+      this._emitter.emit('validation:error', { message: 'No boundary to remove.' });
+      return;
+    }
+    if (this._mode === 'habitat-parcels' && this._habitatParcels.length === 0) {
+      this._emitter.emit('validation:error', { message: 'No parcels to remove.' });
+      return;
+    }
+    
+    this._removeActive = true;
+    this._map.getTargetElement().style.cursor = 'crosshair';
+    this._emitter.emit('remove:started', {});
+  };
+
+  DefraMapClient.prototype.cancelRemove = function() {
+    if (!this._removeActive) return;
+    // Clear hover highlight
+    if (this._removeHoverFeature) {
+      this._removeHoverFeature.set('removeHover', false);
+      this._removeHoverFeature = null;
+    }
+    this._removeActive = false;
+    this._map.getTargetElement().style.cursor = 'default';
+    this._emitter.emit('remove:cancelled', {});
+  };
+
+  // ============================
   // Public API (library info)
   // ============================
 
@@ -1610,7 +1768,8 @@
       drawing: { isDrawing: this._isDrawing, polygonComplete: this._polygonComplete },
       parcels: { count: this._habitatParcels.length, editingIndex: this._editingParcelIndex, selectedIndex: this._selectedParcelIndex },
       fill: { active: this._fillActive, mode: this._fillMode, selectedCount: this._fillSelected.length },
-      slice: { active: this._sliceActive }
+      slice: { active: this._sliceActive },
+      remove: { active: this._removeActive }
     };
   };
 
