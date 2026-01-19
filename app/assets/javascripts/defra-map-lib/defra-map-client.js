@@ -1786,6 +1786,32 @@
   };
 
   // ============================
+  // Stub implementations for snapping methods
+  // These are overridden by defra-map-client.snapping.js when loaded
+  // ============================
+
+  DefraMapClient.prototype._throttledFetchSnapData = function() {
+    // Stub: no-op when snapping module not loaded
+  };
+
+  DefraMapClient.prototype._findSnapPoint = function(coordinate) {
+    // Stub: return coordinate unchanged when snapping module not loaded
+    return { coordinate: coordinate, snapType: this._snapType.NONE };
+  };
+
+  DefraMapClient.prototype._clampToBoundary = function(coordinate) {
+    // Stub: return coordinate unchanged when snapping module not loaded
+    return coordinate;
+  };
+
+  DefraMapClient.prototype._getDistance = function(a, b) {
+    // Stub: basic distance calculation
+    const dx = b[0] - a[0];
+    const dy = b[1] - a[1];
+    return Math.sqrt(dx * dx + dy * dy);
+  };
+
+  // ============================
   // Export
   // ============================
 

@@ -11,7 +11,8 @@
 
 {% block head %}
   {{ super() }}
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@10.2.1/ol.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/OrdnanceSurvey/os-api-branding@latest/os-api-branding.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@v10.6.0/ol.css" />
   <style>
     .map-preview-container {
       margin-bottom: 30px;
@@ -200,6 +201,17 @@
 {% endblock %}
 
 {% block pageScripts %}
-  <script src="https://cdn.jsdelivr.net/npm/ol@10.2.1/dist/ol.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/OrdnanceSurvey/os-api-branding@latest/os-api-branding.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/proj4@2.9.0/dist/proj4.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/ol@v10.6.0/dist/ol.js"></script>
+  <script src="https://unpkg.com/ol-mapbox-style@13.1.0/dist/olms.js"></script>
+  <script>
+    // Register EPSG:27700 (British National Grid) projection
+    proj4.defs('EPSG:27700', '+proj=tmerc +lat_0=49 +lon_0=-2 +k=0.9996012717 +x_0=400000 +y_0=-100000 +ellps=airy +towgs84=446.448,-125.157,542.06,0.15,0.247,0.842,-20.489 +units=m +no_defs');
+    ol.proj.proj4.register(proj4);
+  </script>
+  <script src="/public/javascripts/defra-map-lib/event-emitter.js"></script>
+  <script src="/public/javascripts/defra-map-lib/geometry-validation.js"></script>
+  <script src="/public/javascripts/defra-map-lib/defra-map-client.js"></script>
   <script src="/public/javascripts/map-confirm-layers.js"></script>
 {% endblock %}

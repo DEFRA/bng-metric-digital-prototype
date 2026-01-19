@@ -63,6 +63,45 @@ The system SHALL provide a page at `/on-site-baseline/confirm-layers` that displ
 
 ---
 
+### Requirement: Map Preview DefraMapClient Integration
+The map preview on the confirm layers page SHALL use the DefraMapClient library (`defra-map-client.js`) for map display, ensuring consistency with other mapping pages in the application. The map SHALL be display-only with no drawing tools enabled.
+
+#### Scenario: DefraMapClient initialization
+- **WHEN** the map preview JavaScript initializes
+- **THEN** it SHALL create a new `DefraMapClient` instance with the following configuration:
+  - `target`: the map container element (id: 'map-preview')
+  - `mode`: 'red-line-boundary' (display mode, not for editing)
+  - `projection`: 'EPSG:27700' (British National Grid)
+  - `tiles`: configuration using the same Ordnance Survey API endpoints as other map pages:
+    - `collectionId`: 'ngd-base'
+    - `crs`: '27700'
+    - `tileMatrixSetUrl`: 'https://api.os.uk/maps/vector/ngd/ota/v1/tilematrixsets/27700'
+    - `styleUrl`: '/api/os/tiles/style/27700'
+    - `tilesUrlTemplate`: '/api/os/tiles/ngd-base/27700/{z}/{y}/{x}'
+  - `controls`: `{ enabled: false }` (no drawing tools required for display-only view)
+
+#### Scenario: Loading GeoJSON from session data
+- **WHEN** the DefraMapClient has initialized
+- **THEN** the page JavaScript SHALL:
+  1. Read the parsed GeoJSON geometry data embedded in the page (from session data)
+  2. Create OpenLayers vector layers for boundary and parcels with appropriate styling
+  3. Add these layers to the map instance via `client.getMap().addLayer()`
+  4. Calculate the combined extent of all features and zoom the map to fit using `client.zoomToExtent()`
+
+#### Scenario: Boundary layer styling
+- **WHEN** the boundary GeoJSON is rendered on the map
+- **THEN** it SHALL be styled with a red dashed stroke (`#d4351c`, width 3, lineDash [10, 5]) and no fill, consistent with the boundary display in other map views
+
+#### Scenario: Parcels layer styling
+- **WHEN** the habitat parcels GeoJSON is rendered on the map
+- **THEN** parcels SHALL be styled with a blue stroke (`#1d70b8`, width 2) and a semi-transparent blue fill (`rgba(29, 112, 184, 0.3)`)
+
+#### Scenario: Map error handling
+- **WHEN** the DefraMapClient fails to initialize or load map tiles
+- **THEN** the map container SHALL display a user-friendly error message indicating the map could not be loaded
+
+---
+
 ### Requirement: GeoPackage Parsing API
 The system SHALL provide server-side functionality to parse uploaded GeoPackage files and extract layer information including layer names, geometry types, polygon counts, and GeoJSON representations of the geometries.
 

@@ -1,6 +1,7 @@
 //
 // Map Preview for Confirm Layers Page
-// Displays uploaded boundary and habitat parcels using OpenLayers
+// Uses DefraMapClient library for consistency with other map pages
+// Display-only mode - no drawing tools enabled
 //
 
 (function() {
@@ -50,7 +51,7 @@
       return;
     }
 
-    // Create the map
+    // Create the map using DefraMapClient
     createMap(mapContainer, boundaryGeoJson, parcelsGeoJson);
   }
 
@@ -59,113 +60,119 @@
       '<p>' + message + '</p></div>';
   }
 
-  function createMap(container, boundaryGeoJson, parcelsGeoJson) {
-    // Determine projection - check if coordinates look like British National Grid
-    // BNG coordinates are typically 6-digit easting/northing (100000-700000)
-    const sampleCoord = getSampleCoordinate(boundaryGeoJson || parcelsGeoJson);
-    const isLikelyBNG = sampleCoord && Math.abs(sampleCoord[0]) > 1000 && Math.abs(sampleCoord[0]) < 800000;
-    
-    // For prototype, assume coordinates are in EPSG:27700 (British National Grid)
-    // If they look like lat/lon (small values), use EPSG:4326
-    const dataProjection = isLikelyBNG ? 'EPSG:27700' : 'EPSG:4326';
-    
-    // Create vector sources for boundary and parcels
-    const format = new ol.format.GeoJSON();
-    
-    const layers = [];
-    let allFeatures = [];
+  async function createMap(container, boundaryGeoJson, parcelsGeoJson) {
+    // Check DefraMapClient is available
+    if (!window.DefraMapClient) {
+      console.error('DefraMapClient not loaded');
+      showMapPlaceholder(container, 'Map library not available');
+      return;
+    }
 
-    // OSM base layer for context (optional - can be removed if not needed)
-    const osmLayer = new ol.layer.Tile({
-      source: new ol.source.OSM(),
-      opacity: 0.5
-    });
-    layers.push(osmLayer);
-
-    // Parcels layer (rendered below boundary for visual hierarchy)
-    if (parcelsGeoJson && parcelsGeoJson.features && parcelsGeoJson.features.length > 0) {
-      const parcelsSource = new ol.source.Vector({
-        features: format.readFeatures(parcelsGeoJson, {
-          dataProjection: dataProjection,
-          featureProjection: 'EPSG:3857'
-        })
+    try {
+      // Initialize DefraMapClient with display-only configuration
+      const client = new window.DefraMapClient({
+        target: container,
+        mode: 'red-line-boundary',
+        projection: 'EPSG:27700',
+        tiles: {
+          collectionId: 'ngd-base',
+          crs: '27700',
+          tileMatrixSetUrl: 'https://api.os.uk/maps/vector/ngd/ota/v1/tilematrixsets/27700',
+          styleUrl: '/api/os/tiles/style/27700',
+          tilesUrlTemplate: '/api/os/tiles/ngd-base/27700/{z}/{y}/{x}'
+        },
+        controls: {
+          enabled: false
+        }
       });
 
-      const parcelsLayer = new ol.layer.Vector({
-        source: parcelsSource,
-        style: new ol.style.Style({
-          stroke: new ol.style.Stroke({
-            color: '#1d70b8',
-            width: 2
-          }),
-          fill: new ol.style.Fill({
-            color: 'rgba(29, 112, 184, 0.3)'
+      // Initialize the map
+      await client.init();
+
+      const map = client.getMap();
+      const format = new ol.format.GeoJSON();
+      let allFeatures = [];
+
+      // Determine data projection - check if coordinates look like British National Grid
+      const sampleCoord = getSampleCoordinate(boundaryGeoJson || parcelsGeoJson);
+      const isLikelyBNG = sampleCoord && Math.abs(sampleCoord[0]) > 1000 && Math.abs(sampleCoord[0]) < 800000;
+      const dataProjection = isLikelyBNG ? 'EPSG:27700' : 'EPSG:4326';
+
+      // Add parcels layer (rendered below boundary for visual hierarchy)
+      if (parcelsGeoJson && parcelsGeoJson.features && parcelsGeoJson.features.length > 0) {
+        const parcelsSource = new ol.source.Vector({
+          features: format.readFeatures(parcelsGeoJson, {
+            dataProjection: dataProjection,
+            featureProjection: 'EPSG:27700'
           })
-        })
-      });
+        });
 
-      layers.push(parcelsLayer);
-      allFeatures = allFeatures.concat(parcelsSource.getFeatures());
-    }
-
-    // Boundary layer (rendered on top with dashed line)
-    if (boundaryGeoJson && boundaryGeoJson.features && boundaryGeoJson.features.length > 0) {
-      const boundarySource = new ol.source.Vector({
-        features: format.readFeatures(boundaryGeoJson, {
-          dataProjection: dataProjection,
-          featureProjection: 'EPSG:3857'
-        })
-      });
-
-      const boundaryLayer = new ol.layer.Vector({
-        source: boundarySource,
-        style: new ol.style.Style({
-          stroke: new ol.style.Stroke({
-            color: '#d4351c',
-            width: 3,
-            lineDash: [10, 5]
+        const parcelsLayer = new ol.layer.Vector({
+          source: parcelsSource,
+          style: new ol.style.Style({
+            stroke: new ol.style.Stroke({
+              color: '#1d70b8',
+              width: 2
+            }),
+            fill: new ol.style.Fill({
+              color: 'rgba(29, 112, 184, 0.3)'
+            })
           }),
-          fill: null
-        })
-      });
+          zIndex: 20
+        });
 
-      layers.push(boundaryLayer);
-      allFeatures = allFeatures.concat(boundarySource.getFeatures());
+        map.addLayer(parcelsLayer);
+        allFeatures = allFeatures.concat(parcelsSource.getFeatures());
+      }
+
+      // Add boundary layer (rendered on top with dashed line)
+      if (boundaryGeoJson && boundaryGeoJson.features && boundaryGeoJson.features.length > 0) {
+        const boundarySource = new ol.source.Vector({
+          features: format.readFeatures(boundaryGeoJson, {
+            dataProjection: dataProjection,
+            featureProjection: 'EPSG:27700'
+          })
+        });
+
+        const boundaryLayer = new ol.layer.Vector({
+          source: boundarySource,
+          style: new ol.style.Style({
+            stroke: new ol.style.Stroke({
+              color: '#d4351c',
+              width: 3,
+              lineDash: [10, 5]
+            }),
+            fill: null
+          }),
+          zIndex: 30
+        });
+
+        map.addLayer(boundaryLayer);
+        allFeatures = allFeatures.concat(boundarySource.getFeatures());
+      }
+
+      // Fit to features extent
+      if (allFeatures.length > 0) {
+        const extent = ol.extent.createEmpty();
+        allFeatures.forEach(function(feature) {
+          ol.extent.extend(extent, feature.getGeometry().getExtent());
+        });
+
+        // Use DefraMapClient's zoomToExtent method
+        client.zoomToExtent(extent, {
+          padding: [40, 40, 40, 40],
+          maxZoom: 16,
+          duration: 500
+        });
+      }
+
+      // Store client reference for debugging
+      window.confirmLayersMapClient = client;
+
+    } catch (error) {
+      console.error('Failed to initialize map:', error);
+      showMapPlaceholder(container, 'Could not load map. Please try again.');
     }
-
-    // Create the map
-    const map = new ol.Map({
-      target: container,
-      layers: layers,
-      view: new ol.View({
-        center: [0, 0],
-        zoom: 2,
-        projection: 'EPSG:3857'
-      }),
-      controls: ol.control.defaults.defaults({
-        attribution: false,
-        rotate: false
-      }).extend([
-        new ol.control.Zoom()
-      ])
-    });
-
-    // Fit to features extent
-    if (allFeatures.length > 0) {
-      const extent = ol.extent.createEmpty();
-      allFeatures.forEach(function(feature) {
-        ol.extent.extend(extent, feature.getGeometry().getExtent());
-      });
-
-      // Add some padding
-      map.getView().fit(extent, {
-        padding: [40, 40, 40, 40],
-        maxZoom: 18
-      });
-    }
-
-    // Store map reference on window for debugging
-    window.confirmLayersMap = map;
   }
 
   function getSampleCoordinate(geoJson) {

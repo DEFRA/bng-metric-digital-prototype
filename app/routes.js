@@ -411,9 +411,9 @@ router.get('/on-site-baseline/confirm-layers', function(req, res) {
     },
     location: {
       // Mock data for prototype
-      lpaName: 'South Oxfordshire District Council',
-      nationalCharacterArea: '108: Upper Thames Clay Vales',
-      lnrsName: 'Oxfordshire LNRS (published)'
+      lpaName: '<LPA Name>',
+      nationalCharacterArea: '<National Character Area>',
+      lnrsName: '<LNRS Name>'
     },
     geometries: geometries,
     boundaryLayerName: siteBoundary ? siteBoundary.name : null,
