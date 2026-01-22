@@ -267,6 +267,14 @@
       if (interaction instanceof ol.interaction.DragPan) {
         this._dragPanInteraction = interaction;
       }
+      // Replace default MouseWheelZoom to allow zooming without map focus (hover is sufficient)
+      if (interaction instanceof ol.interaction.MouseWheelZoom) {
+        this._map.removeInteraction(interaction);
+        this._map.addInteraction(new ol.interaction.MouseWheelZoom({
+          onFocusOnly: false,
+          constrainResolution: true
+        }));
+      }
     });
 
     this._setupOverlayLayers();

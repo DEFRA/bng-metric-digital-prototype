@@ -124,13 +124,16 @@
 
   DefraMapClient.prototype._findFillPolygonAtPixel = function(pixel, silent) {
     const coordinate = this._map.getCoordinateFromPixel(pixel);
+    console.log('[FindFill] pixel:', pixel, '-> coord:', coordinate);
     if (!coordinate) return null;
 
     const features = this._snapIndexSource.getFeatures();
+    console.log('[FindFill] features in source:', features.length);
     let foundPolygon = null;
     let smallestArea = Infinity;
 
     const allowedLayers = this._osFeatures.fillPolygonLayers || [];
+    console.log('[FindFill] allowedLayers:', allowedLayers.length);
     if (!allowedLayers.length) {
       return null;
     }
@@ -246,6 +249,10 @@
   };
 
   DefraMapClient.prototype._updateFillPreviewLayer = function() {
+    // Generate unique call ID to track which invocation this is
+    const callId = Math.random().toString(36).substring(7);
+    console.log('[FillPreview] Update called, ID:', callId, 'selections:', this._fillSelected.length);
+    
     this._fillPreviewSource.clear();
     if (this._fillExistingBoundaryGeometry) {
       this._fillPreviewSource.addFeature(new ol.Feature({
@@ -255,11 +262,29 @@
       }));
     }
     for (const selected of this._fillSelected) {
-      this._fillPreviewSource.addFeature(new ol.Feature({
+      const feature = new ol.Feature({
         geometry: selected.geometry.clone(),
         layerType: selected.layerType
-      }));
+      });
+      this._fillPreviewSource.addFeature(feature);
+      console.log('[FillPreview] Added feature, callId:', callId);
     }
+    console.log('[FillPreview] Features in preview:', this._fillPreviewSource.getFeatures().length, 'callId:', callId);
+    
+    // Log geometry details if we have features
+    const previewFeatures = this._fillPreviewSource.getFeatures();
+    if (previewFeatures.length > 0) {
+      const geom = previewFeatures[0].getGeometry();
+      const viewExtent = this._map.getView().calculateExtent(this._map.getSize());
+      console.log('[FillPreview] Feature extent:', geom.getExtent());
+      console.log('[FillPreview] View extent:', viewExtent);
+    }
+    
+    // Force updates through multiple methods
+    this._fillPreviewSource.changed();
+    this._fillPreviewLayer.changed();
+    this._map.updateSize();
+    this._map.renderSync();
   };
 
   DefraMapClient.prototype._emitFillSelectionChanged = function() {
