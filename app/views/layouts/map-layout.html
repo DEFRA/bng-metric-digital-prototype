@@ -1,5 +1,13 @@
 {% extends "govuk-prototype-kit/layouts/govuk-branded.njk" %}
 {% from "govuk/components/back-link/macro.njk" import govukBackLink %}
+{% from "govuk/components/skip-link/macro.njk" import govukSkipLink %}
+
+{% block skipLink %}
+  {{ govukSkipLink({
+    text: "Skip to map",
+    href: "#map"
+  }) }}
+{% endblock %}
 
 {% block head %}
   {{ super() }}
@@ -95,6 +103,7 @@
   <script src="/public/javascripts/defra-map-lib/defra-map-client.fill.js"></script>
   <script src="/public/javascripts/defra-map-lib/defra-map-client.slice.js"></script>
   <script src="/public/javascripts/defra-map-lib/defra-map-client.controls.js"></script>
+  <script src="/public/javascripts/defra-map-lib/defra-map-client.keyboard.js"></script>
   {% block mapScript %}
   <!-- Child templates should override this block to include their specific map script -->
   {% endblock %}

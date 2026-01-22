@@ -334,8 +334,17 @@
       hamburgerBtn.classList.add('defra-map-controls__hamburger--active');
     };
 
-    const closeDrawer = () => {
+    const closeDrawer = (focusMap) => {
       drawerOpen = false;
+      
+      // Move focus away from drawer BEFORE setting aria-hidden to avoid accessibility warning
+      if (focusMap) {
+        target.focus({ preventScroll: true });
+      } else if (drawer.contains(document.activeElement)) {
+        // If focus is inside drawer, move it to hamburger button
+        hamburgerBtn.focus({ preventScroll: true });
+      }
+      
       drawer.classList.remove('defra-map-controls__drawer--open');
       drawer.setAttribute('aria-hidden', 'true');
       hamburgerBtn.setAttribute('aria-expanded', 'false');
@@ -541,28 +550,28 @@
           if (this._sliceActive) this.cancelSlice();
           if (this._fillActive) this.cancelFill();
           this.startDrawing();
-          closeDrawer();
+          closeDrawer(true); // Focus map for keyboard drawing
           showFloatingActions('draw');
           updateButtons();
         } else if (action === 'fill-boundary') {
           if (this._sliceActive) this.cancelSlice();
           if (this._isDrawing) this.cancelDrawing();
           this.startFillBoundary();
-          closeDrawer();
+          closeDrawer(true); // Focus map for keyboard interaction
           showFloatingActions('fill-boundary');
           updateButtons();
         } else if (action === 'fill-parcels') {
           if (this._sliceActive) this.cancelSlice();
           if (this._isDrawing) this.cancelDrawing();
           this.startFillParcels();
-          closeDrawer();
+          closeDrawer(true); // Focus map for keyboard interaction
           showFloatingActions('fill-parcels');
           updateButtons();
         } else if (action === 'slice') {
           if (this._fillActive) this.cancelFill();
           if (this._isDrawing) this.cancelDrawing();
           this.startSlice();
-          closeDrawer();
+          closeDrawer(true); // Focus map for keyboard interaction
           showFloatingActions('slice');
           updateButtons();
         } else if (action === 'remove') {
@@ -570,7 +579,7 @@
           if (this._fillActive) this.cancelFill();
           if (this._isDrawing) this.cancelDrawing();
           this.startRemove();
-          closeDrawer();
+          closeDrawer(true); // Focus map for keyboard interaction
           showFloatingActions('remove');
           updateButtons();
         }
