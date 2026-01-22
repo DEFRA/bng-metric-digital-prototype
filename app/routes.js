@@ -29,6 +29,20 @@ if (typeof globalThis.self === 'undefined') {
   globalThis.self = globalThis;
 }
 
+// Validation thresholds TBD
+const maxFileSizeMB = 100;
+const boundaryLayerName = 'Red Line Boundary';
+const habitatsLayerName = 'Habitats';
+const maxBoundaryFeatures = 10;
+const maxPolygonSize = 1000000000; // 1000 sq km
+
+const withinUKArcgisUrl = 'https://services1.arcgis.com/ESMARspQHYMw9BZ9/arcgis/rest/services/Countries_December_2024_Boundaries_UK_BFE/FeatureServer/0/query';
+const lpaQueryUrl = 'https://services1.arcgis.com/ESMARspQHYMw9BZ9/ArcGIS/rest/services/Local_Planning_Authorities_April_2022_UK_BFE_2022/FeatureServer/0/query';
+const ncaQueryUrl = 'https://services.arcgis.com/JJzESW51TqeY9uat/ArcGIS/rest/services/National_Character_Areas_England/FeatureServer/0/query';
+const lnrsQueryUrl = 'https://services.arcgis.com/JJzESW51TqeY9uat/ArcGIS/rest/services/Local_Nature_Recovery_Strategy_Areas_England/FeatureServer/0/query';
+
+
+
 // Lazy-load shpjs via dynamic import to ensure we get the ESM default export
 let shpPromise = null;
 async function getShp() {
@@ -328,7 +342,7 @@ router.get('/on-site-baseline/upload-single-file', function(req, res) {
 });
 
 // Upload Single File Page - POST (handles GeoPackage upload)
-router.post('/on-site-baseline/upload-single-file', upload.single('fileUpload'), function(req, res) {
+router.post('/on-site-baseline/upload-single-file', upload.single('fileUpload'), async function(req, res) {
   if (!req.file) {
     return res.redirect('/on-site-baseline/upload-single-file?error=Select a file to upload');
   }
@@ -336,6 +350,11 @@ router.post('/on-site-baseline/upload-single-file', upload.single('fileUpload'),
   const originalName = req.file.originalname.toLowerCase();
   if (!originalName.endsWith('.gpkg')) {
     return res.redirect('/on-site-baseline/upload-single-file?error=Upload a GeoPackage (.gpkg) file');
+  }
+
+  // Check that the file is not too large
+  if (req.file.size > maxFileSizeMB * 1024 * 1024) {
+    return res.redirect(`/on-site-baseline/upload-single-file?error=File is too large. Please upload a file smaller than ${maxFileSizeMB}MB`);    
   }
   
   try {
@@ -355,10 +374,66 @@ router.post('/on-site-baseline/upload-single-file', upload.single('fileUpload'),
         storageKey: `upload-${Date.now()}`
       }
     };
-    
+   
+
+    console.log('gpkgData.layers:', gpkgData.layers);
+    console.log('gpkgData.geometries:', gpkgData.geometries);
+
+    // Check if geometries are within the UK
+    //if (!gpkgData.geometries[boundaryLayerName].features.every(f => isWithinUK(f.geometry))) {
+    if (!isWithinUK(gpkgData.geometries[boundaryLayerName].features)) {
+      console.log("Geometries are not within England");
+      return res.redirect(`/on-site-baseline/upload-single-file?error=Geometries are not within England`);
+    }
+
+    // Check that there are not too many Red Line Boundary features
+    if (gpkgData.geometries[boundaryLayerName].features.length > maxBoundaryFeatures) {
+      console.log("Red Line Boundary has too many features");
+      return res.redirect(`/on-site-baseline/upload-single-file?error=Red Line Boundary has too many features. Please upload a file with no more than ${maxBoundaryFeatures} features`);
+    }
+
+   
+    // Check that geometries are not too large
+    // `f.geometry` is a GeoJSON geometry object and does not have an `area` property,
+    // so we calculate the area on the fly using `calculatePolygonArea`.
+    if (gpkgData.geometries[boundaryLayerName].features.some(f => {
+      const area = calculatePolygonArea(f.geometry)
+      return area > maxPolygonSize
+    })) {     
+      console.log("Geometries are too large");
+      return res.redirect(`/on-site-baseline/upload-single-file?error=Geometries are too large. Please upload a file with polygons smaller than ${maxPolygonSize/1000000} square kilometers`);
+    }
+
+    // Check that geometries do not self-intersect
+    if (gpkgData.geometries[boundaryLayerName].features.some(f => {
+      // Check for self-intersection
+      // f.geometry is a GeoJSON geometry object
+      if (f.geometry.type === 'Polygon' || f.geometry.type === 'MultiPolygon') {
+        if (isPolygonSelfIntersecting(f.geometry)) {
+          return true; // Found a self-intersecting geometry
+        }
+      }
+      return false; // Not self-intersecting
+    })) {
+      console.log("Geometries self-intersect");
+      return res.redirect(`/on-site-baseline/upload-single-file?error=Geometries self-intersect. Please upload a file with non-self-intersecting polygons`);
+    }   
+
+    // Get the LPA name
+    const lpaName = await getLPA(gpkgData.geometries[boundaryLayerName].features);
+    console.log("LPA name:", lpaName);
+
+    const ncaName = await getNCA(gpkgData.geometries[boundaryLayerName].features);
+    console.log("NCA name:", ncaName);
+
+    const lnrsName = await getLNRS(gpkgData.geometries[boundaryLayerName].features);
+    console.log("LNRS name:", lnrsName);
+
     req.session.data['geopackageLayers'] = gpkgData.layers;
     req.session.data['geopackageGeometries'] = gpkgData.geometries;
-    
+    req.session.data['lpaName'] = lpaName;
+    req.session.data['ncaName'] = ncaName;
+    req.session.data['lnrsName'] = lnrsName;
     // Redirect to confirm page
     res.redirect('/on-site-baseline/confirm-layers');
   } catch (err) {
@@ -410,10 +485,9 @@ router.get('/on-site-baseline/confirm-layers', function(req, res) {
       isFull: true // Simplified for prototype
     },
     location: {
-      // Mock data for prototype
-      lpaName: '<LPA Name>',
-      nationalCharacterArea: '<National Character Area>',
-      lnrsName: '<LNRS Name>'
+      lpaName: req.session.data['lpaName'] || '<LPA Name>',
+      nationalCharacterArea: req.session.data['ncaName'] || '<National Character Area>',
+      lnrsName: req.session.data['lnrsName'] || '<LNRS Name>'
     },
     geometries: geometries,
     boundaryLayerName: siteBoundary ? siteBoundary.name : null,
@@ -623,3 +697,282 @@ function calculateRingArea(ring) {
   
   return Math.abs(area / 2);
 }
+
+
+async function queryArcgis(url, params){
+  const response = await fetch(`${url}?${new URLSearchParams(params).toString()}`);
+  const data = await response.json();
+  return data;
+}
+
+/**
+ * Check if the geometry is within the UK
+ * @param {Object} features - The features to check. NOTE: Currently just checks the first feature.
+ * @returns {boolean} - True if the geometry is within the UK, false otherwise
+ */ 
+async function isWithinUK(features) {
+
+  const esrijson_str = JSON.stringify(geojsonToEsri(features[0].geometry));
+    
+  const queryParams = {
+    layerDefs: '{"0":"CTRY24NM=\'England\'"}',
+    geometry: esrijson_str,
+    geometryType: 'esriGeometryPolygon',
+    inSR: '27700',
+    spatialRel: 'esriSpatialRelIntersects',
+    resultType: 'standard',
+    featureEncoding: 'esriDefault',
+    applyVCSProjection: 'false',
+    returnCountOnly: 'true',
+    f: 'json'
+  };
+  
+  // const response = await fetch(`${withinUKArcgisUrl}?${new URLSearchParams(withinUKArcgisParams).toString()}`);
+  // const data = await response.json();
+  const data = await queryArcgis(withinUKArcgisUrl, queryParams);
+  
+  if (data.count && data.count  > 0) {
+      return true;
+  } else {
+    return false;
+  }
+}
+
+async function getLPA(features) {
+
+  const esrijson_str = JSON.stringify(geojsonToEsri(features[0].geometry));
+    
+  const queryParams = {
+    geometry: esrijson_str,
+    geometryType: 'esriGeometryPolygon',
+    inSR: '27700',
+    spatialRel: 'esriSpatialRelIntersects',
+    resultType: 'standard',
+    featureEncoding: 'esriDefault',
+    applyVCSProjection: 'false',
+    returnGeometry: 'false',
+    outFields: 'LPA22NM,LPA22CD',
+    f: 'json'
+  };
+  
+  const data = await queryArcgis(lpaQueryUrl, queryParams);
+  
+  if (data.features) {
+      return data.features[0].attributes.LPA22NM;
+  } else {
+    return "No LPA found";
+  }
+}
+
+async function getNCA(features) {
+
+  const esrijson_str = JSON.stringify(geojsonToEsri(features[0].geometry));
+
+  const queryParams = {
+    geometry: esrijson_str,
+    geometryType: 'esriGeometryPolygon',
+    inSR: '27700',
+    spatialRel: 'esriSpatialRelIntersects',
+    resultType: 'standard',
+    featureEncoding: 'esriDefault',
+    applyVCSProjection: 'false',
+    returnGeometry: 'false',
+    outFields: 'JCACODE, JCANAME, NCA_Name, NAID, NANAME',
+    f: 'json'
+  };
+
+  const data = await queryArcgis(ncaQueryUrl, queryParams);
+
+  if (data.features) {
+    return data.features[0].attributes.NCA_Name;
+  } else {
+    return "No NCA found";
+  }
+}
+
+async function getLNRS(features) {
+
+  const esrijson_str = JSON.stringify(geojsonToEsri(features[0].geometry));
+
+  const queryParams = {
+    geometry: esrijson_str,
+    geometryType: 'esriGeometryPolygon',
+    inSR: '27700',
+    spatialRel: 'esriSpatialRelIntersects',
+    resultType: 'standard',
+    featureEncoding: 'esriDefault',
+    applyVCSProjection: 'false',
+    returnGeometry: 'false',
+    outFields: 'Name, Resp_Auth',
+    f: 'json'
+  };
+
+  const data = await queryArcgis(lnrsQueryUrl, queryParams);
+
+  if (data.features) {
+    return data.features[0].attributes.Name;
+  } else {
+    return "No LNR found";
+  }
+}
+
+
+/**
+ * Check if two line segments intersect (excluding endpoints)
+ * @param {Array} a1 - First point of segment A [x, y]
+ * @param {Array} a2 - Second point of segment A [x, y]
+ * @param {Array} b1 - First point of segment B [x, y]
+ * @param {Array} b2 - Second point of segment B [x, y]
+ * @returns {boolean} True if segments intersect (not just touch at endpoints)
+ */
+function doLineSegmentsIntersect(a1, a2, b1, b2) {
+  // Helper function to calculate orientation
+  const orientation = (p, q, r) => {
+    const val = (q[1] - p[1]) * (r[0] - q[0]) - (q[0] - p[0]) * (r[1] - q[1]);
+    if (val === 0) return 0; // Collinear
+    return val > 0 ? 1 : 2; // Clockwise or Counterclockwise
+  };
+
+  const onSegment = (p, q, r) => {
+    return q[0] <= Math.max(p[0], r[0]) && q[0] >= Math.min(p[0], r[0]) &&
+            q[1] <= Math.max(p[1], r[1]) && q[1] >= Math.min(p[1], r[1]);
+  };
+
+  // Find orientations
+  const o1 = orientation(a1, a2, b1);
+  const o2 = orientation(a1, a2, b2);
+  const o3 = orientation(b1, b2, a1);
+  const o4 = orientation(b1, b2, a2);
+
+  // General case: segments intersect if orientations differ
+  if (o1 !== o2 && o3 !== o4) {
+    return true;
+  }
+
+  // Special cases: collinear segments
+  if (o1 === 0 && onSegment(a1, b1, a2)) return true;
+  if (o2 === 0 && onSegment(a1, b2, a2)) return true;
+  if (o3 === 0 && onSegment(b1, a1, b2)) return true;
+  if (o4 === 0 && onSegment(b1, a2, b2)) return true;
+
+  return false;
+}
+
+/**
+ * Check if a polygon is self-intersecting
+ * @param {Object} geometry - GeoJSON Polygon or MultiPolygon geometry
+ * @returns {boolean} True if polygon is self-intersecting
+ */
+function isPolygonSelfIntersecting(geometry) {
+  // Handle GeoJSON Polygon
+  if (geometry.type === 'Polygon') {
+    const coordinates = geometry.coordinates[0]; // Get exterior ring
+    return checkPolygonRingSelfIntersecting(coordinates);
+  }
+  
+  // Handle GeoJSON MultiPolygon
+  if (geometry.type === 'MultiPolygon') {
+    for (const polygon of geometry.coordinates) {
+      if (checkPolygonRingSelfIntersecting(polygon[0])) {
+        return true;
+      }
+    }
+    return false;
+  }
+  
+  return false;
+}
+  
+/**
+ * Check if a polygon ring (exterior or interior) is self-intersecting
+ * @param {Array} coordinates - Array of [lng, lat] coordinate pairs
+ * @returns {boolean} True if ring is self-intersecting
+ */
+function checkPolygonRingSelfIntersecting(coordinates) {
+  const numPoints = coordinates.length;
+
+  // Need at least 4 points (including closing point) to form a polygon
+  if (numPoints < 4) {
+    return false;
+  }
+
+  // Check all pairs of non-adjacent edges
+  for (let i = 0; i < numPoints - 1; i++) {
+    const a1 = coordinates[i];
+    const a2 = coordinates[i + 1];
+
+    // Skip adjacent and next-to-adjacent edges (they share vertices)
+    // Also skip the edge that would close the polygon with the starting edge
+    for (let j = i + 2; j < numPoints - 1; j++) {
+      // Skip the last edge if it's adjacent to the first edge
+      if (i === 0 && j === numPoints - 2) {
+        continue;
+      }
+
+      const b1 = coordinates[j];
+      const b2 = coordinates[j + 1];
+
+      if (doLineSegmentsIntersect(a1, a2, b1, b2)) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+/**
+ * Convert a GeoJSON geometry object to an ESRI geometry object
+ * @param {Object} geojson - The GeoJSON geometry object
+ * @returns {Object} The ESRI geometry object
+ */
+function geojsonToEsri(geojson) {
+  if (!geojson || !geojson.type) {
+    throw new Error("Input must be a valid GeoJSON geometry object");
+  }
+
+  switch (geojson.type) {
+    case "Point":
+      return {
+        x: geojson.coordinates[0],
+        y: geojson.coordinates[1]
+      };
+
+    case "MultiPoint":
+      return {
+        points: geojson.coordinates.map(c => [c[0], c[1]])
+      };
+
+    case "LineString":
+      return {
+        paths: [geojson.coordinates.map(c => [c[0], c[1]])]
+      };
+
+    case "MultiLineString":
+      return {
+        paths: geojson.coordinates.map(path =>
+          path.map(c => [c[0], c[1]])
+        )
+      };
+
+    case "Polygon":
+      return {
+        rings: geojson.coordinates.map(ring =>
+          ring.map(c => [c[0], c[1]])
+        )
+      };
+
+    case "MultiPolygon":
+      return {
+        rings: geojson.coordinates.flatMap(polygon =>
+          polygon.map(ring =>
+            ring.map(c => [c[0], c[1]])
+          )
+        )
+      };
+
+    default:
+      throw new Error(`Unsupported GeoJSON geometry type: ${geojson.type}`);
+  }
+}
+
