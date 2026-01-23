@@ -506,14 +506,81 @@ router.post('/on-site-baseline/confirm-layers', function(req, res) {
   res.redirect('/on-site-baseline/habitats-summary');
 });
 
-// Habitats Summary placeholder page
+// Habitats Summary page
 router.get('/on-site-baseline/habitats-summary', function(req, res) {
   const layers = req.session.data['geopackageLayers'] || [];
-  const uploadedFiles = req.session.data['uploadedFiles'] || {};
+  const geometries = req.session.data['geopackageGeometries'] || {};
+  const lpaName = req.session.data['lpaName'] || 'Not specified';
+  const ncaName = req.session.data['ncaName'] || 'Not specified';
+  
+  // Find boundary and parcels layers
+  const boundaryLayer = layers.find(l => l.name.toLowerCase().includes('boundary') || l.name.toLowerCase().includes('site'));
+  const parcelsLayer = layers.find(l => l.name.toLowerCase().includes('parcel') || l.name.toLowerCase().includes('habitat'));
+  
+  // Calculate total site area
+  let totalAreaHectares = 0;
+  if (boundaryLayer) {
+    totalAreaHectares = (boundaryLayer.totalAreaSqm / 10000).toFixed(2);
+  }
+  
+  // Build parcels data
+  const parcelCount = parcelsLayer ? parcelsLayer.featureCount : 0;
+  const habitatParcels = [];
+  
+  if (parcelsLayer && parcelsLayer.featureCount > 0) {
+    for (let i = 1; i <= parcelsLayer.featureCount; i++) {
+      habitatParcels.push({
+        parcelId: 'HP-' + i.toString().padStart(3, '0'),
+        areaHectares: (Math.random() * 5 + 0.5).toFixed(2),
+        habitatLabel: null,
+        status: 'Not started',
+        actionUrl: '/on-site-baseline/parcel/' + i + '/habitat-type'
+      });
+    }
+  }
+  
+  // Build parcel count message
+  let parcelCountMessage = 'No habitat parcels found.';
+  if (parcelCount === 1) {
+    parcelCountMessage = 'You have 1 habitat parcel to classify.';
+  } else if (parcelCount > 1) {
+    parcelCountMessage = 'You have ' + parcelCount + ' habitat parcels to classify.';
+  }
+  
+  // Prepare map data
+  const mapData = {
+    siteBoundary: boundaryLayer ? geometries[boundaryLayer.name] : null,
+    parcels: parcelsLayer ? geometries[parcelsLayer.name] : null
+  };
+  
+  // Build table rows for GovUK table component
+  const tableRows = habitatParcels.map(function(parcel) {
+    return [
+      { text: parcel.parcelId },
+      { text: parcel.areaHectares },
+      { text: parcel.habitatLabel || 'Not specified' },
+      { text: parcel.status },
+      { html: '<a class="govuk-link" href="' + parcel.actionUrl + '">Add details<span class="govuk-visually-hidden"> for ' + parcel.parcelId + '</span></a>' }
+    ];
+  });
   
   res.render('on-site-baseline/habitats-summary', {
-    layers: layers,
-    uploadedFiles: uploadedFiles
+    baselineSummary: {
+      parcelCountMessage: parcelCountMessage
+    },
+    siteSummary: {
+      totalAreaHectares: totalAreaHectares + ' hectares',
+      localPlanningAuthority: lpaName,
+      nationalCharacterArea: ncaName
+    },
+    mapData: mapData,
+    habitatParcels: habitatParcels,
+    tableRows: tableRows,
+    actions: {
+      startFirstParcel: {
+        url: habitatParcels.length > 0 ? habitatParcels[0].actionUrl : '#'
+      }
+    }
   });
 });
 
