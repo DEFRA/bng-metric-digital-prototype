@@ -3,6 +3,7 @@
 This folder contains a reusable, BNG-agnostic mapping client implemented as a **class-based API** (no JS modules/bundlers required).
 
 ### What you get
+
 - **OpenLayers map bootstrapping** for OS NGD vector tiles in **EPSG:27700**
 - **Snapping** to OS feature geometry (via backend-proxied OGC API Features)
 - **Draw/edit** a red-line boundary polygon (single polygon mode)
@@ -13,6 +14,7 @@ This folder contains a reusable, BNG-agnostic mapping client implemented as a **
 - **Hooks/events** for client integration (DOM/UI is owned by the host app)
 
 ### How to include
+
 Include the scripts in your page **in order** (example paths for Prototype Kit):
 
 ```html
@@ -33,7 +35,8 @@ const client = new window.DefraMapClient({
   tiles: {
     collectionId: 'ngd-base',
     crs: '27700',
-    tileMatrixSetUrl: 'https://api.os.uk/maps/vector/ngd/ota/v1/tilematrixsets/27700',
+    tileMatrixSetUrl:
+      'https://api.os.uk/maps/vector/ngd/ota/v1/tilematrixsets/27700',
     styleUrl: '/api/os/tiles/style/27700',
     tilesUrlTemplate: '/api/os/tiles/ngd-base/27700/{z}/{y}/{x}'
   },
@@ -41,24 +44,32 @@ const client = new window.DefraMapClient({
     baseUrl: '/api/os/features',
     minZoomForSnap: 14,
     fetchThrottleMs: 300,
-    layers: [ /* OS collection ids to fetch for snapping */ ],
-    fillPolygonLayers: [ /* OS polygon collection ids selectable in fill mode */ ]
+    layers: [
+      /* OS collection ids to fetch for snapping */
+    ],
+    fillPolygonLayers: [
+      /* OS polygon collection ids selectable in fill mode */
+    ]
   },
   endpoints: {
     saveBoundaryUrl: '/api/save-red-line-boundary',
     saveParcelsUrl: '/api/save-habitat-parcels'
   }
-});
+})
 
-client.on('map:ready', () => console.log('map ready'));
-client.on('boundary:changed', (e) => console.log('boundary area sqm', e.areaSqm));
-client.on('parcel:selected', (e) => console.log('parcel selected', e.index));
+client.on('map:ready', () => console.log('map ready'))
+client.on('boundary:changed', (e) =>
+  console.log('boundary area sqm', e.areaSqm)
+)
+client.on('parcel:selected', (e) => console.log('parcel selected', e.index))
 
-await client.init();
+await client.init()
 ```
 
 ### Events (hooks)
+
 The library emits events via `client.on(eventName, handler)`. Common events:
+
 - `map:ready`
 - `view:changed` (zoom + snap availability)
 - `osFeatures:loading`, `osFeatures:loaded`, `osFeatures:error`
@@ -71,12 +82,13 @@ The library emits events via `client.on(eventName, handler)`. Common events:
 - `validation:error`
 
 ### Area getters (square meters)
+
 - `client.boundaryAreaSqm` (read-only)
 - `client.parcelsTotalAreaSqm` (read-only)
 - `client.getParcelAreaSqm(index)`
 
 ### Notes / constraints
+
 - This is designed for GOV.UK Prototype Kit usage and is not production-hardened.
 - The host app is responsible for DOM/UI wiring (buttons, status banners, etc).
 - Backend endpoints are provided via `options.tiles`, `options.osFeatures`, and `options.endpoints`.
-

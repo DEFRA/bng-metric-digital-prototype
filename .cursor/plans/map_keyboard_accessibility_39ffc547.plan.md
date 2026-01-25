@@ -15,7 +15,7 @@ todos:
     content: Add SCSS styles for map focus state and center target crosshair overlay
     status: pending
   - id: todo-1769075793846-0apvrugkn
-    content: "Configure skip link in map-layout.html to target #map container"
+    content: 'Configure skip link in map-layout.html to target #map container'
     status: pending
   - id: script-include
     content: Add script tag for keyboard module in map-layout.html
@@ -81,6 +81,7 @@ Keyboard interaction module implementing:
 
 - Add skip link component targeting the map container
 - Override the `skipLink` block to include `govukSkipLink` with `href: "#map"`
+
 ```nunjucks
 {% block skipLink %}
   {{ govukSkipLink({
@@ -90,7 +91,6 @@ Keyboard interaction module implementing:
 {% endblock %}
 ```
 
-
 ### 3. Modify: `app/assets/sass/application.scss`
 
 Add styles for:
@@ -99,6 +99,7 @@ Add styles for:
 - Center target crosshair overlay
 - Keyboard mode indicator
 - Snap point indicator positioning
+
 ```scss
 // Keyboard target crosshair
 .defra-map-keyboard-target {
@@ -110,7 +111,6 @@ Add styles for:
   z-index: 800;
 }
 ```
-
 
 ### 4. Modify: `app/views/layouts/map-layout.html`
 
@@ -140,15 +140,15 @@ Reuse existing `_hoverSource` and `_hoverFeature` for snap preview:
 ### Keyboard Event Handling
 
 ```javascript
-DefraMapClient.prototype._setupKeyboardInteraction = function() {
-  const target = this._map.getTargetElement();
-  target.setAttribute('tabindex', '0');
-  target.setAttribute('role', 'application');
-  target.setAttribute('aria-label', 'Interactive map');
-  
-  target.addEventListener('keydown', (e) => this._handleMapKeydown(e));
-  document.addEventListener('keydown', (e) => this._handleGlobalKeydown(e));
-};
+DefraMapClient.prototype._setupKeyboardInteraction = function () {
+  const target = this._map.getTargetElement()
+  target.setAttribute('tabindex', '0')
+  target.setAttribute('role', 'application')
+  target.setAttribute('aria-label', 'Interactive map')
+
+  target.addEventListener('keydown', (e) => this._handleMapKeydown(e))
+  document.addEventListener('keydown', (e) => this._handleGlobalKeydown(e))
+}
 ```
 
 ### Drawer Menu Keyboard Navigation

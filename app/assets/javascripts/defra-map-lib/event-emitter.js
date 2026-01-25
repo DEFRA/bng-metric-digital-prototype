@@ -3,52 +3,57 @@
 // Not a module (loaded via <script> tags).
 //
 
-(function(window) {
-  'use strict';
+;(function (window) {
+  'use strict'
 
   function DefraEventEmitter() {
-    this._listeners = {};
+    this._listeners = {}
   }
 
-  DefraEventEmitter.prototype.on = function(eventName, handler) {
+  DefraEventEmitter.prototype.on = function (eventName, handler) {
     if (!eventName || typeof handler !== 'function') {
-      return;
+      return
     }
 
     if (!this._listeners[eventName]) {
-      this._listeners[eventName] = [];
+      this._listeners[eventName] = []
     }
 
-    this._listeners[eventName].push(handler);
-  };
+    this._listeners[eventName].push(handler)
+  }
 
-  DefraEventEmitter.prototype.off = function(eventName, handler) {
+  DefraEventEmitter.prototype.off = function (eventName, handler) {
     if (!eventName || !this._listeners[eventName]) {
-      return;
+      return
     }
 
     if (!handler) {
-      delete this._listeners[eventName];
-      return;
+      delete this._listeners[eventName]
+      return
     }
 
-    this._listeners[eventName] = this._listeners[eventName].filter(h => h !== handler);
-  };
+    this._listeners[eventName] = this._listeners[eventName].filter(
+      (h) => h !== handler
+    )
+  }
 
-  DefraEventEmitter.prototype.emit = function(eventName, payload) {
-    const handlers = this._listeners[eventName] || [];
-    handlers.forEach(handler => {
+  DefraEventEmitter.prototype.emit = function (eventName, payload) {
+    const handlers = this._listeners[eventName] || []
+    handlers.forEach((handler) => {
       try {
-        handler(payload);
+        handler(payload)
       } catch (e) {
         // Do not break other handlers.
         // eslint-disable-next-line no-console
-        console.error('DefraEventEmitter handler error for event:', eventName, e);
+        console.error(
+          'DefraEventEmitter handler error for event:',
+          eventName,
+          e
+        )
       }
-    });
-  };
+    })
+  }
 
-  window.DefraMapLib = window.DefraMapLib || {};
-  window.DefraMapLib.DefraEventEmitter = DefraEventEmitter;
-})(window);
-
+  window.DefraMapLib = window.DefraMapLib || {}
+  window.DefraMapLib.DefraEventEmitter = DefraEventEmitter
+})(window)

@@ -30,9 +30,11 @@ No test framework is configured (expected for prototype phase).
 ## Architecture
 
 ### Server Routes (`app/routes.js`)
+
 All routes in single file using GOV.UK Prototype Kit router. Session state via `req.session.data[...]`.
 
 **API Route Groups:**
+
 - `/api/os/*` - OS API proxy (tiles, styles, features)
 - `/api/save-red-line-boundary`, `/api/red-line-boundary` - Boundary management
 - `/api/save-habitat-parcels`, `/api/habitat-parcels` - Parcel management
@@ -40,16 +42,20 @@ All routes in single file using GOV.UK Prototype Kit router. Session state via `
 - `/on-site-baseline/*` - Habitat baseline workflow
 
 ### Views (`app/views/`)
+
 - Extend `layouts/main.html` (standard) or `layouts/map-layout.html` (3-column map pages)
 - Use GOV.UK Design System macros: `govukInput`, `govukSelect`, `govukButton`, etc.
 
 ### Mapping Client (`app/assets/javascripts/defra-map-lib/`)
+
 Reusable class-based library with event-emitter pattern:
+
 - Core: `defra-map-client.js`
 - Modules: controls, fill, slice, snapping, keyboard, geometry-validation
 - Page integrations: `map-*.js` scripts
 
 ### Coordinate Reference System
+
 Primary: **EPSG:27700 (British National Grid)** - chosen to reduce misalignment with OS feature data. Fallback: EPSG:3857.
 
 ## Code Style

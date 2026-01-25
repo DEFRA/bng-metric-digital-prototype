@@ -102,32 +102,32 @@ Data contract
 Any read data can be stubbed into a corresponding GET route
 Data required (read)
 {
-  "baselineSummary": {
-    "parcelCountMessage": "string"
-  },
-  "siteSummary": {
-    "totalAreaHectares": "string",
-    "localPlanningAuthority": "string",
-    "nationalCharacterArea": "string"
-  },
-  "mapData": {
-    "siteBoundary": "GeoJSON",
-    "parcels": "GeoJSON"
-  },
-  "habitatParcels": [
-    {
-      "parcelId": "string",
-      "areaHectares": "string",
-      "habitatLabel": "string | null",
-      "status": "string",
-      "actionUrl": "string"
-    }
-  ],
-  "actions": {
-    "startFirstParcel": {
-      "url": "string"
-    }
-  }
+"baselineSummary": {
+"parcelCountMessage": "string"
+},
+"siteSummary": {
+"totalAreaHectares": "string",
+"localPlanningAuthority": "string",
+"nationalCharacterArea": "string"
+},
+"mapData": {
+"siteBoundary": "GeoJSON",
+"parcels": "GeoJSON"
+},
+"habitatParcels": [
+{
+"parcelId": "string",
+"areaHectares": "string",
+"habitatLabel": "string | null",
+"status": "string",
+"actionUrl": "string"
+}
+],
+"actions": {
+"startFirstParcel": {
+"url": "string"
+}
+}
 }
 
 Data written
