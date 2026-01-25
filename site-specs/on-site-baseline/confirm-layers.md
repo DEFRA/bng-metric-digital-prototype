@@ -1,12 +1,15 @@
 # Page: Confirm site boundary and habitat parcels
 
 ## Page ID
+
 parcels-confirm
 
 ## Route
+
 /on-site-baseline/confirm-layers
 
 ## Purpose
+
 Allow the user to review the site boundary and habitat parcel layers detected in the uploaded GIS file, confirm coverage, and review automatically derived location information before continuing.
 
 ---
@@ -14,6 +17,7 @@ Allow the user to review the site boundary and habitat parcel layers detected in
 ## Page content
 
 ### Notification banner
+
 - **Component:** GovUK Notification Banner (success)
 - **Title:** Success
 - **Heading:** `{{ uploadSummary.layerCountMessage }}`
@@ -21,11 +25,13 @@ Allow the user to review the site boundary and habitat parcel layers detected in
 ---
 
 ### Heading
+
 - **Component:** GovUK Heading (large)
 - **Text:** Check your site boundary and habitat parcels
 
 ### Body text
-- **Component:** GovUK Body  
+
+- **Component:** GovUK Body
 - **Text:**  
   We found the following layers in your file.
 
@@ -37,6 +43,7 @@ Allow the user to review the site boundary and habitat parcel layers detected in
 - **Data source:** `mapPreview`
 
 ### Legend
+
 - Site boundary → `mapPreview.legend.boundary`
 - Habitat parcels → `mapPreview.legend.parcels`
 
@@ -45,9 +52,11 @@ Allow the user to review the site boundary and habitat parcel layers detected in
 ## Layers identified
 
 ### Summary list
+
 - **Component:** GovUK Summary List
 
 #### Row: Site boundary
+
 - **Value:**
   - Polygon count: `layers.siteBoundary.polygonCount`
   - Area (hectares): `layers.siteBoundary.areaHa`
@@ -55,6 +64,7 @@ Allow the user to review the site boundary and habitat parcel layers detected in
 - **Action:** Change layer
 
 #### Row: Habitat parcels
+
 - **Value:**
   - Polygon count: `layers.habitatParcels.polygonCount`
   - Area (hectares): `layers.habitatParcels.areaHa`
@@ -75,10 +85,12 @@ Allow the user to review the site boundary and habitat parcel layers detected in
 ## Location information
 
 ### Section heading
+
 - **Component:** GovUK Heading (medium)
 - **Text:** Location information
 
 ### Auto-looked-up values
+
 - **Component:** GovUK Summary List (no border)
 - **Label:** Looked up automatically
 
@@ -91,6 +103,7 @@ Allow the user to review the site boundary and habitat parcel layers detected in
 ## Actions
 
 ### Primary action
+
 - **Component:** GovUK Button
 - **Text:** Continue
 - **Action:** Proceed to next step
@@ -135,3 +148,4 @@ Expected data available to the view:
     "lnrsName": "Oxfordshire LNRS (published)"
   }
 }
+```

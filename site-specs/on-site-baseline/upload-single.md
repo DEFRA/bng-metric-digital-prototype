@@ -1,12 +1,15 @@
 # Page: Upload habitat data (single file)
 
 ## Page ID
+
 parcels-upload
 
 ## Route
+
 /on-site-baseline/upload-single-file
 
 ## Purpose
+
 Allow the user to upload a single GIS file that contains both the site boundary and habitat parcel geometries, which will then be inspected to identify layers and derive location information.
 
 ---
@@ -14,14 +17,17 @@ Allow the user to upload a single GIS file that contains both the site boundary 
 ## Page content
 
 ### Caption
+
 - **Component:** GovUK Caption (large)
 - **Text:** On-site baseline
 
 ### Heading
+
 - **Component:** GovUK Heading (large)
 - **Text:** Upload your habitat data
 
 ### Body text
+
 - **Component:** GovUK Body  
   **Text:**  
   Upload a GIS file containing your site boundary and habitat parcels.
@@ -35,12 +41,14 @@ Allow the user to upload a single GIS file that contains both the site boundary 
 ## Supporting information
 
 ### Details (expandable help)
+
 - **Component:** GovUK Details
 
 **Summary text:**  
 What layers should my file contain?
 
 **Details content:**
+
 - **GovUK Body:** Your file should include:
 - **GovUK Bulleted list:**
   - A polygon for your site boundary (red line boundary)
@@ -53,6 +61,7 @@ What layers should my file contain?
 ## Form
 
 ### File upload
+
 - **Component:** GovUK File Upload
 - **Label (medium):** Upload a file
 - **Field name:** fileUpload
@@ -65,6 +74,7 @@ What layers should my file contain?
 ## Actions
 
 ### Primary action
+
 - **Component:** GovUK Button
 - **Text:** Upload file
 - **Action:** Submit form
@@ -86,3 +96,4 @@ On submit, store:
     }
   }
 }
+```

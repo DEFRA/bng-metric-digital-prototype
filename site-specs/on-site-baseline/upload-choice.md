@@ -1,12 +1,15 @@
 # Page: Choose how to add habitat data
 
 ## Page ID
+
 upload-choice
 
 ## Route
+
 /on-site-baseline/start
 
 ## Purpose
+
 Allow the user to choose how they will provide habitat and boundary data so the correct journey branch can be followed.
 
 ---
@@ -14,14 +17,17 @@ Allow the user to choose how they will provide habitat and boundary data so the 
 ## Page content
 
 ### Caption
+
 - **Component:** GovUK Caption (large)
 - **Text:** On-site baseline
 
 ### Heading
+
 - **Component:** GovUK Heading (large)
 - **Text:** How do you want to add your habitat data?
 
 ### Body text
+
 - **Component:** GovUK Body
 - **Text:**  
   You need to tell us about the site boundary and the habitat parcels within it.
@@ -31,10 +37,12 @@ Allow the user to choose how they will provide habitat and boundary data so the 
 ## Form
 
 ### Question
+
 - **Component:** GovUK Fieldset (legend size: medium)
 - **Legend text:** What GIS files do you have?
 
 ### Input
+
 - **Component:** GovUK Radios (large)
 - **Field name:** uploadChoice
 - **Required:** true
@@ -61,6 +69,7 @@ Allow the user to choose how they will provide habitat and boundary data so the 
 ## Actions
 
 ### Primary action
+
 - **Component:** GovUK Button
 - **Text:** Continue
 - **Action:** Submit form
@@ -75,3 +84,4 @@ On submit, store:
 {
   "uploadChoice": "single-file | separate-files | no-files"
 }
+```

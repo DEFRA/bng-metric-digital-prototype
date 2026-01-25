@@ -1,15 +1,18 @@
 # Project Context
 
 ## Purpose
+
 This repository is a **prototype** for a Biodiversity Net Gain (BNG) metric user journey using the **GOV.UK Prototype Kit** and **GOV.UK Design System**.
 
 The prototype focuses on a mapping-led flow that lets users:
+
 - **Define a site “red line boundary”** on a map (draw or “fill” from OS features), then save it to session.
 - **Create on-site habitat parcels** within that boundary, attribute baseline habitat data per parcel, and save to session.
 
 This is intended for **rapid iteration and user testing**, not production use.
 
 ## Tech Stack
+
 - **Runtime**: Node.js (README specifies `>= v22`), npm (`>= v11`).
 - **App framework**: GOV.UK Prototype Kit `13.18.1` (Express-based), using session-backed `req.session.data`.
 - **Templating/UI**: Nunjucks templates + GOV.UK Frontend `5.13.0` (Design System macros + GOV.UK classes).
@@ -22,6 +25,7 @@ This is intended for **rapid iteration and user testing**, not production use.
 ## Project Conventions
 
 ### Code Style
+
 - **Templates**:
   - Templates live in `app/views/`.
   - Pages **extend a layout** (for example `app/views/layouts/main.html` or `app/views/layouts/map-layout.html`).
@@ -39,6 +43,7 @@ This is intended for **rapid iteration and user testing**, not production use.
   - Use Prettier via `npm run format` / `npm run format:check`.
 
 ### Architecture Patterns
+
 - **Prototype Kit structure**:
   - Nunjucks views render server-side; user “journey state” is typically held in session.
   - API-like endpoints are implemented as Express routes (still within the Prototype Kit) and used by client-side JS.
@@ -53,23 +58,27 @@ This is intended for **rapid iteration and user testing**, not production use.
   - Ordnance Survey API calls are proxied via server endpoints under `/api/os/...` to keep API keys off the client.
 
 ### Testing Strategy
+
 - **Current state**: No dedicated automated test suite is configured in this repository.
 - **Expected approach (prototype)**:
   - Manual “happy path” smoke tests through the user journey in a browser.
   - Use `npm run format:check` (Prettier) as a lightweight consistency gate.
 
 ### Git Workflow
+
 - **Not explicitly defined in-repo**. Recommended defaults for this prototype:
   - Small PRs on short-lived feature branches.
   - Keep commits focused and descriptive (no strict convention enforced here).
 
 ## Domain Context
+
 - **BNG metric**: Biodiversity Net Gain assessment requires defining a site boundary and classifying habitat parcels for baseline calculations.
 - **Red line boundary**: The site boundary used as the outer constraint for habitat parcels (parcels must be within boundary; parcels must not overlap).
 - **Habitat attribution**: Parcels are assigned habitat metadata (broad habitat type, habitat type, condition, strategic significance, irreplaceable habitat flag, user comments).
 - **Irreplaceable habitats**: Flagged as excluded from standard BNG calculations and require bespoke compensation (prototype surfaces a warning).
 
 ## Important Constraints
+
 - **Prototype-only**: The README explicitly notes this is **not production-ready** and not intended to be resilient/secure/performant like a production service.
 - **Secrets and environment variables**:
   - Do not commit `.env`; secrets are provided via CDP Portal “Secrets” in deployed environments.
@@ -77,6 +86,7 @@ This is intended for **rapid iteration and user testing**, not production use.
 - **No direct client exposure of API keys**: External map/API requests should go via server proxy routes.
 
 ## External Dependencies
+
 - **Ordnance Survey APIs**:
   - NGD vector tiles + styles and OGC API Features (proxied via `/api/os/...` routes).
 - **Defra CDP**:

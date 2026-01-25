@@ -1,14 +1,17 @@
 <!-- OPENSPEC:START -->
+
 # OpenSpec Instructions
 
 These instructions are for AI assistants working in this project.
 
 Always open `@/openspec/AGENTS.md` when the request:
+
 - Mentions planning or proposals (words like proposal, spec, change, plan)
 - Introduces new capabilities, breaking changes, architecture shifts, or big performance/security work
 - Sounds ambiguous and you need the authoritative spec before coding
 
 Use `@/openspec/AGENTS.md` to learn:
+
 - How to create and apply change proposals
 - Spec format and conventions
 - Project structure and guidelines
@@ -29,17 +32,20 @@ Always add a semicolon `;` to JavaScript code lines where expected.
 The project is designed to allow users to draw red-line boundaries and habitat areas within a red-line boundary. This is part of a Biodiversity Net Gains metric calculation tool for GovUK. Currently it is in prototype phase.
 
 ## Front-end code apporach
+
 **Purpose:**  
 Generate form-based prototypes using the GOV.UK Prototype Kit and GOV.UK Design System.
 Also has mapping using OpenLayers integrated into the journey.
 
 **Frameworks & Tools:**
+
 - GOV.UK Prototype Kit (v13+)
 - GOV.UK Design System components/macros
 - Nunjucks templates
 - Node.js + Express routing
 
 **Code Style Rules:**
+
 - Always use GOV.UK CSS classes (`govuk-form-group`, `govuk-input`, etc.)
 - Prefer macros:
   - {{ govukInput({...}) }}
@@ -57,6 +63,7 @@ Also has mapping using OpenLayers integrated into the journey.
 {% extends "layouts/main.html" %}
 {% block pageTitle %}Example Form – GOV.UK{% endblock %}
 {% block content %}
+
 <form class="govuk-form-group" method="post" action="/next-step">
   {{ govukInput({
     id: "site-name",
@@ -78,8 +85,8 @@ Also has mapping using OpenLayers integrated into the journey.
 {% endblock %}
 {% endraw %}
 
-
 **Output Files:**
+
 - `/app/views/forms/[form-name].njk`
 - `/app/routes.js` to add a new route to fetch the corresponding form using router.get
 
@@ -90,25 +97,29 @@ The kit looks in the app/views folder for a file called start.html. It adds the 
 If the kit cannot find start.html in app/views, it will send an 'Error: not found' page instead.
 
 ## Client side JavaScript
-Any JavaScript required to enable browser functionality should be put in `app/assets/javascripts` and referenced in the 
-Nunjucks template accordingly using the path `public/javascripts`. 
+
+Any JavaScript required to enable browser functionality should be put in `app/assets/javascripts` and referenced in the
+Nunjucks template accordingly using the path `public/javascripts`.
 
 ## Styling
-The project uses SASS for styling, and page specific styles should be placed in `app/assets/sass/application.scss` or referenced here using an import declaration. 
+
+The project uses SASS for styling, and page specific styles should be placed in `app/assets/sass/application.scss` or referenced here using an import declaration.
 
 ## Prototype API end-points approach
+
 Edit the file:
+
 - app/routes.js
 
 Append new API routes using the code convention as an example:
-```javascript
-router.post('/live-in-uk-answer', function(request, response) {
 
-    var liveInUK = request.session.data['live-in-uk']
-    if (liveInUK === "Yes"){
-        response.redirect("/next-question")
-    } else {
-        response.redirect("/ineligible")
-    }
-});
+```javascript
+router.post('/live-in-uk-answer', function (request, response) {
+  var liveInUK = request.session.data['live-in-uk']
+  if (liveInUK === 'Yes') {
+    response.redirect('/next-question')
+  } else {
+    response.redirect('/ineligible')
+  }
+})
 ```
