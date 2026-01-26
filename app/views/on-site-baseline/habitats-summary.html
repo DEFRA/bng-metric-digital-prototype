@@ -98,6 +98,36 @@
       rows: tableRows
     }) }}
 
+    {% if hedgerowTableRows and hedgerowTableRows.length > 0 %}
+    <h2 class="govuk-heading-m">Hedgerows</h2>
+
+    {{ govukTable({
+      firstCellIsHeader: true,
+      head: [
+        { text: "Reference" },
+        { text: "Length (metres)" },
+        { text: "Status" },
+        { text: "Action", classes: "govuk-visually-hidden" }
+      ],
+      rows: hedgerowTableRows
+    }) }}
+    {% endif %}
+
+    {% if watercourseTableRows and watercourseTableRows.length > 0 %}
+    <h2 class="govuk-heading-m">Watercourses</h2>
+
+    {{ govukTable({
+      firstCellIsHeader: true,
+      head: [
+        { text: "Reference" },
+        { text: "Length (metres)" },
+        { text: "Status" },
+        { text: "Action", classes: "govuk-visually-hidden" }
+      ],
+      rows: watercourseTableRows
+    }) }}
+    {% endif %}
+
     {{ govukButton({
       text: "Start adding habitat details",
       href: actions.startFirstParcel.url

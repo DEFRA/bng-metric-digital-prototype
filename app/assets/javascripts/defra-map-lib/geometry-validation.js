@@ -454,6 +454,79 @@
     return visitedCount === n
   }
 
+  // ============================
+  // Linear feature (line) validation
+  // ============================
+
+  /**
+   * Check if a line (array of coordinates) is entirely within a boundary polygon.
+   * Returns true if all vertices and all edge midpoints are inside or on the boundary.
+   */
+  GeometryValidation.isLineWithinBoundary = function (
+    lineCoords,
+    boundaryPolygon
+  ) {
+    if (!lineCoords || lineCoords.length < 2 || !boundaryPolygon) {
+      return false
+    }
+
+    // Check all vertices are inside or on boundary
+    for (let i = 0; i < lineCoords.length; i++) {
+      if (
+        !GeometryValidation.isPointInsideOrOnBoundary(
+          lineCoords[i],
+          boundaryPolygon
+        )
+      ) {
+        return false
+      }
+    }
+
+    // Check midpoints of all segments are inside or on boundary
+    for (let i = 0; i < lineCoords.length - 1; i++) {
+      const midpoint = [
+        (lineCoords[i][0] + lineCoords[i + 1][0]) / 2,
+        (lineCoords[i][1] + lineCoords[i + 1][1]) / 2
+      ]
+      if (
+        !GeometryValidation.isPointInsideOrOnBoundary(midpoint, boundaryPolygon)
+      ) {
+        return false
+      }
+    }
+
+    return true
+  }
+
+  /**
+   * Validate a linear feature (hedgerow/watercourse) against a boundary.
+   * Returns { valid: boolean, error?: string }
+   */
+  GeometryValidation.validateLinearFeature = function (
+    lineCoords,
+    boundaryPolygon,
+    featureType
+  ) {
+    const typeName = featureType || 'Linear feature'
+
+    if (!lineCoords || lineCoords.length < 2) {
+      return { valid: false, error: `${typeName} must have at least 2 points.` }
+    }
+
+    if (!boundaryPolygon) {
+      return { valid: false, error: 'No boundary defined.' }
+    }
+
+    if (!GeometryValidation.isLineWithinBoundary(lineCoords, boundaryPolygon)) {
+      return {
+        valid: false,
+        error: `${typeName} must be entirely within the red line boundary.`
+      }
+    }
+
+    return { valid: true }
+  }
+
   window.DefraMapLib = window.DefraMapLib || {}
   window.DefraMapLib.GeometryValidation = GeometryValidation
 })(window)

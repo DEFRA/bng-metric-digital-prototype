@@ -262,7 +262,14 @@ router.get('/api/os/features/:collection/items', async function (req, res) {
 router.post('/api/save-red-line-boundary', function (req, res) {
   req.session.data['redLineBoundary'] = req.body
   console.log('Red line boundary saved to session')
-  res.json({ success: true, redirect: '/on-site-habitat-baseline' })
+  // Explicitly save session to ensure data persists before redirect
+  req.session.save(function (err) {
+    if (err) {
+      console.error('Session save error:', err)
+      return res.status(500).json({ error: 'Failed to save session' })
+    }
+    res.json({ success: true, redirect: '/on-site-habitat-baseline' })
+  })
 })
 
 // Get red line boundary from session
@@ -277,13 +284,51 @@ router.get('/api/red-line-boundary', function (req, res) {
 router.post('/api/save-habitat-parcels', function (req, res) {
   req.session.data['habitatParcels'] = req.body
   console.log('Habitat parcels saved to session')
-  res.json({ success: true, redirect: '/on-site-baseline/habitats-summary' })
+  // Explicitly save session to ensure data persists before redirect
+  req.session.save(function (err) {
+    if (err) {
+      console.error('Session save error:', err)
+      return res.status(500).json({ error: 'Failed to save session' })
+    }
+    res.json({ success: true, redirect: '/on-site-baseline/habitats-summary' })
+  })
 })
 
 // Get habitat parcels from session
 router.get('/api/habitat-parcels', function (req, res) {
   const parcels = req.session.data['habitatParcels'] || null
   res.json(parcels)
+})
+
+// Linear Features API Endpoints
+
+// Save linear features to session
+router.post('/api/save-linear-features', function (req, res) {
+  req.session.data['hedgerows'] = req.body.hedgerows
+  req.session.data['watercourses'] = req.body.watercourses
+  console.log('Linear features saved to session')
+  // Explicitly save session to ensure data persists
+  req.session.save(function (err) {
+    if (err) {
+      console.error('Session save error:', err)
+      return res.status(500).json({ error: 'Failed to save session' })
+    }
+    res.json({ success: true })
+  })
+})
+
+// Get linear features from session
+router.get('/api/linear-features', function (req, res) {
+  res.json({
+    hedgerows: req.session.data['hedgerows'] || {
+      type: 'FeatureCollection',
+      features: []
+    },
+    watercourses: req.session.data['watercourses'] || {
+      type: 'FeatureCollection',
+      features: []
+    }
+  })
 })
 
 router.post('/api/convert', upload.single('file'), async (req, res) => {
@@ -600,6 +645,16 @@ router.get('/on-site-baseline/habitats-summary', function (req, res) {
   const drawnParcels = req.session.data['habitatParcels']
   const isDrawingFlow = drawnBoundary && drawnParcels
 
+  // Debug logging
+  console.log('Habitats summary - session state:', {
+    hasBoundary: !!drawnBoundary,
+    hasParcels: !!drawnParcels,
+    parcelCount: drawnParcels?.features?.length || 0,
+    isDrawingFlow: isDrawingFlow,
+    hasHedgerows: !!(req.session.data['hedgerows']?.features?.length > 0),
+    hasWatercourses: !!(req.session.data['watercourses']?.features?.length > 0)
+  })
+
   let totalAreaHectares = 0
   let habitatParcels = []
   let mapData = {}
@@ -653,7 +708,15 @@ router.get('/on-site-baseline/habitats-summary', function (req, res) {
     // Prepare map data from drawn geometries
     mapData = {
       siteBoundary: boundaryFeatureCollection,
-      parcels: drawnParcels
+      parcels: drawnParcels,
+      hedgerows: req.session.data['hedgerows'] || {
+        type: 'FeatureCollection',
+        features: []
+      },
+      watercourses: req.session.data['watercourses'] || {
+        type: 'FeatureCollection',
+        features: []
+      }
     }
   } else {
     // GeoPackage flow - use uploaded data
@@ -733,7 +796,15 @@ router.get('/on-site-baseline/habitats-summary', function (req, res) {
     // Prepare map data
     mapData = {
       siteBoundary: boundaryLayer,
-      parcels: parcelsLayer
+      parcels: parcelsLayer,
+      hedgerows: req.session.data['hedgerows'] || {
+        type: 'FeatureCollection',
+        features: []
+      },
+      watercourses: req.session.data['watercourses'] || {
+        type: 'FeatureCollection',
+        features: []
+      }
     }
   }
 
@@ -766,6 +837,43 @@ router.get('/on-site-baseline/habitats-summary', function (req, res) {
     ]
   })
 
+  // Build hedgerow table rows
+  const hedgerows = mapData.hedgerows?.features || []
+  const hedgerowTableRows = hedgerows.map(function (feature, index) {
+    const lengthM = feature.properties?.lengthM || 0
+    return [
+      { text: 'H-' + (index + 1).toString().padStart(3, '0') },
+      { text: lengthM.toFixed(1) },
+      { text: 'Not started' },
+      {
+        html:
+          '<a class="govuk-link" href="/on-site-baseline/hedgerow/' +
+          (index + 1) +
+          '/details">Add details<span class="govuk-visually-hidden"> for H-' +
+          (index + 1).toString().padStart(3, '0') +
+          '</span></a>'
+      }
+    ]
+  })
+
+  // Build watercourse table rows
+  const watercourses = mapData.watercourses?.features || []
+  const watercourseTableRows = watercourses.map(function (feature, index) {
+    const lengthM = feature.properties?.lengthM || 0
+    return [
+      { text: 'W-' + (index + 1).toString().padStart(3, '0') },
+      { text: lengthM.toFixed(1) },
+      { text: 'Not started' },
+      {
+        html:
+          '<a class="govuk-link" href="/on-site-baseline/watercourse/' +
+          (index + 1) +
+          '/details">Add details<span class="govuk-visually-hidden"> for W-' +
+          (index + 1).toString().padStart(3, '0') +
+          '</span></a>'
+      }
+    ]
+  })
 
   res.render('on-site-baseline/habitats-summary', {
     baselineSummary: {
@@ -779,6 +887,8 @@ router.get('/on-site-baseline/habitats-summary', function (req, res) {
     mapData: mapData,
     habitatParcels: habitatParcels,
     tableRows: tableRows,
+    hedgerowTableRows: hedgerowTableRows,
+    watercourseTableRows: watercourseTableRows,
     actions: {
       startFirstParcel: {
         url: habitatParcels.length > 0 ? habitatParcels[0].actionUrl : '#'

@@ -5,7 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Project Overview
 
 The project is an important part of preserving biodiversity within England, as part of the official planning
-process. 
+process.
 
 Biodiversity Net Gain (BNG) metric prototype built on GOV.UK Prototype Kit. Allows users to define red-line boundaries and habitat parcels on OS maps, upload habitat data from GeoPackage/shapefiles, and calculate biodiversity metrics.
 
