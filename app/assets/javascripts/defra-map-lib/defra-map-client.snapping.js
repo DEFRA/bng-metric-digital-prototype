@@ -52,6 +52,20 @@
     })
   }
 
+  DefraMapClient.prototype.setSnapToHedgerows = function (enabled) {
+    this._snapToHedgerows = !!enabled
+    this._emitter.emit('snapping:hedgerowsChanged', {
+      enabled: this._snapToHedgerows
+    })
+  }
+
+  DefraMapClient.prototype.setSnapToWatercourses = function (enabled) {
+    this._snapToWatercourses = !!enabled
+    this._emitter.emit('snapping:watercoursesChanged', {
+      enabled: this._snapToWatercourses
+    })
+  }
+
   // ============================
   // Internal snapping WFS fetch
   // ============================
@@ -266,6 +280,66 @@
           minDistance = dist
           snapPoint = pt
           snapType = this._snapType.PARCEL_EDGE
+        }
+      })
+    }
+
+    // Hedgerow vertices and edges
+    if (
+      this._snapToHedgerows &&
+      this._mode === 'habitat-parcels' &&
+      this._hedgerows &&
+      this._hedgerows.length > 0
+    ) {
+      this._hedgerows.forEach((hedgerow) => {
+        const coords = hedgerow.coords
+        // Vertices
+        coords.forEach((vertex) => {
+          const distance = this._getDistance(coordinate, vertex)
+          if (distance < minDistance && distance < vertexTolerance) {
+            minDistance = distance
+            snapPoint = vertex
+            snapType = this._snapType.HEDGEROW_VERTEX
+          }
+        })
+        // Edges
+        const geom = hedgerow.feature.getGeometry()
+        const pt = geom.getClosestPoint(coordinate)
+        const dist = this._getDistance(coordinate, pt)
+        if (dist < minDistance && dist < tolerance) {
+          minDistance = dist
+          snapPoint = pt
+          snapType = this._snapType.HEDGEROW_EDGE
+        }
+      })
+    }
+
+    // Watercourse vertices and edges
+    if (
+      this._snapToWatercourses &&
+      this._mode === 'habitat-parcels' &&
+      this._watercourses &&
+      this._watercourses.length > 0
+    ) {
+      this._watercourses.forEach((watercourse) => {
+        const coords = watercourse.coords
+        // Vertices
+        coords.forEach((vertex) => {
+          const distance = this._getDistance(coordinate, vertex)
+          if (distance < minDistance && distance < vertexTolerance) {
+            minDistance = distance
+            snapPoint = vertex
+            snapType = this._snapType.WATERCOURSE_VERTEX
+          }
+        })
+        // Edges
+        const geom = watercourse.feature.getGeometry()
+        const pt = geom.getClosestPoint(coordinate)
+        const dist = this._getDistance(coordinate, pt)
+        if (dist < minDistance && dist < tolerance) {
+          minDistance = dist
+          snapPoint = pt
+          snapType = this._snapType.WATERCOURSE_EDGE
         }
       })
     }

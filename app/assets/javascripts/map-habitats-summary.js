@@ -24,19 +24,43 @@
 
     let boundaryGeoJson = null
     let parcelsGeoJson = null
+    let hedgerowsGeoJson = null
+    let watercoursesGeoJson = null
 
     if (geometriesDataEl) {
       try {
         const mapData = JSON.parse(geometriesDataEl.textContent)
         boundaryGeoJson = mapData.siteBoundary || null
         parcelsGeoJson = mapData.parcels || null
+        hedgerowsGeoJson = mapData.hedgerows || null
+        watercoursesGeoJson = mapData.watercourses || null
+
+        // Debug logging
+        console.log('Map data loaded:', {
+          hasBoundary: !!(boundaryGeoJson && boundaryGeoJson.features?.length),
+          hasParcels: !!(parcelsGeoJson && parcelsGeoJson.features?.length),
+          hasHedgerows: !!(
+            hedgerowsGeoJson && hedgerowsGeoJson.features?.length
+          ),
+          hasWatercourses: !!(
+            watercoursesGeoJson && watercoursesGeoJson.features?.length
+          )
+        })
       } catch (e) {
         console.error('Failed to parse geometries:', e)
       }
+    } else {
+      console.warn('No geometries-data element found on page')
     }
 
     // Create the map using DefraMapClient (will show default England view if no data)
-    createMap(mapContainer, boundaryGeoJson, parcelsGeoJson)
+    createMap(
+      mapContainer,
+      boundaryGeoJson,
+      parcelsGeoJson,
+      hedgerowsGeoJson,
+      watercoursesGeoJson
+    )
   }
 
   function showMapPlaceholder(container, message) {
@@ -47,7 +71,13 @@
       '</p></div>'
   }
 
-  async function createMap(container, boundaryGeoJson, parcelsGeoJson) {
+  async function createMap(
+    container,
+    boundaryGeoJson,
+    parcelsGeoJson,
+    hedgerowsGeoJson,
+    watercoursesGeoJson
+  ) {
     // Check DefraMapClient is available
     if (!window.DefraMapClient) {
       console.error('DefraMapClient not loaded')
@@ -120,6 +150,63 @@
         allFeatures = allFeatures.concat(parcelsSource.getFeatures())
       }
 
+      // Add hedgerows layer (green lines)
+      if (
+        hedgerowsGeoJson &&
+        hedgerowsGeoJson.features &&
+        hedgerowsGeoJson.features.length > 0
+      ) {
+        const hedgerowsSource = new ol.source.Vector({
+          features: format.readFeatures(hedgerowsGeoJson, {
+            dataProjection: dataProjection,
+            featureProjection: 'EPSG:27700'
+          })
+        })
+
+        const hedgerowsLayer = new ol.layer.Vector({
+          source: hedgerowsSource,
+          style: new ol.style.Style({
+            stroke: new ol.style.Stroke({
+              color: '#00703c',
+              width: 4
+            })
+          }),
+          zIndex: 25
+        })
+
+        map.addLayer(hedgerowsLayer)
+        allFeatures = allFeatures.concat(hedgerowsSource.getFeatures())
+      }
+
+      // Add watercourses layer (blue dashed lines)
+      if (
+        watercoursesGeoJson &&
+        watercoursesGeoJson.features &&
+        watercoursesGeoJson.features.length > 0
+      ) {
+        const watercoursesSource = new ol.source.Vector({
+          features: format.readFeatures(watercoursesGeoJson, {
+            dataProjection: dataProjection,
+            featureProjection: 'EPSG:27700'
+          })
+        })
+
+        const watercoursesLayer = new ol.layer.Vector({
+          source: watercoursesSource,
+          style: new ol.style.Style({
+            stroke: new ol.style.Stroke({
+              color: '#1d70b8',
+              width: 4,
+              lineDash: [8, 4]
+            })
+          }),
+          zIndex: 25
+        })
+
+        map.addLayer(watercoursesLayer)
+        allFeatures = allFeatures.concat(watercoursesSource.getFeatures())
+      }
+
       // Add boundary layer (rendered on top with dashed line)
       if (
         boundaryGeoJson &&
@@ -154,18 +241,43 @@
       if (allFeatures.length > 0) {
         const extent = ol.extent.createEmpty()
         allFeatures.forEach(function (feature) {
-          ol.extent.extend(extent, feature.getGeometry().getExtent())
+          const geom = feature.getGeometry()
+          if (geom) {
+            ol.extent.extend(extent, geom.getExtent())
+          }
         })
 
-        // Use DefraMapClient's zoomToExtent method
-        client.zoomToExtent(extent, {
-          padding: [40, 40, 40, 40],
-          maxZoom: 16,
-          duration: 500
-        })
+        // Validate extent before zooming - ensure it's not empty or invalid
+        const isValidExtent =
+          !ol.extent.isEmpty(extent) &&
+          isFinite(extent[0]) &&
+          isFinite(extent[1]) &&
+          isFinite(extent[2]) &&
+          isFinite(extent[3]) &&
+          extent[0] > -1000000 &&
+          extent[1] > -1000000 &&
+          extent[2] < 2000000 &&
+          extent[3] < 2000000
+
+        if (isValidExtent) {
+          // Use DefraMapClient's zoomToExtent method
+          client.zoomToExtent(extent, {
+            padding: [40, 40, 40, 40],
+            maxZoom: 16,
+            minZoom: 7,
+            duration: 500
+          })
+        } else {
+          console.warn('Invalid extent calculated, using default view')
+          // Set a sensible default view for England
+          map.getView().setCenter([400000, 310000])
+          map.getView().setZoom(7)
+        }
       } else {
-        // No features - map will show default view of England (already set by DefraMapClient)
+        // No features - set default view of central England
         console.log('No features to display, showing default England view')
+        map.getView().setCenter([400000, 310000])
+        map.getView().setZoom(7)
       }
 
       // Store client reference for debugging

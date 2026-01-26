@@ -44,7 +44,11 @@
     // Help icon (question mark in circle)
     help: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>`,
     // Trash/Remove icon
-    remove: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>`
+    remove: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>`,
+    // Hedgerow icon - stylized hedge/branch
+    hedgerow: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2v20"/><path d="M8 6c-2 2-4 1-4 1s1 4 4 4"/><path d="M16 6c2 2 4 1 4 1s-1 4-4 4"/><path d="M8 14c-2 2-4 1-4 1s1 4 4 4"/><path d="M16 14c2 2 4 1 4 1s-1 4-4 4"/></svg>`,
+    // Watercourse icon - wavy water lines
+    watercourse: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12c2-2 4-2 6 0s4 2 6 0 4-2 6 0"/><path d="M2 18c2-2 4-2 6 0s4 2 6 0 4-2 6 0"/></svg>`
   }
 
   function parseCsv(str) {
@@ -229,6 +233,32 @@
       toolRow.appendChild(btnRemove)
     }
 
+    // Hedgerow drawing controls
+    let btnHedgerow = null
+
+    if (tools.includes('hedgerow')) {
+      btnHedgerow = addIconButton(
+        ICONS.hedgerow,
+        'Draw hedgerow',
+        'hedgerow',
+        'defra-map-controls__icon-btn--hedgerow'
+      )
+      toolRow.appendChild(btnHedgerow)
+    }
+
+    // Watercourse drawing controls
+    let btnWatercourse = null
+
+    if (tools.includes('watercourse')) {
+      btnWatercourse = addIconButton(
+        ICONS.watercourse,
+        'Draw watercourse',
+        'watercourse',
+        'defra-map-controls__icon-btn--watercourse'
+      )
+      toolRow.appendChild(btnWatercourse)
+    }
+
     // ========================================
     // Floating Action Buttons (bottom-right)
     // ========================================
@@ -260,7 +290,7 @@
     floatingActions.appendChild(floatingConfirmBtn)
 
     // Track which tool is active for floating buttons
-    let activeToolType = null // 'draw' | 'fill-boundary' | 'fill-parcels' | 'slice' | 'remove'
+    let activeToolType = null // 'draw' | 'fill-boundary' | 'fill-parcels' | 'slice' | 'remove' | 'hedgerow' | 'watercourse'
 
     // Snapping toggles section
     const snapButtons = {}
@@ -509,6 +539,23 @@
             'defra-map-floating-actions__btn--disabled'
           )
         }
+      } else if (
+        activeToolType === 'hedgerow' ||
+        activeToolType === 'watercourse'
+      ) {
+        // For line drawing, enable confirm only if we have at least 2 points
+        const canConfirm =
+          this._currentLineCoords && this._currentLineCoords.length >= 2
+        floatingConfirmBtn.disabled = !canConfirm
+        if (canConfirm) {
+          floatingConfirmBtn.classList.remove(
+            'defra-map-floating-actions__btn--disabled'
+          )
+        } else {
+          floatingConfirmBtn.classList.add(
+            'defra-map-floating-actions__btn--disabled'
+          )
+        }
       } else {
         // For other tools, always enable
         floatingConfirmBtn.disabled = false
@@ -534,6 +581,11 @@
         this.cancelSlice()
       } else if (activeToolType === 'remove') {
         this.cancelRemove()
+      } else if (
+        activeToolType === 'hedgerow' ||
+        activeToolType === 'watercourse'
+      ) {
+        this.cancelLineDraw()
       }
       hideFloatingActions()
       updateButtons()
@@ -563,6 +615,14 @@
       } else if (activeToolType === 'remove') {
         // Finish remove mode - user is done removing parcels
         this.finishRemove()
+      } else if (
+        activeToolType === 'hedgerow' ||
+        activeToolType === 'watercourse'
+      ) {
+        // Finish line if we have at least 2 points
+        if (this._currentLineCoords && this._currentLineCoords.length >= 2) {
+          this.finishLineDraw()
+        }
       }
       hideFloatingActions()
       updateButtons()
@@ -653,9 +713,28 @@
           if (this._sliceActive) this.cancelSlice()
           if (this._fillActive) this.cancelFill()
           if (this._isDrawing) this.cancelDrawing()
+          if (this._isLineDrawing) this.cancelLineDraw()
           this.startRemove()
           closeDrawer(true) // Focus map for keyboard interaction
           showFloatingActions('remove')
+          updateButtons()
+        } else if (action === 'hedgerow') {
+          if (this._sliceActive) this.cancelSlice()
+          if (this._fillActive) this.cancelFill()
+          if (this._isDrawing) this.cancelDrawing()
+          if (this._removeActive) this.cancelRemove()
+          this.startDrawHedgerow()
+          closeDrawer(true) // Focus map for keyboard interaction
+          showFloatingActions('hedgerow')
+          updateButtons()
+        } else if (action === 'watercourse') {
+          if (this._sliceActive) this.cancelSlice()
+          if (this._fillActive) this.cancelFill()
+          if (this._isDrawing) this.cancelDrawing()
+          if (this._removeActive) this.cancelRemove()
+          this.startDrawWatercourse()
+          closeDrawer(true) // Focus map for keyboard interaction
+          showFloatingActions('watercourse')
           updateButtons()
         }
       }
@@ -717,6 +796,10 @@
       const sliceActive = dbg && dbg.slice ? !!dbg.slice.active : false
       const isDrawing = dbg && dbg.drawing ? !!dbg.drawing.isDrawing : false
       const removeActive = dbg && dbg.remove ? !!dbg.remove.active : false
+      const isLineDrawing =
+        dbg && dbg.linear ? !!dbg.linear.isLineDrawing : false
+      const currentLineType =
+        dbg && dbg.linear ? dbg.linear.currentLineType : null
 
       // Update tool button visibility (hide when that tool is active)
       if (btnDraw) {
@@ -739,6 +822,19 @@
 
       if (btnRemove) {
         btnRemove.style.display = removeActive ? 'none' : 'inline-flex'
+      }
+
+      if (btnHedgerow) {
+        const isHedgerowActive = isLineDrawing && currentLineType === 'hedgerow'
+        btnHedgerow.style.display = isHedgerowActive ? 'none' : 'inline-flex'
+      }
+
+      if (btnWatercourse) {
+        const isWatercourseActive =
+          isLineDrawing && currentLineType === 'watercourse'
+        btnWatercourse.style.display = isWatercourseActive
+          ? 'none'
+          : 'inline-flex'
       }
 
       // Update floating confirm button state
@@ -813,6 +909,32 @@
     this.on('remove:finished', () => {
       hideFloatingActions()
       updateButtons()
+    })
+
+    // Linear feature (hedgerow/watercourse) events
+    this.on('linedraw:started', updateButtons)
+    this.on('linedraw:cancelled', () => {
+      hideFloatingActions()
+      updateButtons()
+    })
+    this.on('linedraw:completed', () => {
+      hideFloatingActions()
+      updateButtons()
+    })
+    this.on('hedgerow:added', () => {
+      hideFloatingActions()
+      updateButtons()
+    })
+    this.on('watercourse:added', () => {
+      hideFloatingActions()
+      updateButtons()
+    })
+    this.on('hedgerow:removed', updateButtons)
+    this.on('watercourse:removed', updateButtons)
+
+    // Update floating confirm button state when line points are placed
+    this.on('linedraw:lengthChanged', () => {
+      updateFloatingConfirmState()
     })
 
     this.on('snapping:osFeaturesChanged', updateSnapButtons)

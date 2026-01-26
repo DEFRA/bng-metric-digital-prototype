@@ -132,6 +132,17 @@
     this._removeActive = false
     this._removeHoverFeature = null
 
+    // Linear features (hedgerows and watercourses)
+    this._hedgerows = [] // [{ id, feature, coords, vertices, meta }]
+    this._watercourses = [] // [{ id, feature, coords, vertices, meta }]
+    this._isLineDrawing = false
+    this._currentLineType = null // 'hedgerow' | 'watercourse'
+    this._currentLineCoords = []
+    this._placedLineVertices = []
+    this._lineFeature = null
+    this._snapToHedgerows = true
+    this._snapToWatercourses = true
+
     // Config: URLs and OS layers
     this._tiles = this._options.tiles || {}
     this._osFeatures = this._options.osFeatures || {}
@@ -178,7 +189,11 @@
       BOUNDARY_VERTEX: 'boundary-vertex',
       BOUNDARY_EDGE: 'boundary-edge',
       PARCEL_VERTEX: 'parcel-vertex',
-      PARCEL_EDGE: 'parcel-edge'
+      PARCEL_EDGE: 'parcel-edge',
+      HEDGEROW_VERTEX: 'hedgerow-vertex',
+      HEDGEROW_EDGE: 'hedgerow-edge',
+      WATERCOURSE_VERTEX: 'watercourse-vertex',
+      WATERCOURSE_EDGE: 'watercourse-edge'
     }
 
     this._parcelColors = [
@@ -191,6 +206,12 @@
       { stroke: 'rgba(233, 30, 99, 1)', fill: 'rgba(233, 30, 99, 0.2)' },
       { stroke: 'rgba(63, 81, 181, 1)', fill: 'rgba(63, 81, 181, 0.2)' }
     ]
+
+    // Linear feature colors
+    this._linearColors = {
+      hedgerow: { stroke: '#00703c', strokeWidth: 4 }, // GOV.UK green
+      watercourse: { stroke: '#1d70b8', strokeWidth: 4, lineDash: [8, 4] } // GOV.UK blue
+    }
 
     // Expose CRS for existing pages (kept for compatibility)
     window.appMapCRS = this._projection

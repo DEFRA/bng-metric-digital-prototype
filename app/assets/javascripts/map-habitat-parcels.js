@@ -89,7 +89,7 @@ window.GOVUKPrototypeKit.documentReady(() => {
     },
     controls: {
       enabled: true,
-      tools: 'draw,fill-parcels,slice,remove',
+      tools: 'draw,fill-parcels,slice,remove,hedgerow,watercourse',
       snappingToggles:
         'os,boundary-vertices,boundary-edges,parcel-vertices,parcel-edges'
     }
@@ -135,6 +135,31 @@ window.GOVUKPrototypeKit.documentReady(() => {
   })
 
   client.on('parcel:changed', () => {
+    renderAreaDisplay()
+    updateSaveButtonState()
+  })
+
+  // Linear features (hedgerow/watercourse) events
+  client.on('hedgerow:added', () => {
+    showStatus('Hedgerow added', 'success')
+    renderAreaDisplay()
+    updateSaveButtonState()
+  })
+
+  client.on('hedgerow:removed', () => {
+    showStatus('Hedgerow removed', 'info')
+    renderAreaDisplay()
+    updateSaveButtonState()
+  })
+
+  client.on('watercourse:added', () => {
+    showStatus('Watercourse added', 'success')
+    renderAreaDisplay()
+    updateSaveButtonState()
+  })
+
+  client.on('watercourse:removed', () => {
+    showStatus('Watercourse removed', 'info')
     renderAreaDisplay()
     updateSaveButtonState()
   })
@@ -224,6 +249,25 @@ window.GOVUKPrototypeKit.documentReady(() => {
     try {
       if (client.setSaveEnabled) client.setSaveEnabled(false)
       showStatus('Saving parcels...', 'info')
+
+      // Save linear features first
+      if (client.exportLinearFeaturesGeoJSON) {
+        const linearData = client.exportLinearFeaturesGeoJSON({
+          dataProjection: 'EPSG:27700'
+        })
+        console.log('Saving linear features:', {
+          hedgerows: linearData.hedgerows?.features?.length || 0,
+          watercourses: linearData.watercourses?.features?.length || 0
+        })
+        const linearResult = await fetch('/api/save-linear-features', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(linearData)
+        })
+        console.log('Linear features save result:', linearResult.ok)
+      }
+
+      console.log('Saving parcels:', client.getParcelCount())
       const result = await client.saveParcels()
       if (result.ok && result.response && result.response.success) {
         showStatus('Parcels saved successfully! Redirecting...', 'success')
@@ -262,6 +306,8 @@ window.GOVUKPrototypeKit.documentReady(() => {
     const boundaryEl = document.getElementById('boundary-area')
     const totalEl = document.getElementById('total-area')
     const remainingEl = document.getElementById('remaining-area-value')
+    const hedgerowLengthEl = document.getElementById('hedgerow-length')
+    const watercourseLengthEl = document.getElementById('watercourse-length')
 
     if (!areaDisplay) return
 
@@ -295,6 +341,18 @@ window.GOVUKPrototypeKit.documentReady(() => {
         remainingEl.textContent = remainingHa.toFixed(2) + ' ha'
         remainingEl.className = 'map-area-display__data'
       }
+    }
+
+    // Update hedgerow length
+    if (hedgerowLengthEl && client.getTotalHedgerowLengthM) {
+      hedgerowLengthEl.textContent =
+        client.getTotalHedgerowLengthM().toFixed(1) + ' m'
+    }
+
+    // Update watercourse length
+    if (watercourseLengthEl && client.getTotalWatercourseLengthM) {
+      watercourseLengthEl.textContent =
+        client.getTotalWatercourseLengthM().toFixed(1) + ' m'
     }
   }
 })

@@ -387,7 +387,12 @@
     target.classList.add('defra-map--keyboard-mode')
 
     // Show center target if a tool is active
-    if (this._isDrawing || this._fillActive || this._sliceActive) {
+    if (
+      this._isDrawing ||
+      this._fillActive ||
+      this._sliceActive ||
+      this._isLineDrawing
+    ) {
       this._showKeyboardTarget()
       this._updateKeyboardSnapIndicator()
     }
@@ -411,7 +416,12 @@
   // ============================
 
   DefraMapClient.prototype._isToolActive = function () {
-    return this._isDrawing || this._fillActive || this._sliceActive
+    return (
+      this._isDrawing ||
+      this._fillActive ||
+      this._sliceActive ||
+      this._isLineDrawing
+    )
   }
 
   // ============================
@@ -487,6 +497,11 @@
     // Update slice preview line if slice is active with a start point
     if (this._sliceActive && this._sliceStart) {
       this._updateSlicePreviewForKeyboard(snapCoord)
+    }
+
+    // Update live line preview if we have points (line drawing mode)
+    if (this._isLineDrawing && this._currentLineCoords.length > 0) {
+      this._updateLiveLine(snapCoord)
     }
   }
 
@@ -667,6 +682,8 @@
       await this._handleKeyboardFillSelect()
     } else if (this._sliceActive) {
       this._handleKeyboardSliceSelect()
+    } else if (this._isLineDrawing) {
+      this._handleKeyboardPlaceLinePoint()
     }
   }
 
@@ -699,6 +716,11 @@
     } else if (this._removeActive) {
       // Finish remove mode (same as Accept button)
       this.finishRemove()
+    } else if (this._isLineDrawing) {
+      // Finish line if we have at least 2 points (same as Accept button)
+      if (this._currentLineCoords && this._currentLineCoords.length >= 2) {
+        this.finishLineDraw()
+      }
     }
   }
 
@@ -711,6 +733,8 @@
       this.cancelSlice()
     } else if (this._removeActive) {
       this.cancelRemove()
+    } else if (this._isLineDrawing) {
+      this.cancelLineDraw()
     }
   }
 
@@ -903,6 +927,27 @@
 
     // Announce placement for screen readers
     this._announceAction(`Point ${this._currentPolygonCoords.length} placed`)
+
+    // Update snap indicator for next position
+    this._updateKeyboardSnapIndicator()
+  }
+
+  // ============================
+  // Keyboard line drawing (hedgerow/watercourse)
+  // ============================
+
+  DefraMapClient.prototype._handleKeyboardPlaceLinePoint = function () {
+    if (!this._isLineDrawing) return
+
+    // Use the last calculated snap coordinate (from center)
+    const snapCoord = this._lastSnapCoord || this._map.getView().getCenter()
+    if (!snapCoord) return
+
+    // Place the vertex on the line
+    this._placeLineVertex(snapCoord)
+
+    // Announce placement for screen readers
+    this._announceAction(`Point ${this._currentLineCoords.length} placed`)
 
     // Update snap indicator for next position
     this._updateKeyboardSnapIndicator()
@@ -1240,6 +1285,30 @@
     })
 
     this.on('slice:completed', () => {
+      this._hideKeyboardTarget()
+    })
+
+    // Line drawing (hedgerow/watercourse) events
+    this.on('linedraw:started', () => {
+      if (this._keyboardMode) {
+        this._showKeyboardTarget()
+        this._updateKeyboardSnapIndicator()
+      }
+    })
+
+    this.on('linedraw:cancelled', () => {
+      this._hideKeyboardTarget()
+    })
+
+    this.on('linedraw:completed', () => {
+      this._hideKeyboardTarget()
+    })
+
+    this.on('hedgerow:added', () => {
+      this._hideKeyboardTarget()
+    })
+
+    this.on('watercourse:added', () => {
       this._hideKeyboardTarget()
     })
   }
