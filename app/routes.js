@@ -41,7 +41,23 @@ const lpaQueryUrl = 'https://services1.arcgis.com/ESMARspQHYMw9BZ9/ArcGIS/rest/s
 const ncaQueryUrl = 'https://services.arcgis.com/JJzESW51TqeY9uat/ArcGIS/rest/services/National_Character_Areas_England/FeatureServer/0/query';
 const lnrsQueryUrl = 'https://services.arcgis.com/JJzESW51TqeY9uat/ArcGIS/rest/services/Local_Nature_Recovery_Strategy_Areas_England/FeatureServer/0/query';
 
+const distinctivenessScores = {
+  'V.High': 8,
+  'High': 6,
+  'Medium': 4,
+  'Low': 2,
+  'V.Low': 0
+}
 
+const conditionScores = {
+  'Good': 3,
+  'Fairly Good': 2.5,
+  'Moderate': 2,
+  'Fairly Poor': 1.5,
+  'Poor': 1,
+  'Condition Assessment N/A': 1,
+  'N/A - Other':0
+}
 
 // Lazy-load shpjs via dynamic import to ensure we get the ESM default export
 let shpPromise = null;
@@ -380,7 +396,6 @@ router.post('/on-site-baseline/upload-single-file', upload.single('fileUpload'),
     console.log('gpkgData.geometries:', gpkgData.geometries);
 
     // Check if geometries are within the UK
-    //if (!gpkgData.geometries[boundaryLayerName].features.every(f => isWithinUK(f.geometry))) {
     if (!isWithinUK(gpkgData.geometries[boundaryLayerName].features)) {
       console.log("Geometries are not within England");
       return res.redirect(`/on-site-baseline/upload-single-file?error=Geometries are not within England`);
@@ -513,40 +528,86 @@ router.get('/on-site-baseline/habitats-summary', function(req, res) {
   const lpaName = req.session.data['lpaName'] || 'Not specified';
   const ncaName = req.session.data['ncaName'] || 'Not specified';
   
-  // Find boundary and parcels layers
-  const boundaryLayer = layers.find(l => l.name.toLowerCase().includes('boundary') || l.name.toLowerCase().includes('site'));
-  const parcelsLayer = layers.find(l => l.name.toLowerCase().includes('parcel') || l.name.toLowerCase().includes('habitat'));
+  // Find boundary and parcels features layers
+  const boundaryLayerInfo = layers.find(l => l.name.toLowerCase().includes('boundary') || l.name.toLowerCase().includes('site'));
+  const parcelsLayerInfo = layers.find(l => l.name.toLowerCase().includes('parcel') || l.name.toLowerCase().includes('habitat'));
+  
+  const boundaryLayer = geometries[boundaryLayerInfo.name];
+  const parcelsLayer = geometries[parcelsLayerInfo.name];
   
   // Calculate total site area
   let totalAreaHectares = 0;
-  if (boundaryLayer) {
-    totalAreaHectares = (boundaryLayer.totalAreaSqm / 10000).toFixed(2);
+  if (boundaryLayerInfo) {
+    totalAreaHectares = (boundaryLayerInfo.totalAreaSqm / 10000).toFixed(2);
   }
   
   // Build parcels data
-  const parcelCount = parcelsLayer ? parcelsLayer.featureCount : 0;
+  const parcelCount = parcelsLayerInfo ? parcelsLayerInfo.featureCount : 0;
   const habitatParcels = [];
+
+  let numParcelsToClassify = 0;
   
-  if (parcelsLayer && parcelsLayer.featureCount > 0) {
-    for (let i = 1; i <= parcelsLayer.featureCount; i++) {
+  if (parcelsLayerInfo && parcelsLayerInfo.featureCount > 0) {
+    for (let i = 1; i <= parcelsLayerInfo.featureCount; i++) {
+
+      let areaHa = 0;
+      let feature = parcelsLayer.features[i-1];
+      if (feature.geometry.type === 'Polygon' || feature.geometry.type === 'MultiPolygon') {
+        const areaSqm = calculatePolygonArea(feature.geometry);
+        areaHa = (areaSqm / 10000);
+      }
+
+      let status = 'Not started';
+
+      let parcelId = feature.properties["Parcel Ref"] || "-";
+      let habitat = feature.properties["Baseline Habitat Type"] || null;
+      let distinctiveness = feature.properties["Baseline Distinctiveness"] || null;
+      let condition = feature.properties["Baseline Condition"] || null;
+
+      // Remove the number and period from the condition
+      if (condition !== null) {
+        condition = condition.replace(/^\d+\.\s*/, "");
+      }
+      
+      if ((habitat !== null) || (distinctiveness !== null) || (condition !== null)) {
+        status = 'In progress';
+      }
+      else {
+        numParcelsToClassify++;
+      }
+
+      let units = 0;
+
+      let distinctivenessScore = distinctivenessScores[distinctiveness] || 0;
+      let conditionScore = conditionScores[condition] || 0;
+
+      if (distinctivenessScore > 0 && conditionScore > 0) {
+        units = areaHa * distinctivenessScore * conditionScore;
+      }
+      
+      let totalScore = distinctivenessScore + conditionScore;
+
       habitatParcels.push({
-        parcelId: 'HP-' + i.toString().padStart(3, '0'),
-        areaHectares: (Math.random() * 5 + 0.5).toFixed(2),
-        habitatLabel: null,
-        status: 'Not started',
+        parcelId: parcelId,
+        areaHectares: areaHa,
+        habitat: habitat,
+        distinctiveness: distinctiveness,
+        condition: condition,
+        units: units,
+        status: status,
         actionUrl: '/on-site-baseline/parcel/' + i + '/habitat-type'
       });
     }
+    
   }
   
   // Build parcel count message
-  let parcelCountMessage = 'No habitat parcels found.';
-  if (parcelCount === 1) {
-    parcelCountMessage = 'You have 1 habitat parcel to classify.';
-  } else if (parcelCount > 1) {
-    parcelCountMessage = 'You have ' + parcelCount + ' habitat parcels to classify.';
+  if (habitatParcels.length === 0) {
+    parcelCountMessage = 'No habitat parcels found.';
+  } else {
+    parcelCountMessage = 'There are ' + habitatParcels.length + ' habitat parcels. You have ' + numParcelsToClassify + ' to classify.';
   }
-  
+
   // Prepare map data
   const mapData = {
     siteBoundary: boundaryLayer ? geometries[boundaryLayer.name] : null,
@@ -557,10 +618,13 @@ router.get('/on-site-baseline/habitats-summary', function(req, res) {
   const tableRows = habitatParcels.map(function(parcel) {
     return [
       { text: parcel.parcelId },
-      { text: parcel.areaHectares },
-      { text: parcel.habitatLabel || 'Not specified' },
-      { text: parcel.status },
-      { html: '<a class="govuk-link" href="' + parcel.actionUrl + '">Add details<span class="govuk-visually-hidden"> for ' + parcel.parcelId + '</span></a>' }
+      { text: parcel.areaHectares.toFixed(2) },
+      { text: parcel.habitat || 'Not specified' },
+      { text: parcel.distinctiveness || 'Not specified' },
+      { text: parcel.condition || 'Not specified' },
+      { text: parcel.units.toFixed(2) || '0' },
+      { text: parcel.status || 'Not started' },
+      { html: '<a class="govuk-link" href="' + parcel.actionUrl + '">Edit details<span class="govuk-visually-hidden"> for ' + parcel.parcelId + '</span></a>' }
     ];
   });
   
@@ -652,18 +716,25 @@ function parseGeoPackage(buffer) {
       const countResult = countQuery.get();
       const featureCount = countResult.count;
       
-      // Get all geometries from the layer
-      const featuresQuery = db.prepare(`SELECT "${geomCol}" as geom FROM "${tableName}" WHERE "${geomCol}" IS NOT NULL`);
+      // Get all columns from the layer (including geometry and attributes)
+      // First, get all column names
+      const tableInfoQuery = db.prepare(`PRAGMA table_info("${tableName}")`);
+      const tableInfo = tableInfoQuery.all();
+      const columnNames = tableInfo.map(col => col.name);
+      
+      // Build SELECT query with all columns
+      const selectColumns = columnNames.map(col => `"${col}"`).join(', ');
+      const featuresQuery = db.prepare(`SELECT ${selectColumns} FROM "${tableName}" WHERE "${geomCol}" IS NOT NULL`);
       const features = featuresQuery.all();
       
       let totalAreaSqm = 0;
       const geoJsonFeatures = [];
       
       features.forEach((row, index) => {
-        if (row.geom) {
+        if (row[geomCol]) {
           try {
             // Parse WKB geometry using wkx
-            const geomBuffer = Buffer.isBuffer(row.geom) ? row.geom : Buffer.from(row.geom);
+            const geomBuffer = Buffer.isBuffer(row[geomCol]) ? row[geomCol] : Buffer.from(row[geomCol]);
             
             // GeoPackage uses standard WKB with optional envelope
             // Check for GeoPackage WKB header (starts with 'GP')
@@ -692,9 +763,19 @@ function parseGeoPackage(buffer) {
               totalAreaSqm += area;
             }
             
+            // Extract all attributes (excluding the geometry column)
+            const properties = {};
+            columnNames.forEach(col => {
+              if (col !== geomCol) {
+                properties[col] = row[col];
+              }
+            });
+            // Also add index for reference
+            properties.index = index;
+            
             geoJsonFeatures.push({
               type: 'Feature',
-              properties: { index: index },
+              properties: properties,
               geometry: geoJson
             });
           } catch (geomErr) {
@@ -736,6 +817,7 @@ function parseGeoPackage(buffer) {
     throw err;
   }
 }
+
 
 // Simple polygon area calculation (for projected coordinates in meters)
 function calculatePolygonArea(geoJson) {
