@@ -343,7 +343,9 @@ function registerOnSiteBaselineRoutes(router) {
     req.session.data['habitatParcels'] = null
     req.session.data['hedgerows'] = null
     req.session.data['watercourses'] = null
-    console.log('Cleared hand-drawn data - GeoPackage upload is now authoritative')
+    console.log(
+      'Cleared hand-drawn data - GeoPackage upload is now authoritative'
+    )
 
     // Redirect to habitats summary (future implementation)
     res.redirect('/on-site-baseline/habitats-summary')

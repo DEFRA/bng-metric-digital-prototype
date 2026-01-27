@@ -9,6 +9,7 @@
   const DefraMapClient = window.DefraMapClient
   const GeometryValidation =
     window.DefraMapLib && window.DefraMapLib.GeometryValidation
+  const TurfHelpers = window.DefraMapLib && window.DefraMapLib.TurfHelpers
   if (!DefraMapClient) {
     throw new Error(
       'defra-map-client.fill.js requires window.DefraMapClient to be loaded first.'
@@ -17,6 +18,11 @@
   if (!GeometryValidation) {
     throw new Error(
       'defra-map-client.fill.js requires window.DefraMapLib.GeometryValidation to be loaded first.'
+    )
+  }
+  if (!TurfHelpers) {
+    throw new Error(
+      'defra-map-client.fill.js requires window.DefraMapLib.TurfHelpers to be loaded first.'
     )
   }
 
@@ -106,6 +112,27 @@
 
   DefraMapClient.prototype._handleFillHover = function (evt) {
     if (!this._fillActive || evt.dragging) return
+
+    // For parcel fill mode, check for gaps too
+    if (this._fillMode === 'parcels') {
+      const polygon = this._findFillPolygonAtPixel(evt.pixel, true)
+      if (polygon) {
+        this._map.getTargetElement().style.cursor = 'pointer'
+        return
+      }
+
+      // Check if hovering over a fillable gap
+      const coordinate = this._map.getCoordinateFromPixel(evt.pixel)
+      if (coordinate && this._isPointInFillableGap(coordinate)) {
+        this._map.getTargetElement().style.cursor = 'copy'
+        return
+      }
+
+      this._map.getTargetElement().style.cursor = 'crosshair'
+      return
+    }
+
+    // For boundary fill mode
     const polygon = this._findFillPolygonAtPixel(evt.pixel, true)
     this._map.getTargetElement().style.cursor = polygon
       ? 'pointer'
@@ -114,39 +141,28 @@
 
   DefraMapClient.prototype._handleFillClick = function (evt) {
     if (!this._fillActive) return
+
     const clickedPolygon = this._findFillPolygonAtPixel(evt.pixel, false)
+    const coordinate = this._map.getCoordinateFromPixel(evt.pixel)
+
+    if (this._fillMode === 'parcels') {
+      // If clicked on an OS polygon, handle OS polygon fill (with clipping if needed)
+      if (clickedPolygon) {
+        this._handleOsPolygonFillClick(clickedPolygon, coordinate)
+        return
+      }
+
+      // Otherwise, try to fill a gap
+      this._handleGapFillClick(coordinate)
+      return
+    }
+
+    // Boundary fill mode - original behaviour
     if (!clickedPolygon) {
       this._emitter.emit('fill:message', {
         type: 'info',
         message: 'No OS polygon found at this location.'
       })
-      return
-    }
-
-    if (this._fillMode === 'parcels') {
-      const validation = this._validatePolygonWithinBoundary(
-        clickedPolygon.geometry
-      )
-      if (!validation.valid) {
-        this._emitter.emit('fill:message', {
-          type: 'warning',
-          message: validation.error
-        })
-        return
-      }
-
-      const overlapCheck = this._checkOverlapWithExistingParcels(
-        clickedPolygon.geometry
-      )
-      if (!overlapCheck.valid) {
-        this._emitter.emit('fill:message', {
-          type: 'warning',
-          message: overlapCheck.error
-        })
-        return
-      }
-
-      this._addFillPolygonAsParcel(clickedPolygon)
       return
     }
 
@@ -497,26 +513,69 @@
     return result.length >= 3 ? result : null
   }
 
-  // Parcel fill: convert OS polygon to parcel and add directly.
+  // Parcel fill: validate polygon and clip to boundary if needed.
+  // Returns: { valid: boolean, error?: string, clipped?: geometry, wasClipped: boolean }
   DefraMapClient.prototype._validatePolygonWithinBoundary = function (
     geometry
   ) {
     const poly = this._geometryToPolygon(geometry)
-    if (!poly) return { valid: false, error: 'Invalid polygon geometry.' }
+    if (!poly)
+      return {
+        valid: false,
+        error: 'Invalid polygon geometry.',
+        wasClipped: false
+      }
     if (!this._fillConstraintBoundary)
-      return { valid: false, error: 'No boundary defined for validation.' }
+      return {
+        valid: false,
+        error: 'No boundary defined for validation.',
+        wasClipped: false
+      }
 
+    // Check if polygon is fully within boundary (no clipping needed)
     if (
-      GeometryValidation.isPolygonWithinBoundary(
-        poly,
-        this._fillConstraintBoundary
-      )
+      TurfHelpers.isPolygonWithinBoundary(poly, this._fillConstraintBoundary)
     ) {
-      return { valid: true, error: null }
+      return { valid: true, error: null, wasClipped: false }
     }
+
+    // Polygon extends beyond boundary - try to clip it
+    if (!TurfHelpers.doPolygonsIntersect(poly, this._fillConstraintBoundary)) {
+      return {
+        valid: false,
+        error: 'This polygon does not intersect the red-line boundary.',
+        wasClipped: false
+      }
+    }
+
+    // Clip the polygon to the boundary
+    const clipped = TurfHelpers.intersectPolygons(
+      poly,
+      this._fillConstraintBoundary
+    )
+    if (!clipped) {
+      return {
+        valid: false,
+        error: 'Failed to clip polygon to boundary.',
+        wasClipped: false
+      }
+    }
+
+    // Check if clipped result is too small (sliver)
+    const cleanedClipped = TurfHelpers.cleanPolygon(clipped)
+    if (!cleanedClipped) {
+      return {
+        valid: false,
+        error: 'Clipped area is too small (less than 10 sqm).',
+        wasClipped: false
+      }
+    }
+
     return {
-      valid: false,
-      error: 'This polygon extends outside the red-line boundary.'
+      valid: true,
+      error: null,
+      clipped: cleanedClipped,
+      wasClipped: true
     }
   }
 
@@ -535,6 +594,197 @@
       }
     }
     return { valid: true, error: null }
+  }
+
+  // Handle OS polygon fill click (with clipping support)
+  // Clips polygon to available space (boundary minus existing parcels)
+  DefraMapClient.prototype._handleOsPolygonFillClick = function (
+    polygonInfo,
+    clickCoordinate
+  ) {
+    const poly = this._geometryToPolygon(polygonInfo.geometry)
+    if (!poly) {
+      this._emitter.emit('fill:message', {
+        type: 'error',
+        message: 'Invalid polygon geometry.'
+      })
+      return
+    }
+
+    if (!this._fillConstraintBoundary) {
+      this._emitter.emit('fill:message', {
+        type: 'warning',
+        message: 'No boundary defined.'
+      })
+      return
+    }
+
+    // Check if polygon intersects the boundary at all
+    if (!TurfHelpers.doPolygonsIntersect(poly, this._fillConstraintBoundary)) {
+      this._emitter.emit('fill:message', {
+        type: 'warning',
+        message: 'This polygon does not intersect the red-line boundary.'
+      })
+      return
+    }
+
+    // Get existing parcel geometries
+    const existingParcelGeoms = this._habitatParcels
+      ? this._habitatParcels.map((p) => p.feature.getGeometry())
+      : []
+
+    // Clip to available space (boundary minus existing parcels)
+    // Pass click coordinate so we select the polygon part at the click location
+    const clippedGeom = TurfHelpers.clipToAvailableSpace(
+      poly,
+      this._fillConstraintBoundary,
+      existingParcelGeoms,
+      clickCoordinate
+    )
+
+    if (!clippedGeom) {
+      this._emitter.emit('fill:message', {
+        type: 'info',
+        message:
+          'No available space to fill. The area is already covered by existing parcels.'
+      })
+      return
+    }
+
+    // Clean the result (filter slivers)
+    const cleanedGeom = TurfHelpers.cleanPolygon(clippedGeom)
+    if (!cleanedGeom) {
+      this._emitter.emit('fill:message', {
+        type: 'info',
+        message: 'Available area is too small to fill (less than 10 sqm).'
+      })
+      return
+    }
+
+    // Add the parcel
+    const coords = cleanedGeom.getCoordinates()[0]
+    const success = this.addParcelFromCoordinates(coords)
+
+    // Determine if clipping occurred
+    const originalArea = poly.getArea()
+    const clippedArea = cleanedGeom.getArea()
+    const wasClipped = Math.abs(originalArea - clippedArea) > 1 // More than 1 sqm difference
+
+    if (success && wasClipped) {
+      this._emitter.emit('fill:message', {
+        type: 'info',
+        message: 'Polygon was clipped to fit the available space.'
+      })
+    }
+  }
+
+  // Handle gap fill click (click on empty area within boundary)
+  DefraMapClient.prototype._handleGapFillClick = function (coordinate) {
+    if (!coordinate) return
+
+    // Check if click is within the boundary
+    if (!this._fillConstraintBoundary) {
+      this._emitter.emit('fill:message', {
+        type: 'warning',
+        message: 'No boundary defined.'
+      })
+      return
+    }
+
+    if (
+      !TurfHelpers.isPointInPolygon(coordinate, this._fillConstraintBoundary)
+    ) {
+      this._emitter.emit('fill:message', {
+        type: 'info',
+        message: 'Click is outside the red-line boundary.'
+      })
+      return
+    }
+
+    // Check if click is inside an existing parcel
+    if (this._isPointInAnyParcel(coordinate)) {
+      this._emitter.emit('fill:message', {
+        type: 'info',
+        message: 'Click on an empty area to fill a gap, or click an OS polygon.'
+      })
+      return
+    }
+
+    // Calculate remaining gaps
+    const parcelGeoms = this._habitatParcels.map((p) => p.feature.getGeometry())
+    const gapsGeom = TurfHelpers.calculateGaps(
+      this._fillConstraintBoundary,
+      parcelGeoms
+    )
+
+    if (!gapsGeom) {
+      this._emitter.emit('fill:message', {
+        type: 'info',
+        message: 'No gaps remaining to fill.'
+      })
+      return
+    }
+
+    // Find the specific gap containing the click
+    const gapPolygon = TurfHelpers.findGapAtPoint(gapsGeom, coordinate)
+    if (!gapPolygon) {
+      this._emitter.emit('fill:message', {
+        type: 'info',
+        message: 'No fillable gap found at this location.'
+      })
+      return
+    }
+
+    // Clean the gap polygon (filter slivers)
+    const cleanedGap = TurfHelpers.cleanPolygon(gapPolygon)
+    if (!cleanedGap) {
+      this._emitter.emit('fill:message', {
+        type: 'info',
+        message: 'Gap is too small to fill (less than 10 sqm).'
+      })
+      return
+    }
+
+    // Add gap as new parcel
+    const coords = cleanedGap.getCoordinates()[0]
+    const success = this.addParcelFromCoordinates(coords)
+
+    if (success) {
+      this._emitter.emit('fill:message', {
+        type: 'info',
+        message: 'Gap filled as new parcel.'
+      })
+    }
+  }
+
+  // Check if a coordinate is inside any existing parcel
+  DefraMapClient.prototype._isPointInAnyParcel = function (coordinate) {
+    for (const parcel of this._habitatParcels) {
+      const parcelGeom = parcel.feature.getGeometry()
+      if (TurfHelpers.isPointInPolygon(coordinate, parcelGeom)) {
+        return true
+      }
+    }
+    return false
+  }
+
+  // Check if a coordinate is in a fillable gap (within boundary but not in any parcel)
+  DefraMapClient.prototype._isPointInFillableGap = function (coordinate) {
+    if (!coordinate || !this._fillConstraintBoundary) return false
+
+    // Must be within boundary
+    if (
+      !TurfHelpers.isPointInPolygon(coordinate, this._fillConstraintBoundary)
+    ) {
+      return false
+    }
+
+    // Must not be in any existing parcel
+    if (this._isPointInAnyParcel(coordinate)) {
+      return false
+    }
+
+    return true
   }
 
   DefraMapClient.prototype._addFillPolygonAsParcel = function (polygonInfo) {
