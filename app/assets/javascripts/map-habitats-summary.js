@@ -7,6 +7,14 @@
 ;(function () {
   'use strict'
 
+  // Module-level layer references for highlight functionality
+  let parcelsLayer = null
+  let hedgerowsLayer = null
+  let watercoursesLayer = null
+  let highlightSource = null
+  let highlightLayer = null
+  let currentHighlightedLink = null
+
   // Wait for DOM to be ready
   document.addEventListener('DOMContentLoaded', function () {
     initMapPreview()
@@ -120,7 +128,7 @@
           })
         })
 
-        const parcelsLayer = new ol.layer.Vector({
+        parcelsLayer = new ol.layer.Vector({
           source: parcelsSource,
           style: new ol.style.Style({
             stroke: new ol.style.Stroke({
@@ -151,7 +159,7 @@
           })
         })
 
-        const hedgerowsLayer = new ol.layer.Vector({
+        hedgerowsLayer = new ol.layer.Vector({
           source: hedgerowsSource,
           style: new ol.style.Style({
             stroke: new ol.style.Stroke({
@@ -179,7 +187,7 @@
           })
         })
 
-        const watercoursesLayer = new ol.layer.Vector({
+        watercoursesLayer = new ol.layer.Vector({
           source: watercoursesSource,
           style: new ol.style.Style({
             stroke: new ol.style.Stroke({
@@ -225,6 +233,26 @@
         allFeatures = allFeatures.concat(boundarySource.getFeatures())
       }
 
+      // Add highlight layer for table click interactions
+      highlightSource = new ol.source.Vector()
+      highlightLayer = new ol.layer.Vector({
+        source: highlightSource,
+        style: function (feature) {
+          var geomType = feature.getGeometry().getType()
+          if (geomType === 'LineString' || geomType === 'MultiLineString') {
+            return new ol.style.Style({
+              stroke: new ol.style.Stroke({ color: '#ffdd00', width: 8 })
+            })
+          }
+          return new ol.style.Style({
+            stroke: new ol.style.Stroke({ color: '#ffdd00', width: 4 }),
+            fill: new ol.style.Fill({ color: 'rgba(255, 221, 0, 0.35)' })
+          })
+        },
+        zIndex: 29
+      })
+      map.addLayer(highlightLayer)
+
       // Fit to features extent if we have features, otherwise show default England view
       if (allFeatures.length > 0) {
         const extent = ol.extent.createEmpty()
@@ -269,9 +297,89 @@
 
       // Store client reference for debugging
       window.habitatsSummaryMapClient = client
+
+      // Set up table click handlers for feature highlighting
+      setupTableClickHandlers()
     } catch (error) {
       console.error('Failed to initialize map:', error)
       showMapPlaceholder(container, 'Could not load map. Please try again.')
+    }
+  }
+
+  function setupTableClickHandlers() {
+    document.querySelectorAll('.habitat-ref-link').forEach(function (link) {
+      link.addEventListener('click', function (e) {
+        e.preventDefault()
+        handleFeatureClick(
+          this.dataset.featureType,
+          parseInt(this.dataset.featureIndex, 10),
+          this
+        )
+      })
+    })
+  }
+
+  function handleFeatureClick(featureType, featureIndex, linkElement) {
+    // Clear previous highlight
+    if (highlightSource) {
+      highlightSource.clear()
+    }
+    if (currentHighlightedLink) {
+      var prevRow = currentHighlightedLink.closest('tr')
+      if (prevRow) {
+        prevRow.classList.remove('habitat-row--highlighted')
+      }
+    }
+
+    // Toggle off if same feature clicked again
+    if (currentHighlightedLink === linkElement) {
+      currentHighlightedLink = null
+      return
+    }
+
+    // Get the appropriate layer based on feature type
+    var layer = null
+    if (featureType === 'parcel') {
+      layer = parcelsLayer
+    } else if (featureType === 'hedgerow') {
+      layer = hedgerowsLayer
+    } else if (featureType === 'watercourse') {
+      layer = watercoursesLayer
+    }
+
+    if (!layer) {
+      return
+    }
+
+    var features = layer.getSource().getFeatures()
+    var feature = features[featureIndex]
+    if (!feature) {
+      return
+    }
+
+    // Add highlight
+    highlightSource.addFeature(
+      new ol.Feature({ geometry: feature.getGeometry().clone() })
+    )
+
+    // Highlight table row
+    var row = linkElement.closest('tr')
+    if (row) {
+      row.classList.add('habitat-row--highlighted')
+    }
+    currentHighlightedLink = linkElement
+
+    // Zoom to feature
+    if (window.habitatsSummaryMapClient) {
+      window.habitatsSummaryMapClient.zoomToExtent(
+        feature.getGeometry().getExtent(),
+        {
+          padding: [80, 80, 80, 80],
+          maxZoom: 17,
+          minZoom: 14,
+          duration: 500
+        }
+      )
     }
   }
 

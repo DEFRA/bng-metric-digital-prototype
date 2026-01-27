@@ -1199,6 +1199,16 @@
   color: #0b0c0c;
 }
 
+// Habitat summary table row highlighting
+.habitat-row--highlighted {
+  background-color: #fff7e6 !important;
+  box-shadow: inset 4px 0 0 #ffdd00;
+
+  td {
+    background-color: inherit !important;
+  }
+}
+
 // Status message - fixed position overlay with GOV.UK notification banner
 #status-message {
   position: absolute;
