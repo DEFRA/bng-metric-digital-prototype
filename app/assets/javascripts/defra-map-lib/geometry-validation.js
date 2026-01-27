@@ -482,12 +482,18 @@
       }
     }
 
-    // Check midpoints of all segments are inside or on boundary
+    // Check each segment
     for (let i = 0; i < lineCoords.length - 1; i++) {
-      const midpoint = [
-        (lineCoords[i][0] + lineCoords[i + 1][0]) / 2,
-        (lineCoords[i][1] + lineCoords[i + 1][1]) / 2
-      ]
+      const p1 = lineCoords[i]
+      const p2 = lineCoords[i + 1]
+
+      // If segment lies along boundary edge, it's valid (skip midpoint check)
+      if (GeometryValidation.isSegmentOnBoundaryEdge(p1, p2, boundaryPolygon)) {
+        continue
+      }
+
+      // For other segments, check midpoint is inside or on boundary
+      const midpoint = [(p1[0] + p2[0]) / 2, (p1[1] + p2[1]) / 2]
       if (
         !GeometryValidation.isPointInsideOrOnBoundary(midpoint, boundaryPolygon)
       ) {
@@ -496,6 +502,166 @@
     }
 
     return true
+  }
+
+  /**
+   * Check if a line segment lies along the boundary edge.
+   * Returns true if both points are on the same boundary edge, or if they
+   * span two adjacent boundary edges (corner case).
+   */
+  GeometryValidation.isSegmentOnBoundaryEdge = function (
+    p1,
+    p2,
+    boundaryPolygon
+  ) {
+    const boundaryCoords = boundaryPolygon.getCoordinates()[0]
+
+    // Check if both points are on the same boundary edge
+    for (let i = 0; i < boundaryCoords.length - 1; i++) {
+      const edgeStart = boundaryCoords[i]
+      const edgeEnd = boundaryCoords[i + 1]
+
+      if (
+        GeometryValidation.isPointOnLineSegment(p1, edgeStart, edgeEnd) &&
+        GeometryValidation.isPointOnLineSegment(p2, edgeStart, edgeEnd)
+      ) {
+        return true
+      }
+    }
+
+    // Check for segments spanning adjacent boundary edges (corner case)
+    for (let i = 0; i < boundaryCoords.length - 1; i++) {
+      const edgeStart = boundaryCoords[i]
+      const edgeEnd = boundaryCoords[i + 1]
+      const nextIdx = (i + 2) % (boundaryCoords.length - 1)
+      const nextEdgeEnd = boundaryCoords[nextIdx === 0 ? 1 : nextIdx]
+
+      const p1OnFirst = GeometryValidation.isPointOnLineSegment(
+        p1,
+        edgeStart,
+        edgeEnd
+      )
+      const p2OnSecond = GeometryValidation.isPointOnLineSegment(
+        p2,
+        edgeEnd,
+        nextEdgeEnd
+      )
+      const p2OnFirst = GeometryValidation.isPointOnLineSegment(
+        p2,
+        edgeStart,
+        edgeEnd
+      )
+      const p1OnSecond = GeometryValidation.isPointOnLineSegment(
+        p1,
+        edgeEnd,
+        nextEdgeEnd
+      )
+
+      if ((p1OnFirst && p2OnSecond) || (p2OnFirst && p1OnSecond)) {
+        return true
+      }
+    }
+
+    return false
+  }
+
+  /**
+   * Correct a line's coordinates to ensure it stays within the boundary.
+   * For points on the boundary, snaps to nearest boundary vertex and traces
+   * the boundary path between consecutive boundary points.
+   * Returns the corrected coordinate array.
+   */
+  GeometryValidation.correctLineToBoundary = function (
+    lineCoords,
+    boundaryPolygon
+  ) {
+    if (!lineCoords || lineCoords.length < 2 || !boundaryPolygon) {
+      return lineCoords
+    }
+
+    const boundaryCoords = boundaryPolygon.getCoordinates()[0]
+    const numVertices = boundaryCoords.length - 1 // Exclude closing duplicate
+
+    // Classify each line vertex: find nearest boundary vertex index or -1 if inside
+    const classified = lineCoords.map((coord) => {
+      // If point is inside the polygon (not on boundary), keep it as-is
+      if (GeometryValidation.isPointInsidePolygon(coord, boundaryPolygon)) {
+        return { coord: coord, boundaryIndex: -1 }
+      }
+
+      // Point is on or near boundary - find nearest boundary vertex
+      let nearestIdx = -1
+      let nearestDist = Infinity
+
+      for (let j = 0; j < numVertices; j++) {
+        const bv = boundaryCoords[j]
+        const dx = coord[0] - bv[0]
+        const dy = coord[1] - bv[1]
+        const dist = Math.sqrt(dx * dx + dy * dy)
+        if (dist < nearestDist) {
+          nearestDist = dist
+          nearestIdx = j
+        }
+      }
+
+      // Snap to the nearest boundary vertex
+      return {
+        coord: boundaryCoords[nearestIdx].slice(),
+        boundaryIndex: nearestIdx
+      }
+    })
+
+    // Build corrected coordinates, tracing boundary between consecutive boundary points
+    const result = [classified[0].coord]
+
+    for (let i = 0; i < classified.length - 1; i++) {
+      const curr = classified[i]
+      const next = classified[i + 1]
+
+      // If both points are on boundary, trace the path between them
+      if (curr.boundaryIndex >= 0 && next.boundaryIndex >= 0) {
+        const startIdx = curr.boundaryIndex
+        const endIdx = next.boundaryIndex
+
+        if (startIdx !== endIdx) {
+          // Find shorter path around the boundary (clockwise or counterclockwise)
+          const forwardPath = []
+          const backwardPath = []
+
+          // Forward: startIdx -> startIdx+1 -> ... -> endIdx
+          let idx = startIdx
+          while (idx !== endIdx) {
+            idx = (idx + 1) % numVertices
+            if (idx !== endIdx) {
+              forwardPath.push(boundaryCoords[idx].slice())
+            }
+          }
+
+          // Backward: startIdx -> startIdx-1 -> ... -> endIdx
+          idx = startIdx
+          while (idx !== endIdx) {
+            idx = (idx - 1 + numVertices) % numVertices
+            if (idx !== endIdx) {
+              backwardPath.push(boundaryCoords[idx].slice())
+            }
+          }
+
+          // Use the shorter path
+          const pathToInsert =
+            forwardPath.length <= backwardPath.length
+              ? forwardPath
+              : backwardPath
+
+          for (const pt of pathToInsert) {
+            result.push(pt)
+          }
+        }
+      }
+
+      result.push(next.coord)
+    }
+
+    return result
   }
 
   /**
