@@ -48,16 +48,22 @@
   <p class="govuk-body">Draw habitat parcels within your red line boundary. Each parcel must be completely within the boundary and must not overlap with other parcels.</p>
 
   <h3 class="govuk-heading-s govuk-!-margin-top-4">Option 1: Fill Parcel (recommended)</h3>
-  <p class="govuk-body">Select existing OS map features within your boundary:</p>
+  <p class="govuk-body">Select existing OS map features or fill gaps within your boundary:</p>
   <ol class="govuk-list govuk-list--number">
     <li><strong>Click "Fill parcel"</strong> to start selection mode</li>
-    <li>Click on a <strong>field, land area, or other OS polygon</strong> within the boundary</li>
-    <li>The selected area will be added as a new habitat parcel</li>
+    <li>Click on a <strong>field, land area, or other OS polygon</strong> to add it as a parcel</li>
+    <li>If an OS polygon extends beyond the boundary, it will be <strong>automatically clipped</strong> to fit</li>
+    <li>Click on <strong>empty areas</strong> (gaps) within the boundary to fill them as parcels</li>
     <li>Continue clicking to add more parcels</li>
     <li>Click <strong>"Finish fill"</strong> when done to use other tools (Slice, Draw)</li>
   </ol>
   <div class="govuk-inset-text">
-    <strong>Note:</strong> Only polygons that are completely within the red-line boundary can be selected.
+    <strong>Cursor indicators:</strong>
+    <ul class="govuk-list govuk-list--bullet govuk-!-margin-top-2">
+      <li><strong>Pointer cursor</strong> = hovering over an OS polygon (click to fill)</li>
+      <li><strong>Copy cursor (+)</strong> = hovering over a fillable gap (click to fill)</li>
+      <li><strong>Crosshair cursor</strong> = no fillable area at this location</li>
+    </ul>
   </div>
 
   <h3 class="govuk-heading-s govuk-!-margin-top-4">Option 2: Draw Parcel</h3>

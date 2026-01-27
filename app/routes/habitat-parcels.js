@@ -103,7 +103,10 @@ function registerHabitatParcelRoutes(router) {
         console.error('Session save error:', err)
         return res.status(500).json({ error: 'Failed to save session' })
       }
-      res.json({ success: true, redirect: '/on-site-baseline/habitats-summary' })
+      res.json({
+        success: true,
+        redirect: '/on-site-baseline/habitats-summary'
+      })
     })
   })
 

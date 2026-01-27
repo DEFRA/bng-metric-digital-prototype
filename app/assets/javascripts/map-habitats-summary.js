@@ -34,7 +34,6 @@
         parcelsGeoJson = mapData.parcels || null
         hedgerowsGeoJson = mapData.hedgerows || null
         watercoursesGeoJson = mapData.watercourses || null
-
       } catch (e) {
         console.error('Failed to parse geometries:', e)
       }
