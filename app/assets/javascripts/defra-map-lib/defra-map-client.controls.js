@@ -684,6 +684,7 @@
         if (action === 'draw') {
           if (this._sliceActive) this.cancelSlice()
           if (this._fillActive) this.cancelFill()
+          if (this._removeActive) this.cancelRemove()
           this.startDrawing()
           closeDrawer(true) // Focus map for keyboard drawing
           showFloatingActions('draw')
@@ -691,6 +692,7 @@
         } else if (action === 'fill-boundary') {
           if (this._sliceActive) this.cancelSlice()
           if (this._isDrawing) this.cancelDrawing()
+          if (this._removeActive) this.cancelRemove()
           this.startFillBoundary()
           closeDrawer(true) // Focus map for keyboard interaction
           showFloatingActions('fill-boundary')
@@ -698,6 +700,7 @@
         } else if (action === 'fill-parcels') {
           if (this._sliceActive) this.cancelSlice()
           if (this._isDrawing) this.cancelDrawing()
+          if (this._removeActive) this.cancelRemove()
           this.startFillParcels()
           closeDrawer(true) // Focus map for keyboard interaction
           showFloatingActions('fill-parcels')
@@ -705,6 +708,7 @@
         } else if (action === 'slice') {
           if (this._fillActive) this.cancelFill()
           if (this._isDrawing) this.cancelDrawing()
+          if (this._removeActive) this.cancelRemove()
           this.startSlice()
           closeDrawer(true) // Focus map for keyboard interaction
           showFloatingActions('slice')
