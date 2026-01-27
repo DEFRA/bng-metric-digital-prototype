@@ -1511,6 +1511,36 @@
 
     const completedPolygon = new ol.geom.Polygon([this._currentPolygonCoords])
 
+    // Validate: reject self-intersecting polygons
+    var GeometryValidation =
+      window.DefraMapLib && window.DefraMapLib.GeometryValidation
+    if (
+      GeometryValidation &&
+      GeometryValidation.isSelfIntersecting(completedPolygon)
+    ) {
+      this._emitter.emit('validation:error', {
+        message:
+          'The shape you drew crosses over itself. Please draw a simple shape without overlapping lines.'
+      })
+      // Clean up
+      this._placedVertices.forEach(
+        function (v) {
+          this._drawSource.removeFeature(v)
+        }.bind(this)
+      )
+      this._placedVertices = []
+      this._currentPolygonCoords = []
+      if (this._polygonFeature) {
+        this._drawSource.removeFeature(this._polygonFeature)
+        this._polygonFeature = null
+      }
+      this._hoverSource.clear()
+      this._isDrawing = false
+      this._canClosePolygon = false
+      this._polygonComplete = false
+      return
+    }
+
     if (this._polygonFeature) {
       this._drawSource.removeFeature(this._polygonFeature)
     }
