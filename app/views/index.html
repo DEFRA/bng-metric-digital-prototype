@@ -7,37 +7,34 @@
 <div class="govuk-grid-row">
   <div class="govuk-grid-column-two-thirds">
 
-    {% include "govuk-prototype-kit/includes/homepage-top.njk" %}
-
     <h1 class="govuk-heading-xl">
       {{ serviceName }}
     </h1>
 
-    <p class="govuk-body">
-      Define your site's red line boundary using an interactive Ordnance Survey map.
+    <p class="govuk-body-l">
+      Calculate biodiversity units for your development site using the statutory biodiversity metric.
     </p>
 
-    <p class="govuk-body">
-      <a href="/define-red-line-boundary" class="govuk-button" data-module="govuk-button">
-        Define Red Line Boundary
-      </a>
-    </p>
-
-    <hr class="govuk-section-break govuk-section-break--l govuk-section-break--visible">
-
-    <h2 class="govuk-heading-m">On-site baseline</h2>
-
-    <p class="govuk-body">
-      Upload habitat data from a GeoPackage file to define your site boundary and habitat parcels.
-    </p>
-
-    <p class="govuk-body">
-      <a href="/on-site-baseline/start" class="govuk-button govuk-button--secondary" data-module="govuk-button">
+    <div class="govuk-!-margin-bottom-8">
+      <h2 class="govuk-heading-m">On-site baseline habitats</h2>
+      <p class="govuk-body">
+        Record the existing habitats within your site boundary before development. You can upload habitat data from a GeoPackage or shapefile, or manually draw habitat parcels on the map. This establishes the baseline biodiversity value that must be maintained or enhanced.
+      </p>
+      <a href="/on-site-baseline/start" class="govuk-button" data-module="govuk-button">
         Start on-site baseline
       </a>
-    </p>
+    </div>
 
-    {% include "govuk-prototype-kit/includes/homepage-bottom.njk" %}
+    <div class="govuk-!-margin-bottom-8">
+      <h2 class="govuk-heading-m">Define your red line boundary</h2>
+      <p class="govuk-body">
+        Draw or edit your site's red line boundary on an interactive Ordnance Survey map. The red line boundary defines the total area of your development site and is required before you can add habitat parcels.
+      </p>
+      <a href="/define-red-line-boundary" class="govuk-button" data-module="govuk-button">
+        Define red line boundary
+      </a>
+    </div>
+
   </div>
 </div>
 

@@ -1,5 +1,5 @@
 {
-  "serviceName": "BNG Metric",
+  "serviceName": "Biodiversity Net Gain Metric",
   "plugins": {
     "govuk-frontend": {
       "rebrand": true
