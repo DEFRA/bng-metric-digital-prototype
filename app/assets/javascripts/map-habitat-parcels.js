@@ -255,19 +255,12 @@ window.GOVUKPrototypeKit.documentReady(() => {
         const linearData = client.exportLinearFeaturesGeoJSON({
           dataProjection: 'EPSG:27700'
         })
-        console.log('Saving linear features:', {
-          hedgerows: linearData.hedgerows?.features?.length || 0,
-          watercourses: linearData.watercourses?.features?.length || 0
-        })
-        const linearResult = await fetch('/api/save-linear-features', {
+        await fetch('/api/save-linear-features', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(linearData)
         })
-        console.log('Linear features save result:', linearResult.ok)
       }
-
-      console.log('Saving parcels:', client.getParcelCount())
       const result = await client.saveParcels()
       if (result.ok && result.response && result.response.success) {
         showStatus('Parcels saved successfully! Redirecting...', 'success')

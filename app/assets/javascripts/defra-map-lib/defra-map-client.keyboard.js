@@ -966,14 +966,6 @@
     const featureCount = this._snapIndexSource
       ? this._snapIndexSource.getFeatures().length
       : 0
-    console.log(
-      '[KB Fill] zoom:',
-      zoom,
-      'features:',
-      featureCount,
-      'minZoom:',
-      this._minZoomForSnap
-    )
 
     if (typeof zoom === 'number' && zoom < this._minZoomForSnap) {
       this._announceAction('Zoom in further to select polygons')
@@ -983,40 +975,24 @@
     if (featureCount === 0) {
       this._lastFetchExtent = null
       await this._fetchSnapData()
-      console.log(
-        '[KB Fill] After fetch:',
-        this._snapIndexSource ? this._snapIndexSource.getFeatures().length : 0
-      )
     }
 
     const mapSize = this._map.getSize()
     const centerPixel = [mapSize[0] / 2, mapSize[1] / 2]
-    const centerCoord = this._map.getCoordinateFromPixel(centerPixel)
-    console.log(
-      '[KB Fill] centerPixel:',
-      centerPixel,
-      'centerCoord:',
-      centerCoord
-    )
 
     // Try finding polygon at center
     const clickedPolygon = this._findFillPolygonAtPixel(centerPixel, false)
-    console.log('[KB Fill] result:', clickedPolygon)
 
     if (!clickedPolygon) {
       this._announceAction('No polygon found at this location')
       return
     }
 
-    console.log('[KB Fill] fillMode:', this._fillMode)
-
     if (this._fillMode === 'parcels') {
-      console.log('[KB Fill] Validating for parcels mode...')
       const validation = this._validatePolygonWithinBoundary(
         clickedPolygon.geometry
       )
       if (!validation.valid) {
-        console.log('[KB Fill] Validation failed:', validation.error)
         this._announceAction(validation.error)
         return
       }
@@ -1025,20 +1001,16 @@
         clickedPolygon.geometry
       )
       if (!overlapCheck.valid) {
-        console.log('[KB Fill] Overlap check failed:', overlapCheck.error)
         this._announceAction(overlapCheck.error)
         return
       }
 
-      console.log('[KB Fill] Adding as parcel...')
       this._addFillPolygonAsParcel(clickedPolygon)
       this._announceAction('Parcel added')
       return
     }
 
-    console.log('[KB Fill] Toggling selection (boundary mode)...')
     this._toggleFillSelection(clickedPolygon)
-    console.log('[KB Fill] Selection count:', this._fillSelected.length)
     this._announceAction(
       `Polygon ${this._fillSelected.length > 0 ? 'selected' : 'deselected'}`
     )
