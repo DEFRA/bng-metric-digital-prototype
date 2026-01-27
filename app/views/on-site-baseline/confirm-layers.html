@@ -101,22 +101,22 @@
       <div class="map-legend">
         <div class="map-legend-item">
           <div class="legend-swatch legend-swatch--boundary"></div>
-          <span>Site boundary</span>
+          <span class="govuk-body govuk-!-margin-bottom-0">Site boundary</span>
         </div>
         <div class="map-legend-item">
           <div class="legend-swatch legend-swatch--parcels"></div>
-          <span>Habitat parcels ({{ layers.habitatParcels.polygonCount }})</span>
+          <span class="govuk-body govuk-!-margin-bottom-0">Habitat parcels ({{ layers.habitatParcels.polygonCount }})</span>
         </div>
         {% if layers.hedgerows.featureCount > 0 %}
         <div class="map-legend-item">
           <div class="legend-swatch legend-swatch--hedgerows"></div>
-          <span>Hedgerows ({{ layers.hedgerows.featureCount }})</span>
+          <span class="govuk-body govuk-!-margin-bottom-0">Hedgerows ({{ layers.hedgerows.featureCount }})</span>
         </div>
         {% endif %}
         {% if layers.watercourses.featureCount > 0 %}
         <div class="map-legend-item">
           <div class="legend-swatch legend-swatch--watercourses"></div>
-          <span>Watercourses ({{ layers.watercourses.featureCount }})</span>
+          <span class="govuk-body govuk-!-margin-bottom-0">Watercourses ({{ layers.watercourses.featureCount }})</span>
         </div>
         {% endif %}
       </div>
@@ -135,15 +135,6 @@
             html: '<p class="govuk-body govuk-!-margin-bottom-1">' + layers.siteBoundary.polygonCount + ' polygon</p>
                    <p class="govuk-body govuk-!-margin-bottom-1">' + layers.siteBoundary.areaHa + ' hectares</p>
                    <p class="govuk-body govuk-!-margin-bottom-0 govuk-!-font-size-16">Layer: ' + layers.siteBoundary.layerName + '</p>'
-          },
-          actions: {
-            items: [
-              {
-                href: "#",
-                text: "Change",
-                visuallyHiddenText: "site boundary layer"
-              }
-            ]
           }
         },
         {
@@ -154,15 +145,6 @@
             html: '<p class="govuk-body govuk-!-margin-bottom-1">' + layers.habitatParcels.polygonCount + ' polygons</p>
                    <p class="govuk-body govuk-!-margin-bottom-1">' + layers.habitatParcels.areaHa + ' hectares</p>
                    <p class="govuk-body govuk-!-margin-bottom-0 govuk-!-font-size-16">Layer: ' + layers.habitatParcels.layerName + '</p>'
-          },
-          actions: {
-            items: [
-              {
-                href: "#",
-                text: "Change",
-                visuallyHiddenText: "habitat parcels layer"
-              }
-            ]
           }
         }
       ]
@@ -194,15 +176,6 @@
           },
           value: {
             text: layers.hedgerows.layerName
-          },
-          actions: {
-            items: [
-              {
-                href: "#",
-                text: "Change",
-                visuallyHiddenText: "hedgerows layer"
-              }
-            ]
           }
         }
       ]
@@ -235,15 +208,6 @@
           },
           value: {
             text: layers.watercourses.layerName
-          },
-          actions: {
-            items: [
-              {
-                href: "#",
-                text: "Change",
-                visuallyHiddenText: "watercourses layer"
-              }
-            ]
           }
         }
       ]
@@ -253,7 +217,7 @@
     <!-- Coverage Check -->
     {% if coverage.isFull %}
       {{ govukInsetText({
-        html: '<span class="coverage-success">✓ Full coverage</span> – Your habitat parcels cover the entire site boundary.'
+        html: '<span class="govuk-body govuk-!-margin-bottom-0 coverage-success">✓ Full coverage</span> – Your habitat parcels cover the entire site boundary.'
       }) }}
     {% endif %}
 
