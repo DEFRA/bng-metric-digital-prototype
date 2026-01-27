@@ -996,6 +996,7 @@
 
     this._map.on('pointermove', (evt) => this._handlePointerMove(evt))
     this._map.on('click', (evt) => this._handleClick(evt))
+    this._map.on('dblclick', (evt) => this._handleDblClick(evt))
     this._map.on('pointerdown', (evt) => this._handlePointerDown(evt))
     this._map.on('pointerup', (evt) => this._handlePointerUp(evt))
     document.addEventListener('keydown', (evt) => {
@@ -1319,6 +1320,10 @@
     const snapCoord = this._lastSnapCoord || evt.coordinate
     const isFirstVertex = this._currentPolygonCoords.length === 0
     this._placeVertex(snapCoord, isFirstVertex)
+  }
+
+  DefraMapClient.prototype._handleDblClick = function (evt) {
+    // Base implementation - can be extended by modules (e.g., linear.js)
   }
 
   DefraMapClient.prototype._handlePointerDown = function (evt) {

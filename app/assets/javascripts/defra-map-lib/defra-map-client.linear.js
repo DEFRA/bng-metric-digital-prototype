@@ -496,12 +496,40 @@
   const origHandleClick = DefraMapClient.prototype._handleClick
   DefraMapClient.prototype._handleClick = function (evt) {
     if (this._isLineDrawing) {
+      // Ignore click if we just completed via double-click
+      if (this._justCompletedLineDraw) return
+
       const snapCoord = this._lastSnapCoord || evt.coordinate
       this._placeLineVertex(snapCoord)
       return
     }
 
     origHandleClick.call(this, evt)
+  }
+
+  // Double-click to complete line drawing
+  const origHandleDblClick = DefraMapClient.prototype._handleDblClick
+  DefraMapClient.prototype._handleDblClick = function (evt) {
+    if (this._isLineDrawing) {
+      // Need at least 2 points to complete a line
+      if (this._currentLineCoords.length < 2) return
+
+      evt.preventDefault()
+      evt.stopPropagation()
+
+      // Set flag to prevent the second single-click from placing a vertex
+      this._justCompletedLineDraw = true
+      setTimeout(() => {
+        this._justCompletedLineDraw = false
+      }, 100)
+
+      this._completeLine()
+      return
+    }
+
+    if (origHandleDblClick) {
+      origHandleDblClick.call(this, evt)
+    }
   }
 
   // ============================
@@ -525,6 +553,13 @@
         this._removeHoverFeature.set('removeHover', false)
         this._removeHoverFeature = null
       }
+
+      // Check if there are still features to remove
+      if (!this._hasRemovableFeatures()) {
+        this._removeActive = false
+        this._map.getTargetElement().style.cursor = 'default'
+      }
+
       this._emitter.emit('remove:completed', {
         type: linearFeature.lineType,
         index: linearFeature.index
@@ -532,6 +567,27 @@
       return
     }
 
+    // For habitat-parcels mode, handle parcel removal with combined exit check
+    if (this._mode === 'habitat-parcels') {
+      const clickedIndex = this._findParcelAtPixel(evt.pixel)
+      if (clickedIndex >= 0) {
+        this.removeParcel(clickedIndex)
+
+        // Check if there are still ANY features to remove (parcels OR linear)
+        if (!this._hasRemovableFeatures()) {
+          this._removeActive = false
+          this._map.getTargetElement().style.cursor = 'default'
+        }
+
+        this._emitter.emit('remove:completed', {
+          type: 'parcel',
+          index: clickedIndex
+        })
+      }
+      return
+    }
+
+    // For red-line-boundary mode, use original handler
     origHandleRemoveClick.call(this, evt)
   }
 
@@ -599,6 +655,49 @@
     )
 
     return found
+  }
+
+  // Helper to check if there are any removable features (parcels or linear)
+  DefraMapClient.prototype._hasRemovableFeatures = function () {
+    if (this._mode === 'red-line-boundary') {
+      return this._polygonComplete
+    }
+    if (this._mode === 'habitat-parcels') {
+      return (
+        this._habitatParcels.length > 0 ||
+        this._hedgerows.length > 0 ||
+        this._watercourses.length > 0
+      )
+    }
+    return false
+  }
+
+  // Override startRemove to include linear features in validation
+  const origStartRemove = DefraMapClient.prototype.startRemove
+  DefraMapClient.prototype.startRemove = function () {
+    if (this._removeActive) return
+    if (this._isDrawing) this.cancelDrawing()
+    if (this._isLineDrawing) this.cancelLineDraw()
+    if (this._fillActive) this.cancelFill()
+    if (this._sliceActive) this.cancelSlice()
+
+    if (this._mode === 'red-line-boundary' && !this._polygonComplete) {
+      this._emitter.emit('validation:error', {
+        message: 'No boundary to remove.'
+      })
+      return
+    }
+
+    if (this._mode === 'habitat-parcels' && !this._hasRemovableFeatures()) {
+      this._emitter.emit('validation:error', {
+        message: 'No features to remove.'
+      })
+      return
+    }
+
+    this._removeActive = true
+    this._map.getTargetElement().style.cursor = 'crosshair'
+    this._emitter.emit('remove:started', {})
   }
 
   // ============================
