@@ -63,6 +63,7 @@ window.GOVUKPrototypeKit.documentReady(() => {
     target: mapContainer,
     mode: 'red-line-boundary',
     projection: 'EPSG:27700',
+    zoom: 3,
     tiles: {
       collectionId: 'ngd-base',
       crs: '27700',

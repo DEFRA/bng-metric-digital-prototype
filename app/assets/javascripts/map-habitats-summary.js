@@ -35,17 +35,6 @@
         hedgerowsGeoJson = mapData.hedgerows || null
         watercoursesGeoJson = mapData.watercourses || null
 
-        // Debug logging
-        console.log('Map data loaded:', {
-          hasBoundary: !!(boundaryGeoJson && boundaryGeoJson.features?.length),
-          hasParcels: !!(parcelsGeoJson && parcelsGeoJson.features?.length),
-          hasHedgerows: !!(
-            hedgerowsGeoJson && hedgerowsGeoJson.features?.length
-          ),
-          hasWatercourses: !!(
-            watercoursesGeoJson && watercoursesGeoJson.features?.length
-          )
-        })
       } catch (e) {
         console.error('Failed to parse geometries:', e)
       }
@@ -275,7 +264,6 @@
         }
       } else {
         // No features - set default view of central England
-        console.log('No features to display, showing default England view')
         map.getView().setCenter([400000, 310000])
         map.getView().setZoom(7)
       }
