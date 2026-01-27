@@ -9,7 +9,8 @@
       "Bash(npm run format:check:*)",
       "Bash(npx prettier:*)",
       "Bash(grep:*)",
-      "Bash(git log:*)"
+      "Bash(git log:*)",
+      "Bash(git show:*)"
     ]
   }
 }

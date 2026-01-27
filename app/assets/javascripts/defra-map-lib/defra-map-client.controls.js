@@ -290,7 +290,7 @@
     floatingActions.appendChild(floatingConfirmBtn)
 
     // Track which tool is active for floating buttons
-    let activeToolType = null // 'draw' | 'fill-boundary' | 'fill-parcels' | 'slice' | 'remove' | 'hedgerow' | 'watercourse'
+    let activeToolType = null // 'draw' | 'fill-boundary' | 'fill-parcels' | 'slice' | 'remove' | 'hedgerow' | 'watercourse' | 'edit-parcel'
 
     // Snapping toggles section
     const snapButtons = {}
@@ -495,8 +495,8 @@
       activeToolType = toolType
       floatingActions.style.display = 'flex'
 
-      // Hide cancel button for remove tool (cancel is redundant as removals are immediate)
-      if (toolType === 'remove') {
+      // Hide cancel button for remove tool and edit-parcel (cancel is redundant)
+      if (toolType === 'remove' || toolType === 'edit-parcel') {
         floatingCancelBtn.style.display = 'none'
       } else {
         floatingCancelBtn.style.display = 'inline-flex'
@@ -556,6 +556,12 @@
             'defra-map-floating-actions__btn--disabled'
           )
         }
+      } else if (activeToolType === 'edit-parcel') {
+        // For parcel editing, always enable (accept current state)
+        floatingConfirmBtn.disabled = false
+        floatingConfirmBtn.classList.remove(
+          'defra-map-floating-actions__btn--disabled'
+        )
       } else {
         // For other tools, always enable
         floatingConfirmBtn.disabled = false
@@ -623,6 +629,9 @@
         if (this._currentLineCoords && this._currentLineCoords.length >= 2) {
           this.finishLineDraw()
         }
+      } else if (activeToolType === 'edit-parcel') {
+        // Stop editing the parcel (accept changes)
+        this.stopEditingParcel()
       }
       hideFloatingActions()
       updateButtons()
@@ -874,6 +883,14 @@
       updateButtons()
     })
     this.on('parcel:added', () => {
+      hideFloatingActions()
+      updateButtons()
+    })
+    this.on('parcel:editStarted', () => {
+      showFloatingActions('edit-parcel')
+      updateButtons()
+    })
+    this.on('parcel:editStopped', () => {
       hideFloatingActions()
       updateButtons()
     })

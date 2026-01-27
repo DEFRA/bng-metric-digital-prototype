@@ -1324,7 +1324,32 @@
   }
 
   DefraMapClient.prototype._handleDblClick = function (evt) {
-    // Base implementation - can be extended by modules (e.g., linear.js)
+    // Don't trigger edit during other active modes
+    if (
+      this._isDrawing ||
+      this._fillActive ||
+      this._sliceActive ||
+      this._removeActive ||
+      this._isLineDrawing
+    ) {
+      return
+    }
+
+    if (this._mode === 'habitat-parcels') {
+      const clickedIndex = this._findParcelAtPixel(evt.pixel)
+      if (clickedIndex >= 0) {
+        evt.preventDefault()
+        evt.stopPropagation()
+
+        if (this._editingParcelIndex === clickedIndex) {
+          // Already editing this parcel - stop editing
+          this.stopEditingParcel()
+        } else {
+          // Start editing this parcel
+          this.startEditingParcel(clickedIndex)
+        }
+      }
+    }
   }
 
   DefraMapClient.prototype._handlePointerDown = function (evt) {
@@ -1986,25 +2011,54 @@
     if (!this._boundaryPolygon) return { valid: true, errors: [] }
 
     const errors = []
-    const corrected = this._habitatParcels.map((p) =>
-      GeometryValidation.correctGeometryToBoundary(
-        p.feature.getGeometry(),
-        this._boundaryPolygon
-      )
-    )
+    const TurfHelpers = window.DefraMapLib && window.DefraMapLib.TurfHelpers
 
-    for (let i = 0; i < corrected.length; i++) {
-      if (
-        !GeometryValidation.isPolygonWithinBoundary(
-          corrected[i],
+    // Use turf.js for validation if available (handles holes/donuts correctly)
+    if (TurfHelpers && typeof turf !== 'undefined') {
+      const parcels = this._habitatParcels.map((p) => p.feature.getGeometry())
+
+      for (let i = 0; i < parcels.length; i++) {
+        // Check if parcel is within boundary using turf.booleanWithin
+        if (
+          !TurfHelpers.isPolygonWithinBoundary(
+            parcels[i],
+            this._boundaryPolygon
+          )
+        ) {
+          errors.push(`Parcel ${i + 1} extends outside the red line boundary.`)
+        }
+
+        // Check for overlapping parcels (shared interior area, not just touching edges)
+        for (let j = i + 1; j < parcels.length; j++) {
+          if (TurfHelpers.doPolygonsOverlap(parcels[i], parcels[j])) {
+            errors.push(`Parcel ${i + 1} overlaps with parcel ${j + 1}.`)
+          }
+        }
+      }
+    } else {
+      // Fallback to GeometryValidation if turf.js not available
+      const corrected = this._habitatParcels.map((p) =>
+        GeometryValidation.correctGeometryToBoundary(
+          p.feature.getGeometry(),
           this._boundaryPolygon
         )
-      ) {
-        errors.push(`Parcel ${i + 1} extends outside the red line boundary.`)
-      }
-      for (let j = i + 1; j < corrected.length; j++) {
-        if (GeometryValidation.doPolygonsOverlap(corrected[i], corrected[j])) {
-          errors.push(`Parcel ${i + 1} overlaps with parcel ${j + 1}.`)
+      )
+
+      for (let i = 0; i < corrected.length; i++) {
+        if (
+          !GeometryValidation.isPolygonWithinBoundary(
+            corrected[i],
+            this._boundaryPolygon
+          )
+        ) {
+          errors.push(`Parcel ${i + 1} extends outside the red line boundary.`)
+        }
+        for (let j = i + 1; j < corrected.length; j++) {
+          if (
+            GeometryValidation.doPolygonsOverlap(corrected[i], corrected[j])
+          ) {
+            errors.push(`Parcel ${i + 1} overlaps with parcel ${j + 1}.`)
+          }
         }
       }
     }
