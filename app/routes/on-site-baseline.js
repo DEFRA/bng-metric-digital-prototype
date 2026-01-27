@@ -584,9 +584,16 @@ function registerOnSiteBaselineRoutes(router) {
     }
 
     // Build table rows for GovUK table component
-    const tableRows = habitatParcels.map(function (parcel) {
+    const tableRows = habitatParcels.map(function (parcel, index) {
       return [
-        { text: parcel.parcelId },
+        {
+          html:
+            '<a href="#" class="govuk-link habitat-ref-link" data-feature-type="parcel" data-feature-index="' +
+            index +
+            '">' +
+            parcel.parcelId +
+            '</a>'
+        },
         { text: parcel.areaHectares },
         { text: parcel.habitatLabel || 'Not specified' },
         { text: parcel.distinctiveness || 'Not specified' },
@@ -614,7 +621,14 @@ function registerOnSiteBaselineRoutes(router) {
       }
       lengthM = lengthM || 0
       return [
-        { text: 'H-' + (index + 1).toString().padStart(3, '0') },
+        {
+          html:
+            '<a href="#" class="govuk-link habitat-ref-link" data-feature-type="hedgerow" data-feature-index="' +
+            index +
+            '">H-' +
+            (index + 1).toString().padStart(3, '0') +
+            '</a>'
+        },
         { text: lengthM.toFixed(1) },
         { text: 'Not started' },
         {
@@ -638,7 +652,14 @@ function registerOnSiteBaselineRoutes(router) {
       }
       lengthM = lengthM || 0
       return [
-        { text: 'W-' + (index + 1).toString().padStart(3, '0') },
+        {
+          html:
+            '<a href="#" class="govuk-link habitat-ref-link" data-feature-type="watercourse" data-feature-index="' +
+            index +
+            '">W-' +
+            (index + 1).toString().padStart(3, '0') +
+            '</a>'
+        },
         { text: lengthM.toFixed(1) },
         { text: 'Not started' },
         {
