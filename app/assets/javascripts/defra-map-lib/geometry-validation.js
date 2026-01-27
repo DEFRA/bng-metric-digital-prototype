@@ -693,6 +693,43 @@
     return { valid: true }
   }
 
+  // ============================
+  // Self-intersection detection
+  // ============================
+
+  /**
+   * Check if a polygon is self-intersecting (crosses over itself).
+   * Returns true if any non-adjacent edges intersect.
+   */
+  GeometryValidation.isSelfIntersecting = function (polygon) {
+    const coords = polygon.getCoordinates()[0]
+    const n = coords.length
+
+    // Need at least 4 points (3 vertices + closing point)
+    if (n < 4) return false
+
+    // Check each edge against non-adjacent edges
+    for (let i = 0; i < n - 1; i++) {
+      // Start j at i + 2 to skip adjacent edge
+      for (let j = i + 2; j < n - 1; j++) {
+        // Skip if j wraps around to be adjacent to i (first and last edge)
+        if (i === 0 && j === n - 2) continue
+
+        if (
+          this.doLineSegmentsIntersect(
+            coords[i],
+            coords[i + 1],
+            coords[j],
+            coords[j + 1]
+          )
+        ) {
+          return true
+        }
+      }
+    }
+    return false
+  }
+
   window.DefraMapLib = window.DefraMapLib || {}
   window.DefraMapLib.GeometryValidation = GeometryValidation
 })(window)
