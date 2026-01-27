@@ -270,15 +270,25 @@
   DefraMapClient.prototype._completeLine = function () {
     if (this._currentLineCoords.length < 2) return
 
-    // Validate line is within boundary (only in habitat-parcels mode)
+    let finalCoords = this._currentLineCoords
+
+    // Correct and validate line within boundary (only in habitat-parcels mode)
     if (this._mode === 'habitat-parcels' && this._boundaryPolygon) {
       const GeometryValidation =
         window.DefraMapLib && window.DefraMapLib.GeometryValidation
       if (GeometryValidation) {
+        // First, correct the line to fit within the boundary
+        // (snaps vertices, inserts corner vertices where needed)
+        finalCoords = GeometryValidation.correctLineToBoundary(
+          this._currentLineCoords,
+          this._boundaryPolygon
+        )
+
+        // Then validate the corrected line
         const featureTypeName =
           this._currentLineType === 'hedgerow' ? 'Hedgerow' : 'Watercourse'
         const validation = GeometryValidation.validateLinearFeature(
-          this._currentLineCoords,
+          finalCoords,
           this._boundaryPolygon,
           featureTypeName
         )
@@ -295,7 +305,7 @@
     }
 
     // Create final line feature
-    const geom = new ol.geom.LineString(this._currentLineCoords)
+    const geom = new ol.geom.LineString(finalCoords)
     const finalFeature = new ol.Feature({
       geometry: geom,
       type: 'linear-feature',
@@ -304,12 +314,12 @@
     this._drawSource.addFeature(finalFeature)
 
     const id = `${this._currentLineType}-${Date.now()}-${Math.random().toString(16).slice(2)}`
-    const lengthM = this._getLineLength(this._currentLineCoords)
+    const lengthM = this._getLineLength(finalCoords)
 
     const linearObj = {
       id: id,
       feature: finalFeature,
-      coords: [...this._currentLineCoords],
+      coords: finalCoords.map((c) => [...c]),
       vertices: [...this._placedLineVertices],
       meta: {}
     }
@@ -471,6 +481,19 @@
       const snapResult = this._findSnapPoint(coordinate)
       let snapCoord = snapResult.coordinate
       let snapType = snapResult.snapType
+
+      // Clamp to boundary if outside (same as polygon drawing)
+      if (
+        (this._snapToBoundaryVertices || this._snapToBoundaryEdges) &&
+        this._mode === 'habitat-parcels' &&
+        this._boundaryPolygon
+      ) {
+        const clamped = this._clampToBoundary(snapCoord)
+        if (clamped[0] !== snapCoord[0] || clamped[1] !== snapCoord[1]) {
+          snapCoord = clamped
+          snapType = this._snapType.BOUNDARY_EDGE
+        }
+      }
 
       this._lastSnapCoord = snapCoord
       this._lastSnapType = snapType
