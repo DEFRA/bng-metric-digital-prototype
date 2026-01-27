@@ -1,4 +1,37 @@
 /**
+ * Calculate line length (for projected coordinates in meters)
+ * @param {Object} geoJson - GeoJSON geometry object (LineString or MultiLineString)
+ * @returns {number} Length in meters
+ */
+function calculateLineLength(geoJson) {
+  if (geoJson.type === 'LineString') {
+    return calculatePathLength(geoJson.coordinates)
+  } else if (geoJson.type === 'MultiLineString') {
+    let totalLength = 0
+    geoJson.coordinates.forEach((path) => {
+      totalLength += calculatePathLength(path)
+    })
+    return totalLength
+  }
+  return 0
+}
+
+/**
+ * Calculate length of a path using Euclidean distance
+ * @param {Array} path - Array of coordinate pairs
+ * @returns {number} Length in meters
+ */
+function calculatePathLength(path) {
+  let length = 0
+  for (let i = 0; i < path.length - 1; i++) {
+    const dx = path[i + 1][0] - path[i][0]
+    const dy = path[i + 1][1] - path[i][1]
+    length += Math.sqrt(dx * dx + dy * dy)
+  }
+  return length
+}
+
+/**
  * Simple polygon area calculation (for projected coordinates in meters)
  * @param {Object} geoJson - GeoJSON geometry object
  * @returns {number} Area in square meters
@@ -183,6 +216,8 @@ function geojsonToEsri(geojson) {
 }
 
 module.exports = {
+  calculateLineLength,
+  calculatePathLength,
   calculatePolygonArea,
   calculateRingArea,
   doLineSegmentsIntersect,

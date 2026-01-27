@@ -23,6 +23,10 @@
     const geometriesDataEl = document.getElementById('geometries-data')
     const boundaryLayerNameEl = document.getElementById('boundary-layer-name')
     const parcelsLayerNameEl = document.getElementById('parcels-layer-name')
+    const hedgerowsLayerNameEl = document.getElementById('hedgerows-layer-name')
+    const watercoursesLayerNameEl = document.getElementById(
+      'watercourses-layer-name'
+    )
 
     if (!geometriesDataEl) {
       console.warn('Geometries data not found')
@@ -45,6 +49,12 @@
     const parcelsLayerName = parcelsLayerNameEl
       ? parcelsLayerNameEl.textContent.trim()
       : null
+    const hedgerowsLayerName = hedgerowsLayerNameEl
+      ? hedgerowsLayerNameEl.textContent.trim()
+      : null
+    const watercoursesLayerName = watercoursesLayerNameEl
+      ? watercoursesLayerNameEl.textContent.trim()
+      : null
 
     // Get the boundary and parcels feature collections
     const boundaryGeoJson =
@@ -55,6 +65,18 @@
       parcelsLayerName && geometries[parcelsLayerName]
         ? geometries[parcelsLayerName]
         : null
+    const hedgerowsGeoJson =
+      hedgerowsLayerName &&
+      hedgerowsLayerName !== 'null' &&
+      geometries[hedgerowsLayerName]
+        ? geometries[hedgerowsLayerName]
+        : null
+    const watercoursesGeoJson =
+      watercoursesLayerName &&
+      watercoursesLayerName !== 'null' &&
+      geometries[watercoursesLayerName]
+        ? geometries[watercoursesLayerName]
+        : null
 
     if (!boundaryGeoJson && !parcelsGeoJson) {
       showMapPlaceholder(mapContainer, 'No valid layers to display')
@@ -62,7 +84,13 @@
     }
 
     // Create the map using DefraMapClient
-    createMap(mapContainer, boundaryGeoJson, parcelsGeoJson)
+    createMap(
+      mapContainer,
+      boundaryGeoJson,
+      parcelsGeoJson,
+      hedgerowsGeoJson,
+      watercoursesGeoJson
+    )
   }
 
   function showMapPlaceholder(container, message) {
@@ -73,7 +101,13 @@
       '</p></div>'
   }
 
-  async function createMap(container, boundaryGeoJson, parcelsGeoJson) {
+  async function createMap(
+    container,
+    boundaryGeoJson,
+    parcelsGeoJson,
+    hedgerowsGeoJson,
+    watercoursesGeoJson
+  ) {
     // Check DefraMapClient is available
     if (!window.DefraMapClient) {
       console.error('DefraMapClient not loaded')
@@ -144,6 +178,62 @@
 
         map.addLayer(parcelsLayer)
         allFeatures = allFeatures.concat(parcelsSource.getFeatures())
+      }
+
+      // Add hedgerows layer
+      if (
+        hedgerowsGeoJson &&
+        hedgerowsGeoJson.features &&
+        hedgerowsGeoJson.features.length > 0
+      ) {
+        const hedgerowsSource = new ol.source.Vector({
+          features: format.readFeatures(hedgerowsGeoJson, {
+            dataProjection: dataProjection,
+            featureProjection: 'EPSG:27700'
+          })
+        })
+
+        const hedgerowsLayer = new ol.layer.Vector({
+          source: hedgerowsSource,
+          style: new ol.style.Style({
+            stroke: new ol.style.Stroke({
+              color: '#00703c',
+              width: 3
+            })
+          }),
+          zIndex: 22
+        })
+
+        map.addLayer(hedgerowsLayer)
+        allFeatures = allFeatures.concat(hedgerowsSource.getFeatures())
+      }
+
+      // Add watercourses layer
+      if (
+        watercoursesGeoJson &&
+        watercoursesGeoJson.features &&
+        watercoursesGeoJson.features.length > 0
+      ) {
+        const watercoursesSource = new ol.source.Vector({
+          features: format.readFeatures(watercoursesGeoJson, {
+            dataProjection: dataProjection,
+            featureProjection: 'EPSG:27700'
+          })
+        })
+
+        const watercoursesLayer = new ol.layer.Vector({
+          source: watercoursesSource,
+          style: new ol.style.Style({
+            stroke: new ol.style.Stroke({
+              color: '#1d70b8',
+              width: 3
+            })
+          }),
+          zIndex: 21
+        })
+
+        map.addLayer(watercoursesLayer)
+        allFeatures = allFeatures.concat(watercoursesSource.getFeatures())
       }
 
       // Add boundary layer (rendered on top with dashed line)
