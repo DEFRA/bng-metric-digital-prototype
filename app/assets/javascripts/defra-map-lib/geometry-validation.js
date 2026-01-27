@@ -121,12 +121,16 @@
   }
 
   GeometryValidation.isPointOnPolygonBoundary = function (point, polygon) {
-    const coords = polygon.getCoordinates()[0]
-    for (let i = 0; i < coords.length - 1; i++) {
-      const segStart = coords[i]
-      const segEnd = coords[i + 1]
-      if (GeometryValidation.isPointOnLineSegment(point, segStart, segEnd)) {
-        return true
+    // Check all rings (exterior + any holes)
+    const allRings = polygon.getCoordinates()
+    for (let r = 0; r < allRings.length; r++) {
+      const coords = allRings[r]
+      for (let i = 0; i < coords.length - 1; i++) {
+        const segStart = coords[i]
+        const segEnd = coords[i + 1]
+        if (GeometryValidation.isPointOnLineSegment(point, segStart, segEnd)) {
+          return true
+        }
       }
     }
     return false
@@ -137,23 +141,59 @@
       return false
     }
 
-    const coords = polygon.getCoordinates()[0]
+    const allRings = polygon.getCoordinates()
     const x = point[0]
     const y = point[1]
-    let inside = false
 
-    for (let i = 0, j = coords.length - 2; i < coords.length - 1; j = i++) {
-      const xi = coords[i][0]
-      const yi = coords[i][1]
-      const xj = coords[j][0]
-      const yj = coords[j][1]
+    // Check if inside exterior ring
+    const exteriorCoords = allRings[0]
+    let insideExterior = false
+
+    for (
+      let i = 0, j = exteriorCoords.length - 2;
+      i < exteriorCoords.length - 1;
+      j = i++
+    ) {
+      const xi = exteriorCoords[i][0]
+      const yi = exteriorCoords[i][1]
+      const xj = exteriorCoords[j][0]
+      const yj = exteriorCoords[j][1]
 
       if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) {
-        inside = !inside
+        insideExterior = !insideExterior
       }
     }
 
-    return inside
+    if (!insideExterior) {
+      return false
+    }
+
+    // Check if inside any hole (if so, point is NOT inside the polygon)
+    for (let r = 1; r < allRings.length; r++) {
+      const holeCoords = allRings[r]
+      let insideHole = false
+
+      for (
+        let i = 0, j = holeCoords.length - 2;
+        i < holeCoords.length - 1;
+        j = i++
+      ) {
+        const xi = holeCoords[i][0]
+        const yi = holeCoords[i][1]
+        const xj = holeCoords[j][0]
+        const yj = holeCoords[j][1]
+
+        if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) {
+          insideHole = !insideHole
+        }
+      }
+
+      if (insideHole) {
+        return false // Point is in a hole, so not inside the polygon
+      }
+    }
+
+    return true
   }
 
   GeometryValidation.isPointInsideOrOnBoundary = function (point, polygon) {
@@ -161,50 +201,103 @@
       return true
     }
 
-    const coords = polygon.getCoordinates()[0]
+    const allRings = polygon.getCoordinates()
     const x = point[0]
     const y = point[1]
-    let inside = false
 
-    for (let i = 0, j = coords.length - 2; i < coords.length - 1; j = i++) {
-      const xi = coords[i][0]
-      const yi = coords[i][1]
-      const xj = coords[j][0]
-      const yj = coords[j][1]
+    // Check if inside exterior ring
+    const exteriorCoords = allRings[0]
+    let insideExterior = false
+
+    for (
+      let i = 0, j = exteriorCoords.length - 2;
+      i < exteriorCoords.length - 1;
+      j = i++
+    ) {
+      const xi = exteriorCoords[i][0]
+      const yi = exteriorCoords[i][1]
+      const xj = exteriorCoords[j][0]
+      const yj = exteriorCoords[j][1]
 
       if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) {
-        inside = !inside
+        insideExterior = !insideExterior
       }
     }
 
-    return inside
+    if (!insideExterior) {
+      return false
+    }
+
+    // Check if inside any hole (if so, point is NOT inside the polygon)
+    for (let r = 1; r < allRings.length; r++) {
+      const holeCoords = allRings[r]
+      let insideHole = false
+
+      for (
+        let i = 0, j = holeCoords.length - 2;
+        i < holeCoords.length - 1;
+        j = i++
+      ) {
+        const xi = holeCoords[i][0]
+        const yi = holeCoords[i][1]
+        const xj = holeCoords[j][0]
+        const yj = holeCoords[j][1]
+
+        if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) {
+          insideHole = !insideHole
+        }
+      }
+
+      if (insideHole) {
+        return false // Point is in a hole, so not inside the polygon
+      }
+    }
+
+    return true
   }
 
   GeometryValidation.isPolygonWithinBoundary = function (
     innerPolygon,
     outerPolygon
   ) {
-    const innerCoords = innerPolygon.getCoordinates()[0]
+    // Check all rings of the inner polygon (exterior + any holes)
+    const allRings = innerPolygon.getCoordinates()
 
-    for (let i = 0; i < innerCoords.length - 1; i++) {
-      const coord = innerCoords[i]
-      if (!GeometryValidation.isPointInsideOrOnBoundary(coord, outerPolygon)) {
-        return false
+    // Check all vertices first (all rings)
+    for (let r = 0; r < allRings.length; r++) {
+      const ringCoords = allRings[r]
+      for (let i = 0; i < ringCoords.length - 1; i++) {
+        const coord = ringCoords[i]
+        if (
+          !GeometryValidation.isPointInsideOrOnBoundary(coord, outerPolygon)
+        ) {
+          return false
+        }
       }
     }
 
-    for (let i = 0; i < innerCoords.length - 1; i++) {
-      const midpoint = [
-        (innerCoords[i][0] + innerCoords[i + 1][0]) / 2,
-        (innerCoords[i][1] + innerCoords[i + 1][1]) / 2
-      ]
-      if (
-        !GeometryValidation.isPointInsideOrOnBoundary(midpoint, outerPolygon)
-      ) {
-        return false
+    // Check midpoints with tolerance to handle floating-point precision
+    // when parcel edges lie exactly on boundary edges (all rings)
+    for (let r = 0; r < allRings.length; r++) {
+      const ringCoords = allRings[r]
+      for (let i = 0; i < ringCoords.length - 1; i++) {
+        const midpoint = [
+          (ringCoords[i][0] + ringCoords[i + 1][0]) / 2,
+          (ringCoords[i][1] + ringCoords[i + 1][1]) / 2
+        ]
+        if (
+          !GeometryValidation.isPointInsideOrOnBoundaryWithTolerance(
+            midpoint,
+            outerPolygon,
+            EPSILON * 100
+          )
+        ) {
+          return false
+        }
       }
     }
 
+    // Extent check
     const innerExtent = innerPolygon.getExtent()
     const outerExtent = outerPolygon.getExtent()
     const buffer = EPSILON * 10
@@ -221,19 +314,65 @@
     return true
   }
 
-  GeometryValidation.doPolygonEdgesIntersect = function (polygon1, polygon2) {
-    const coords1 = polygon1.getCoordinates()[0]
-    const coords2 = polygon2.getCoordinates()[0]
+  /**
+   * Check if a point is inside or on the boundary of a polygon,
+   * with an additional tolerance for boundary edge proximity.
+   * This handles floating-point precision issues when points should
+   * be exactly on an edge but are slightly off due to calculations.
+   */
+  GeometryValidation.isPointInsideOrOnBoundaryWithTolerance = function (
+    point,
+    polygon,
+    tolerance
+  ) {
+    // First try standard check
+    if (GeometryValidation.isPointInsideOrOnBoundary(point, polygon)) {
+      return true
+    }
 
-    for (let i = 0; i < coords1.length - 1; i++) {
-      const a1 = coords1[i]
-      const a2 = coords1[i + 1]
-
-      for (let j = 0; j < coords2.length - 1; j++) {
-        const b1 = coords2[j]
-        const b2 = coords2[j + 1]
-        if (GeometryValidation.doLineSegmentsIntersect(a1, a2, b1, b2)) {
+    // If failed, check if point is within tolerance of any boundary edge (all rings)
+    const allRings = polygon.getCoordinates()
+    for (let r = 0; r < allRings.length; r++) {
+      const coords = allRings[r]
+      for (let i = 0; i < coords.length - 1; i++) {
+        const closest = GeometryValidation.getClosestPointOnSegment(
+          point,
+          coords[i],
+          coords[i + 1]
+        )
+        const dx = point[0] - closest[0]
+        const dy = point[1] - closest[1]
+        const dist = Math.sqrt(dx * dx + dy * dy)
+        if (dist <= tolerance) {
           return true
+        }
+      }
+    }
+
+    return false
+  }
+
+  GeometryValidation.doPolygonEdgesIntersect = function (polygon1, polygon2) {
+    // Check all rings from both polygons (exterior + holes)
+    const allRings1 = polygon1.getCoordinates()
+    const allRings2 = polygon2.getCoordinates()
+
+    for (let r1 = 0; r1 < allRings1.length; r1++) {
+      const coords1 = allRings1[r1]
+      for (let r2 = 0; r2 < allRings2.length; r2++) {
+        const coords2 = allRings2[r2]
+
+        for (let i = 0; i < coords1.length - 1; i++) {
+          const a1 = coords1[i]
+          const a2 = coords1[i + 1]
+
+          for (let j = 0; j < coords2.length - 1; j++) {
+            const b1 = coords2[j]
+            const b2 = coords2[j + 1]
+            if (GeometryValidation.doLineSegmentsIntersect(a1, a2, b1, b2)) {
+              return true
+            }
+          }
         }
       }
     }
@@ -291,42 +430,60 @@
       return false
     }
 
-    const coords1 = polygon1.getCoordinates()[0]
-    const coords2 = polygon2.getCoordinates()[0]
+    // Check all rings from both polygons (exterior + holes)
+    const allRings1 = polygon1.getCoordinates()
+    const allRings2 = polygon2.getCoordinates()
 
-    for (let i = 0; i < coords1.length - 1; i++) {
-      if (GeometryValidation.isPointInsidePolygon(coords1[i], polygon2)) {
-        return true
+    // Check if any vertex of polygon1 (any ring) is inside polygon2
+    for (let r = 0; r < allRings1.length; r++) {
+      const coords1 = allRings1[r]
+      for (let i = 0; i < coords1.length - 1; i++) {
+        if (GeometryValidation.isPointInsidePolygon(coords1[i], polygon2)) {
+          return true
+        }
       }
     }
 
-    for (let i = 0; i < coords2.length - 1; i++) {
-      if (GeometryValidation.isPointInsidePolygon(coords2[i], polygon1)) {
-        return true
+    // Check if any vertex of polygon2 (any ring) is inside polygon1
+    for (let r = 0; r < allRings2.length; r++) {
+      const coords2 = allRings2[r]
+      for (let i = 0; i < coords2.length - 1; i++) {
+        if (GeometryValidation.isPointInsidePolygon(coords2[i], polygon1)) {
+          return true
+        }
       }
     }
 
+    // Check if edges intersect
     if (GeometryValidation.doPolygonEdgesIntersect(polygon1, polygon2)) {
       return true
     }
 
-    for (let i = 0; i < coords1.length - 1; i++) {
-      const midpoint = [
-        (coords1[i][0] + coords1[i + 1][0]) / 2,
-        (coords1[i][1] + coords1[i + 1][1]) / 2
-      ]
-      if (GeometryValidation.isPointInsidePolygon(midpoint, polygon2)) {
-        return true
+    // Check midpoints of all rings from polygon1
+    for (let r = 0; r < allRings1.length; r++) {
+      const coords1 = allRings1[r]
+      for (let i = 0; i < coords1.length - 1; i++) {
+        const midpoint = [
+          (coords1[i][0] + coords1[i + 1][0]) / 2,
+          (coords1[i][1] + coords1[i + 1][1]) / 2
+        ]
+        if (GeometryValidation.isPointInsidePolygon(midpoint, polygon2)) {
+          return true
+        }
       }
     }
 
-    for (let i = 0; i < coords2.length - 1; i++) {
-      const midpoint = [
-        (coords2[i][0] + coords2[i + 1][0]) / 2,
-        (coords2[i][1] + coords2[i + 1][1]) / 2
-      ]
-      if (GeometryValidation.isPointInsidePolygon(midpoint, polygon1)) {
-        return true
+    // Check midpoints of all rings from polygon2
+    for (let r = 0; r < allRings2.length; r++) {
+      const coords2 = allRings2[r]
+      for (let i = 0; i < coords2.length - 1; i++) {
+        const midpoint = [
+          (coords2[i][0] + coords2[i + 1][0]) / 2,
+          (coords2[i][1] + coords2[i + 1][1]) / 2
+        ]
+        if (GeometryValidation.isPointInsidePolygon(midpoint, polygon1)) {
+          return true
+        }
       }
     }
 
@@ -567,8 +724,10 @@
 
   /**
    * Correct a line's coordinates to ensure it stays within the boundary.
-   * For points on the boundary, snaps to nearest boundary vertex and traces
-   * the boundary path between consecutive boundary points.
+   * Points inside or on the boundary are kept as-is. Points outside are
+   * clamped to the nearest point on the boundary edge.
+   * Does NOT extend lines along the boundary - preserves the user's original
+   * line length and shape.
    * Returns the corrected coordinate array.
    */
   GeometryValidation.correctLineToBoundary = function (
@@ -580,88 +739,56 @@
     }
 
     const boundaryCoords = boundaryPolygon.getCoordinates()[0]
-    const numVertices = boundaryCoords.length - 1 // Exclude closing duplicate
+    const result = []
 
-    // Classify each line vertex: find nearest boundary vertex index or -1 if inside
-    const classified = lineCoords.map((coord) => {
-      // If point is inside the polygon (not on boundary), keep it as-is
-      if (GeometryValidation.isPointInsidePolygon(coord, boundaryPolygon)) {
-        return { coord: coord, boundaryIndex: -1 }
+    for (let i = 0; i < lineCoords.length; i++) {
+      const coord = lineCoords[i]
+
+      // Check if point is inside or on boundary - if so, keep as-is
+      if (
+        GeometryValidation.isPointInsideOrOnBoundary(coord, boundaryPolygon)
+      ) {
+        result.push(coord.slice())
+      } else {
+        // Point is outside - clamp to nearest point on boundary edge
+        const clamped = GeometryValidation.clampPointToBoundary(
+          coord,
+          boundaryCoords
+        )
+        result.push(clamped)
       }
-
-      // Point is on or near boundary - find nearest boundary vertex
-      let nearestIdx = -1
-      let nearestDist = Infinity
-
-      for (let j = 0; j < numVertices; j++) {
-        const bv = boundaryCoords[j]
-        const dx = coord[0] - bv[0]
-        const dy = coord[1] - bv[1]
-        const dist = Math.sqrt(dx * dx + dy * dy)
-        if (dist < nearestDist) {
-          nearestDist = dist
-          nearestIdx = j
-        }
-      }
-
-      // Snap to the nearest boundary vertex
-      return {
-        coord: boundaryCoords[nearestIdx].slice(),
-        boundaryIndex: nearestIdx
-      }
-    })
-
-    // Build corrected coordinates, tracing boundary between consecutive boundary points
-    const result = [classified[0].coord]
-
-    for (let i = 0; i < classified.length - 1; i++) {
-      const curr = classified[i]
-      const next = classified[i + 1]
-
-      // If both points are on boundary, trace the path between them
-      if (curr.boundaryIndex >= 0 && next.boundaryIndex >= 0) {
-        const startIdx = curr.boundaryIndex
-        const endIdx = next.boundaryIndex
-
-        if (startIdx !== endIdx) {
-          // Find shorter path around the boundary (clockwise or counterclockwise)
-          const forwardPath = []
-          const backwardPath = []
-
-          // Forward: startIdx -> startIdx+1 -> ... -> endIdx
-          let idx = startIdx
-          while (idx !== endIdx) {
-            idx = (idx + 1) % numVertices
-            if (idx !== endIdx) {
-              forwardPath.push(boundaryCoords[idx].slice())
-            }
-          }
-
-          // Backward: startIdx -> startIdx-1 -> ... -> endIdx
-          idx = startIdx
-          while (idx !== endIdx) {
-            idx = (idx - 1 + numVertices) % numVertices
-            if (idx !== endIdx) {
-              backwardPath.push(boundaryCoords[idx].slice())
-            }
-          }
-
-          // Use the shorter path
-          const pathToInsert =
-            forwardPath.length <= backwardPath.length
-              ? forwardPath
-              : backwardPath
-
-          for (const pt of pathToInsert) {
-            result.push(pt)
-          }
-        }
-      }
-
-      result.push(next.coord)
     }
 
     return result
+  }
+
+  /**
+   * Clamp a point to the nearest location on the boundary edge.
+   * Returns the closest point on any boundary segment.
+   */
+  GeometryValidation.clampPointToBoundary = function (point, boundaryCoords) {
+    let nearestPoint = null
+    let nearestDist = Infinity
+
+    for (let i = 0; i < boundaryCoords.length - 1; i++) {
+      const edgeStart = boundaryCoords[i]
+      const edgeEnd = boundaryCoords[i + 1]
+      const closest = GeometryValidation.getClosestPointOnSegment(
+        point,
+        edgeStart,
+        edgeEnd
+      )
+      const dx = point[0] - closest[0]
+      const dy = point[1] - closest[1]
+      const dist = Math.sqrt(dx * dx + dy * dy)
+
+      if (dist < nearestDist) {
+        nearestDist = dist
+        nearestPoint = closest
+      }
+    }
+
+    return nearestPoint || point.slice()
   }
 
   /**

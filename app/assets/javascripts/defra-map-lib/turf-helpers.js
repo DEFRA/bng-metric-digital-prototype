@@ -143,6 +143,38 @@
   }
 
   /**
+   * Check if two polygons overlap (share interior area).
+   * This is different from intersect - touching edges don't count as overlap.
+   * Correctly handles donut geometry where a hole is filled by another parcel.
+   * @param {ol.geom.Polygon} polygon1 - First polygon
+   * @param {ol.geom.Polygon} polygon2 - Second polygon
+   * @returns {boolean} True if they share interior area
+   */
+  TurfHelpers.doPolygonsOverlap = function (polygon1, polygon2) {
+    try {
+      const turfPoly1 = TurfHelpers.olPolygonToTurf(polygon1)
+      const turfPoly2 = TurfHelpers.olPolygonToTurf(polygon2)
+
+      if (!turfPoly1 || !turfPoly2) return false
+
+      // Calculate the intersection
+      const intersection = turf.intersect(
+        turf.featureCollection([turfPoly1, turfPoly2])
+      )
+
+      if (!intersection) return false
+
+      // Check if the intersection has significant area
+      // (edges touching have zero area intersection)
+      const area = turf.area(intersection)
+      return area > TurfHelpers.MIN_AREA_SQM
+    } catch (e) {
+      console.warn('TurfHelpers.doPolygonsOverlap error:', e)
+      return false
+    }
+  }
+
+  /**
    * Calculate the remaining gaps within a boundary after subtracting parcels.
    * Returns a turf.js geometry representing the unfilled area.
    * @param {ol.geom.Polygon} boundary - The boundary polygon
@@ -260,6 +292,9 @@
 
   /**
    * Check if a polygon is fully within a boundary (no clipping needed).
+   * Uses a tolerant check: the parcel is valid if it doesn't extend
+   * significantly outside the boundary. This correctly handles parcels
+   * that have vertices on the boundary edge.
    * @param {ol.geom.Polygon} polygon - Polygon to check
    * @param {ol.geom.Polygon} boundary - Boundary polygon
    * @returns {boolean} True if polygon is entirely within boundary
@@ -271,7 +306,25 @@
 
       if (!turfPoly || !turfBoundary) return false
 
-      return turf.booleanWithin(turfPoly, turfBoundary)
+      // Try strict within first
+      if (turf.booleanWithin(turfPoly, turfBoundary)) {
+        return true
+      }
+
+      // For parcels on the boundary edge, check if the difference
+      // (parcel minus boundary) has negligible area
+      const difference = turf.difference(
+        turf.featureCollection([turfPoly, turfBoundary])
+      )
+
+      if (!difference) {
+        // No difference means parcel is entirely within boundary
+        return true
+      }
+
+      // If the area outside boundary is negligible, consider it valid
+      const outsideArea = turf.area(difference)
+      return outsideArea < TurfHelpers.MIN_AREA_SQM
     } catch (e) {
       console.warn('TurfHelpers.isPolygonWithinBoundary error:', e)
       return false
