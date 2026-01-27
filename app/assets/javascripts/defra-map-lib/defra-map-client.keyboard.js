@@ -334,8 +334,10 @@
     const target = this._map.getTargetElement()
     target.classList.add('defra-map--focused')
 
-    // Show keyboard hint panel
-    this._showKeyboardHint()
+    // Only show keyboard hint for keyboard-initiated focus (not mouse clicks)
+    if (target.matches(':focus-visible')) {
+      this._showKeyboardHint()
+    }
 
     this._emitter.emit('keyboard:focus', {})
   }

@@ -986,9 +986,8 @@
 // OS Features loading indicator
 .os-features-loading {
   position: absolute;
-  top: 10px;
-  left: 50%;
-  transform: translateX(-50%);
+  bottom: 15px;
+  right: 10px;
   z-index: 500;
   display: flex;
   align-items: center;
