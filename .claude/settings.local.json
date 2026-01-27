@@ -5,7 +5,9 @@
       "Bash(curl:*)",
       "Bash(node --check:*)",
       "WebSearch",
-      "Bash(node -e:*)"
+      "Bash(node -e:*)",
+      "Bash(npm run format:check:*)",
+      "Bash(npx prettier:*)"
     ]
   }
 }

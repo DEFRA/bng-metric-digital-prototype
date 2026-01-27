@@ -7,6 +7,7 @@ const multer = require('multer')
 const { parseGeoPackage } = require('../lib/geopackage-parser')
 const {
   calculatePolygonArea,
+  calculateLineLength,
   isPolygonSelfIntersecting
 } = require('../lib/geometry-utils')
 const { isWithinUK, getLPA, getNCA, getLNRS } = require('../lib/arcgis-queries')
@@ -245,6 +246,48 @@ function registerOnSiteBaselineRoutes(router) {
       ? (habitatParcels.totalAreaSqm / 10000).toFixed(2)
       : 0
 
+    // Find hedgerow layer
+    let hedgerowLayer = layers.find(
+      (l) =>
+        l.name.toLowerCase().includes('hedgerow') ||
+        l.name.toLowerCase().includes('hedge')
+    )
+
+    // Find watercourse layer
+    let watercourseLayer = layers.find(
+      (l) =>
+        l.name.toLowerCase().includes('watercourse') ||
+        l.name.toLowerCase().includes('river') ||
+        l.name.toLowerCase().includes('stream')
+    )
+
+    // Calculate hedgerow totals
+    let hedgerowTotalLengthM = 0
+    let hedgerowFeatureCount = 0
+    if (hedgerowLayer && geometries[hedgerowLayer.name]) {
+      const hedgerowFeatures = geometries[hedgerowLayer.name].features || []
+      hedgerowFeatureCount = hedgerowFeatures.length
+      hedgerowFeatures.forEach((feature) => {
+        if (feature.geometry) {
+          hedgerowTotalLengthM += calculateLineLength(feature.geometry)
+        }
+      })
+    }
+
+    // Calculate watercourse totals
+    let watercourseTotalLengthM = 0
+    let watercourseFeatureCount = 0
+    if (watercourseLayer && geometries[watercourseLayer.name]) {
+      const watercourseFeatures =
+        geometries[watercourseLayer.name].features || []
+      watercourseFeatureCount = watercourseFeatures.length
+      watercourseFeatures.forEach((feature) => {
+        if (feature.geometry) {
+          watercourseTotalLengthM += calculateLineLength(feature.geometry)
+        }
+      })
+    }
+
     // Build view data
     const viewData = {
       uploadSummary: {
@@ -260,6 +303,16 @@ function registerOnSiteBaselineRoutes(router) {
           polygonCount: habitatParcels ? habitatParcels.featureCount : 0,
           areaHa: parcelsAreaHa,
           layerName: habitatParcels ? habitatParcels.name : 'Not found'
+        },
+        hedgerows: {
+          featureCount: hedgerowFeatureCount,
+          totalLengthM: hedgerowTotalLengthM.toFixed(1),
+          layerName: hedgerowLayer ? hedgerowLayer.name : null
+        },
+        watercourses: {
+          featureCount: watercourseFeatureCount,
+          totalLengthM: watercourseTotalLengthM.toFixed(1),
+          layerName: watercourseLayer ? watercourseLayer.name : null
         }
       },
       coverage: {
@@ -284,6 +337,14 @@ function registerOnSiteBaselineRoutes(router) {
     // Mark layers as confirmed
     req.session.data['layersConfirmed'] = true
 
+    // Clear hand-drawn data when confirming GeoPackage layers
+    // This ensures the GeoPackage flow is used on the habitats-summary page
+    req.session.data['redLineBoundary'] = null
+    req.session.data['habitatParcels'] = null
+    req.session.data['hedgerows'] = null
+    req.session.data['watercourses'] = null
+    console.log('Cleared hand-drawn data - GeoPackage upload is now authoritative')
+
     // Redirect to habitats summary (future implementation)
     res.redirect('/on-site-baseline/habitats-summary')
   })
@@ -291,21 +352,34 @@ function registerOnSiteBaselineRoutes(router) {
   // Habitats Summary page
   router.get('/on-site-baseline/habitats-summary', function (req, res) {
     // Check which flow the user came from:
-    // - GeoPackage flow: has geopackageLayers and geopackageGeometries
-    // - Drawing flow: has redLineBoundary and habitatParcels
+    // - GeoPackage flow: layersConfirmed is true (set when user confirms uploaded layers)
+    // - Drawing flow: has redLineBoundary and habitatParcels but no layersConfirmed
 
+    const layersConfirmed = req.session.data['layersConfirmed']
+    const hasGeoPackageData =
+      req.session.data['geopackageLayers'] &&
+      req.session.data['geopackageLayers'].length > 0
     const drawnBoundary = req.session.data['redLineBoundary']
     const drawnParcels = req.session.data['habitatParcels']
-    const isDrawingFlow = drawnBoundary && drawnParcels
+
+    // Use GeoPackage flow if layers were confirmed from upload
+    // Use drawing flow only if no GeoPackage data was confirmed
+    const isGeoPackageFlow = layersConfirmed && hasGeoPackageData
+    const isDrawingFlow = !isGeoPackageFlow && drawnBoundary && drawnParcels
 
     // Debug logging
     console.log('Habitats summary - session state:', {
+      layersConfirmed: !!layersConfirmed,
+      hasGeoPackageData: !!hasGeoPackageData,
       hasBoundary: !!drawnBoundary,
       hasParcels: !!drawnParcels,
       parcelCount: drawnParcels?.features?.length || 0,
+      isGeoPackageFlow: isGeoPackageFlow,
       isDrawingFlow: isDrawingFlow,
       hasHedgerows: !!(req.session.data['hedgerows']?.features?.length > 0),
-      hasWatercourses: !!(req.session.data['watercourses']?.features?.length > 0)
+      hasWatercourses: !!(
+        req.session.data['watercourses']?.features?.length > 0
+      )
     })
 
     let totalAreaHectares = 0
@@ -356,7 +430,8 @@ function registerOnSiteBaselineRoutes(router) {
             condition: null,
             units: 0,
             status: 'Not started',
-            actionUrl: '/on-site-baseline/parcel/' + (index + 1) + '/habitat-type'
+            actionUrl:
+              '/on-site-baseline/parcel/' + (index + 1) + '/habitat-type'
           })
         })
       }
@@ -418,7 +493,9 @@ function registerOnSiteBaselineRoutes(router) {
 
           let status = 'Not started'
 
-          let parcelId = feature.properties['Parcel Ref'] || 'HP-' + i.toString().padStart(3, '0')
+          let parcelId =
+            feature.properties['Parcel Ref'] ||
+            'HP-' + i.toString().padStart(3, '0')
           let habitat = feature.properties['Baseline Habitat Type'] || null
           let distinctiveness =
             feature.properties['Baseline Distinctiveness'] || null
@@ -459,15 +536,35 @@ function registerOnSiteBaselineRoutes(router) {
         }
       }
 
+      // Find hedgerow and watercourse layers from uploaded GeoPackage
+      const hedgerowLayerInfo = layers.find(
+        (l) =>
+          l.name.toLowerCase().includes('hedgerow') ||
+          l.name.toLowerCase().includes('hedge')
+      )
+      const watercourseLayerInfo = layers.find(
+        (l) =>
+          l.name.toLowerCase().includes('watercourse') ||
+          l.name.toLowerCase().includes('river') ||
+          l.name.toLowerCase().includes('stream')
+      )
+
+      const hedgerowLayer = hedgerowLayerInfo
+        ? geometries[hedgerowLayerInfo.name]
+        : null
+      const watercourseLayer = watercourseLayerInfo
+        ? geometries[watercourseLayerInfo.name]
+        : null
+
       // Prepare map data
       mapData = {
         siteBoundary: boundaryLayer,
         parcels: parcelsLayer,
-        hedgerows: req.session.data['hedgerows'] || {
+        hedgerows: hedgerowLayer || {
           type: 'FeatureCollection',
           features: []
         },
-        watercourses: req.session.data['watercourses'] || {
+        watercourses: watercourseLayer || {
           type: 'FeatureCollection',
           features: []
         }
@@ -508,7 +605,12 @@ function registerOnSiteBaselineRoutes(router) {
     // Build hedgerow table rows
     const hedgerows = mapData.hedgerows?.features || []
     const hedgerowTableRows = hedgerows.map(function (feature, index) {
-      const lengthM = feature.properties?.lengthM || 0
+      // Use lengthM property if available, otherwise calculate from geometry
+      let lengthM = feature.properties?.lengthM
+      if (lengthM === undefined && feature.geometry) {
+        lengthM = calculateLineLength(feature.geometry)
+      }
+      lengthM = lengthM || 0
       return [
         { text: 'H-' + (index + 1).toString().padStart(3, '0') },
         { text: lengthM.toFixed(1) },
@@ -527,7 +629,12 @@ function registerOnSiteBaselineRoutes(router) {
     // Build watercourse table rows
     const watercourses = mapData.watercourses?.features || []
     const watercourseTableRows = watercourses.map(function (feature, index) {
-      const lengthM = feature.properties?.lengthM || 0
+      // Use lengthM property if available, otherwise calculate from geometry
+      let lengthM = feature.properties?.lengthM
+      if (lengthM === undefined && feature.geometry) {
+        lengthM = calculateLineLength(feature.geometry)
+      }
+      lengthM = lengthM || 0
       return [
         { text: 'W-' + (index + 1).toString().padStart(3, '0') },
         { text: lengthM.toFixed(1) },

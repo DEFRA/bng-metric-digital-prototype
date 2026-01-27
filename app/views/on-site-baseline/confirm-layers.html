@@ -51,6 +51,20 @@
       background: rgba(29, 112, 184, 0.3);
       border: 2px solid #1d70b8;
     }
+    .legend-swatch--hedgerows {
+      background: transparent;
+      border: none;
+      height: 4px;
+      margin-top: 10px;
+      background-color: #00703c;
+    }
+    .legend-swatch--watercourses {
+      background: transparent;
+      border: none;
+      height: 4px;
+      margin-top: 10px;
+      background-color: #1d70b8;
+    }
     .coverage-success {
       color: #00703c;
       font-weight: 700;
@@ -93,6 +107,18 @@
           <div class="legend-swatch legend-swatch--parcels"></div>
           <span>Habitat parcels ({{ layers.habitatParcels.polygonCount }})</span>
         </div>
+        {% if layers.hedgerows.featureCount > 0 %}
+        <div class="map-legend-item">
+          <div class="legend-swatch legend-swatch--hedgerows"></div>
+          <span>Hedgerows ({{ layers.hedgerows.featureCount }})</span>
+        </div>
+        {% endif %}
+        {% if layers.watercourses.featureCount > 0 %}
+        <div class="map-legend-item">
+          <div class="legend-swatch legend-swatch--watercourses"></div>
+          <span>Watercourses ({{ layers.watercourses.featureCount }})</span>
+        </div>
+        {% endif %}
       </div>
     </div>
 
@@ -141,6 +167,88 @@
         }
       ]
     }) }}
+
+    {% if layers.hedgerows.featureCount > 0 %}
+    <h2 class="govuk-heading-m">Hedgerows</h2>
+    {{ govukSummaryList({
+      rows: [
+        {
+          key: {
+            text: "Features"
+          },
+          value: {
+            text: layers.hedgerows.featureCount + ' hedgerow' + ('s' if layers.hedgerows.featureCount != 1 else '')
+          }
+        },
+        {
+          key: {
+            text: "Total length"
+          },
+          value: {
+            text: layers.hedgerows.totalLengthM + ' metres'
+          }
+        },
+        {
+          key: {
+            text: "Layer"
+          },
+          value: {
+            text: layers.hedgerows.layerName
+          },
+          actions: {
+            items: [
+              {
+                href: "#",
+                text: "Change",
+                visuallyHiddenText: "hedgerows layer"
+              }
+            ]
+          }
+        }
+      ]
+    }) }}
+    {% endif %}
+
+    {% if layers.watercourses.featureCount > 0 %}
+    <h2 class="govuk-heading-m">Watercourses</h2>
+    {{ govukSummaryList({
+      rows: [
+        {
+          key: {
+            text: "Features"
+          },
+          value: {
+            text: layers.watercourses.featureCount + ' watercourse' + ('s' if layers.watercourses.featureCount != 1 else '')
+          }
+        },
+        {
+          key: {
+            text: "Total length"
+          },
+          value: {
+            text: layers.watercourses.totalLengthM + ' metres'
+          }
+        },
+        {
+          key: {
+            text: "Layer"
+          },
+          value: {
+            text: layers.watercourses.layerName
+          },
+          actions: {
+            items: [
+              {
+                href: "#",
+                text: "Change",
+                visuallyHiddenText: "watercourses layer"
+              }
+            ]
+          }
+        }
+      ]
+    }) }}
+    {% endif %}
 
     <!-- Coverage Check -->
     {% if coverage.isFull %}
@@ -197,6 +305,8 @@
 <script id="geometries-data" type="application/json">{{ geometries | dump | safe }}</script>
 <script id="boundary-layer-name" type="text/plain">{{ boundaryLayerName }}</script>
 <script id="parcels-layer-name" type="text/plain">{{ parcelsLayerName }}</script>
+<script id="hedgerows-layer-name" type="text/plain">{{ layers.hedgerows.layerName }}</script>
+<script id="watercourses-layer-name" type="text/plain">{{ layers.watercourses.layerName }}</script>
 
 {% endblock %}
 
