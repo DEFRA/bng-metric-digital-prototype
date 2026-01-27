@@ -31,6 +31,35 @@
         height: 500px;
       }
     }
+
+    /* Highlighted table row when feature is selected */
+    .habitat-row--highlighted {
+      background-color: #ffdd00 !important;
+    }
+
+    .habitat-row--highlighted th,
+    .habitat-row--highlighted td {
+      background-color: #ffdd00 !important;
+    }
+
+    /* Clickable reference links in tables */
+    .habitat-ref-link {
+      color: #1d70b8;
+      text-decoration: underline;
+      cursor: pointer;
+    }
+
+    .habitat-ref-link:hover {
+      color: #003078;
+      text-decoration-thickness: max(3px, .1875rem, .12em);
+    }
+
+    .habitat-ref-link:focus {
+      outline: 3px solid transparent;
+      background-color: #fd0;
+      box-shadow: 0 -2px #fd0, 0 4px #0b0c0c;
+      text-decoration: none;
+    }
   </style>
 {% endblock %}
 
@@ -129,7 +158,7 @@
     {% endif %}
 
     {{ govukButton({
-      text: "Start adding habitat details",
+      text: "Start post-intervention",
       href: actions.startFirstParcel.url
     }) }}
 

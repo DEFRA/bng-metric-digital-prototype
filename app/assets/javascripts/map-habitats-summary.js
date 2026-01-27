@@ -13,7 +13,10 @@
   let watercoursesLayer = null
   let highlightSource = null
   let highlightLayer = null
+  let hoverSource = null
+  let hoverLayer = null
   let currentHighlightedLink = null
+  let mapInstance = null
 
   // Wait for DOM to be ready
   document.addEventListener('DOMContentLoaded', function () {
@@ -253,6 +256,29 @@
       })
       map.addLayer(highlightLayer)
 
+      // Add hover layer for map hover interactions (lighter highlight)
+      hoverSource = new ol.source.Vector()
+      hoverLayer = new ol.layer.Vector({
+        source: hoverSource,
+        style: function (feature) {
+          var geomType = feature.getGeometry().getType()
+          if (geomType === 'LineString' || geomType === 'MultiLineString') {
+            return new ol.style.Style({
+              stroke: new ol.style.Stroke({ color: '#ffdd00', width: 6 })
+            })
+          }
+          return new ol.style.Style({
+            stroke: new ol.style.Stroke({ color: '#ffdd00', width: 3 }),
+            fill: new ol.style.Fill({ color: 'rgba(255, 221, 0, 0.2)' })
+          })
+        },
+        zIndex: 28
+      })
+      map.addLayer(hoverLayer)
+
+      // Store map reference for interactions
+      mapInstance = map
+
       // Fit to features extent if we have features, otherwise show default England view
       if (allFeatures.length > 0) {
         const extent = ol.extent.createEmpty()
@@ -300,6 +326,9 @@
 
       // Set up table click handlers for feature highlighting
       setupTableClickHandlers()
+
+      // Set up map interaction handlers for hover and click
+      setupMapInteractions(map)
     } catch (error) {
       console.error('Failed to initialize map:', error)
       showMapPlaceholder(container, 'Could not load map. Please try again.')
@@ -319,7 +348,185 @@
     })
   }
 
-  function handleFeatureClick(featureType, featureIndex, linkElement) {
+  function setupMapInteractions(map) {
+    // Handle pointer move for hover highlighting
+    map.on('pointermove', function (evt) {
+      if (evt.dragging) {
+        return
+      }
+
+      // Clear previous hover highlight
+      if (hoverSource) {
+        hoverSource.clear()
+      }
+
+      var pixel = map.getEventPixel(evt.originalEvent)
+      var hit = false
+
+      map.forEachFeatureAtPixel(
+        pixel,
+        function (feature, layer) {
+          // Skip boundary layer and highlight/hover layers
+          if (
+            layer === highlightLayer ||
+            layer === hoverLayer ||
+            (!parcelsLayer &&
+              !hedgerowsLayer &&
+              !watercoursesLayer)
+          ) {
+            return
+          }
+
+          // Only highlight features from our data layers
+          if (
+            layer === parcelsLayer ||
+            layer === hedgerowsLayer ||
+            layer === watercoursesLayer
+          ) {
+            hit = true
+            // Add hover highlight (don't add if already click-highlighted)
+            if (highlightSource.getFeatures().length === 0) {
+              hoverSource.addFeature(
+                new ol.Feature({ geometry: feature.getGeometry().clone() })
+              )
+            }
+            return true // Stop at first feature
+          }
+        },
+        { hitTolerance: 5 }
+      )
+
+      // Change cursor style
+      map.getTargetElement().style.cursor = hit ? 'pointer' : ''
+    })
+
+    // Handle click on map features
+    map.on('click', function (evt) {
+      var pixel = map.getEventPixel(evt.originalEvent)
+      var featureFound = false
+
+      map.forEachFeatureAtPixel(
+        pixel,
+        function (feature, layer) {
+          // Determine feature type and index
+          var featureType = null
+          var featureIndex = -1
+
+          if (layer === parcelsLayer) {
+            featureType = 'parcel'
+            featureIndex = parcelsLayer.getSource().getFeatures().indexOf(feature)
+          } else if (layer === hedgerowsLayer) {
+            featureType = 'hedgerow'
+            featureIndex = hedgerowsLayer.getSource().getFeatures().indexOf(feature)
+          } else if (layer === watercoursesLayer) {
+            featureType = 'watercourse'
+            featureIndex = watercoursesLayer
+              .getSource()
+              .getFeatures()
+              .indexOf(feature)
+          }
+
+          if (featureType && featureIndex >= 0) {
+            // Find the corresponding table link
+            var link = document.querySelector(
+              '.habitat-ref-link[data-feature-type="' +
+                featureType +
+                '"][data-feature-index="' +
+                featureIndex +
+                '"]'
+            )
+
+            if (link) {
+              featureFound = true
+
+              // Clear hover highlight
+              if (hoverSource) {
+                hoverSource.clear()
+              }
+
+              // Use the existing handler which will highlight and scroll to table
+              handleMapFeatureClick(featureType, featureIndex, link)
+            }
+            return true // Stop at first feature
+          }
+        },
+        { hitTolerance: 5 }
+      )
+
+      // If clicked on empty area, clear highlights and zoom to full extent
+      if (!featureFound) {
+        clearAllHighlights()
+        zoomToFullExtent()
+      }
+    })
+  }
+
+  function clearAllHighlights() {
+    // Clear map highlights
+    if (highlightSource) {
+      highlightSource.clear()
+    }
+    if (hoverSource) {
+      hoverSource.clear()
+    }
+
+    // Clear table row highlights
+    if (currentHighlightedLink) {
+      var row = currentHighlightedLink.closest('tr')
+      if (row) {
+        row.classList.remove('habitat-row--highlighted')
+      }
+      currentHighlightedLink = null
+    }
+  }
+
+  function zoomToFullExtent() {
+    if (!window.habitatsSummaryMapClient) {
+      return
+    }
+
+    // Collect all features to calculate extent
+    var allFeatures = []
+    if (parcelsLayer) {
+      allFeatures = allFeatures.concat(parcelsLayer.getSource().getFeatures())
+    }
+    if (hedgerowsLayer) {
+      allFeatures = allFeatures.concat(hedgerowsLayer.getSource().getFeatures())
+    }
+    if (watercoursesLayer) {
+      allFeatures = allFeatures.concat(watercoursesLayer.getSource().getFeatures())
+    }
+
+    if (allFeatures.length === 0) {
+      return
+    }
+
+    var extent = ol.extent.createEmpty()
+    allFeatures.forEach(function (feature) {
+      var geom = feature.getGeometry()
+      if (geom) {
+        ol.extent.extend(extent, geom.getExtent())
+      }
+    })
+
+    var isValidExtent =
+      !ol.extent.isEmpty(extent) &&
+      isFinite(extent[0]) &&
+      isFinite(extent[1]) &&
+      isFinite(extent[2]) &&
+      isFinite(extent[3])
+
+    if (isValidExtent) {
+      window.habitatsSummaryMapClient.zoomToExtent(extent, {
+        padding: [40, 40, 40, 40],
+        maxZoom: 16,
+        minZoom: 7,
+        duration: 500
+      })
+    }
+  }
+
+  function handleMapFeatureClick(featureType, featureIndex, linkElement) {
     // Clear previous highlight
     if (highlightSource) {
       highlightSource.clear()
@@ -357,6 +564,56 @@
       return
     }
 
+    // Add highlight on map
+    highlightSource.addFeature(
+      new ol.Feature({ geometry: feature.getGeometry().clone() })
+    )
+
+    // Highlight table row
+    var row = linkElement.closest('tr')
+    if (row) {
+      row.classList.add('habitat-row--highlighted')
+    }
+    currentHighlightedLink = linkElement
+
+    // Scroll to the table row (inverse of the table-to-map interaction)
+    if (row) {
+      row.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }
+  }
+
+  function handleFeatureClick(featureType, featureIndex, linkElement) {
+    // Clear previous highlight from different feature
+    if (highlightSource) {
+      highlightSource.clear()
+    }
+    if (currentHighlightedLink && currentHighlightedLink !== linkElement) {
+      var prevRow = currentHighlightedLink.closest('tr')
+      if (prevRow) {
+        prevRow.classList.remove('habitat-row--highlighted')
+      }
+    }
+
+    // Get the appropriate layer based on feature type
+    var layer = null
+    if (featureType === 'parcel') {
+      layer = parcelsLayer
+    } else if (featureType === 'hedgerow') {
+      layer = hedgerowsLayer
+    } else if (featureType === 'watercourse') {
+      layer = watercoursesLayer
+    }
+
+    if (!layer) {
+      return
+    }
+
+    var features = layer.getSource().getFeatures()
+    var feature = features[featureIndex]
+    if (!feature) {
+      return
+    }
+
     // Add highlight
     highlightSource.addFeature(
       new ol.Feature({ geometry: feature.getGeometry().clone() })
@@ -369,7 +626,12 @@
     }
     currentHighlightedLink = linkElement
 
-    // Zoom to feature
+    // Scroll to map and zoom to feature
+    var mapContainer = document.getElementById('map-preview')
+    if (mapContainer) {
+      mapContainer.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }
+
     if (window.habitatsSummaryMapClient) {
       window.habitatsSummaryMapClient.zoomToExtent(
         feature.getGeometry().getExtent(),
