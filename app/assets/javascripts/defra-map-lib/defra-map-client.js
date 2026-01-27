@@ -1004,6 +1004,7 @@
         if (this._sliceActive) this.cancelSlice()
         if (this._fillActive) this.cancelFill()
         if (this._isDrawing) this.cancelDrawing()
+        if (this._removeActive) this.cancelRemove()
       }
     })
 

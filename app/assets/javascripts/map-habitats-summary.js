@@ -370,9 +370,7 @@
           if (
             layer === highlightLayer ||
             layer === hoverLayer ||
-            (!parcelsLayer &&
-              !hedgerowsLayer &&
-              !watercoursesLayer)
+            (!parcelsLayer && !hedgerowsLayer && !watercoursesLayer)
           ) {
             return
           }
@@ -414,10 +412,16 @@
 
           if (layer === parcelsLayer) {
             featureType = 'parcel'
-            featureIndex = parcelsLayer.getSource().getFeatures().indexOf(feature)
+            featureIndex = parcelsLayer
+              .getSource()
+              .getFeatures()
+              .indexOf(feature)
           } else if (layer === hedgerowsLayer) {
             featureType = 'hedgerow'
-            featureIndex = hedgerowsLayer.getSource().getFeatures().indexOf(feature)
+            featureIndex = hedgerowsLayer
+              .getSource()
+              .getFeatures()
+              .indexOf(feature)
           } else if (layer === watercoursesLayer) {
             featureType = 'watercourse'
             featureIndex = watercoursesLayer
@@ -494,7 +498,9 @@
       allFeatures = allFeatures.concat(hedgerowsLayer.getSource().getFeatures())
     }
     if (watercoursesLayer) {
-      allFeatures = allFeatures.concat(watercoursesLayer.getSource().getFeatures())
+      allFeatures = allFeatures.concat(
+        watercoursesLayer.getSource().getFeatures()
+      )
     }
 
     if (allFeatures.length === 0) {

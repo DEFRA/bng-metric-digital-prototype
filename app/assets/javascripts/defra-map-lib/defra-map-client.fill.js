@@ -662,8 +662,8 @@
     }
 
     // Add the parcel
-    const coords = cleanedGeom.getCoordinates()[0]
-    const success = this.addParcelFromCoordinates(coords)
+    const coords = cleanedGeom.getCoordinates()
+    const success = this.addParcelFromPolygonCoordinates(coords)
 
     // Determine if clipping occurred
     const originalArea = poly.getArea()
@@ -746,8 +746,8 @@
     }
 
     // Add gap as new parcel
-    const coords = cleanedGap.getCoordinates()[0]
-    const success = this.addParcelFromCoordinates(coords)
+    const coords = cleanedGap.getCoordinates()
+    const success = this.addParcelFromPolygonCoordinates(coords)
 
     if (success) {
       this._emitter.emit('fill:message', {
@@ -791,8 +791,8 @@
     const poly = this._geometryToPolygon(polygonInfo.geometry)
     if (!poly) return false
 
-    const coords = poly.getCoordinates()[0]
-    return this.addParcelFromCoordinates(coords)
+    const coords = poly.getCoordinates()
+    return this.addParcelFromPolygonCoordinates(coords)
   }
 
   DefraMapClient.prototype.addParcelFromCoordinates = function (coords) {
@@ -834,6 +834,86 @@
       id,
       feature: parcelFeature,
       coords: parcelCoords,
+      vertices: vertexFeatures,
+      colorIndex,
+      meta: {}
+    }
+    this._habitatParcels.push(parcel)
+
+    const index = this._habitatParcels.length - 1
+    this._emitter.emit('parcel:added', {
+      index,
+      id,
+      areaSqm: completedPolygon.getArea(),
+      source: 'fill'
+    })
+    this._emitter.emit('parcels:changed', {
+      count: this._habitatParcels.length,
+      totalAreaSqm: this.parcelsTotalAreaSqm
+    })
+    return true
+  }
+
+  /**
+   * Add a parcel from full polygon coordinates (including holes for donut shapes).
+   * @param {Array} polygonCoords - Full polygon coordinates [exterior, hole1, hole2, ...]
+   * @returns {boolean} True if parcel was added successfully
+   */
+  DefraMapClient.prototype.addParcelFromPolygonCoordinates = function (
+    polygonCoords
+  ) {
+    if (this._mode !== 'habitat-parcels') return false
+    if (!polygonCoords || polygonCoords.length === 0) return false
+
+    // Ensure exterior ring is closed
+    const exteriorRing = polygonCoords[0].map((c) => [...c])
+    const first = exteriorRing[0]
+    const last = exteriorRing[exteriorRing.length - 1]
+    if (first[0] !== last[0] || first[1] !== last[1]) {
+      exteriorRing.push([...first])
+    }
+
+    // Process hole rings - ensure each is closed
+    const processedCoords = [exteriorRing]
+    for (let i = 1; i < polygonCoords.length; i++) {
+      const holeRing = polygonCoords[i].map((c) => [...c])
+      const holeFirst = holeRing[0]
+      const holeLast = holeRing[holeRing.length - 1]
+      if (holeFirst[0] !== holeLast[0] || holeFirst[1] !== holeLast[1]) {
+        holeRing.push([...holeFirst])
+      }
+      processedCoords.push(holeRing)
+    }
+
+    const completedPolygon = new ol.geom.Polygon(processedCoords)
+    const colorIndex = this._habitatParcels.length % this._parcelColors.length
+
+    const parcelFeature = new ol.Feature({
+      geometry: completedPolygon,
+      type: 'parcel',
+      colorIndex: colorIndex
+    })
+    this._drawSource.addFeature(parcelFeature)
+
+    // Create vertex features only for exterior ring (holes don't need visible vertices)
+    const vertexFeatures = []
+    for (let i = 0; i < exteriorRing.length - 1; i++) {
+      const vertexFeature = new ol.Feature({
+        geometry: new ol.geom.Point(exteriorRing[i]),
+        type: 'vertex',
+        isFirst: i === 0,
+        highlighted: false,
+        colorIndex: colorIndex
+      })
+      vertexFeatures.push(vertexFeature)
+      this._drawSource.addFeature(vertexFeature)
+    }
+
+    const id = `parcel-${Date.now()}-${Math.random().toString(16).slice(2)}`
+    const parcel = {
+      id,
+      feature: parcelFeature,
+      coords: exteriorRing, // Store exterior ring for editing
       vertices: vertexFeatures,
       colorIndex,
       meta: {}
