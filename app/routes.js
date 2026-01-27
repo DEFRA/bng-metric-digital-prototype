@@ -699,6 +699,9 @@ router.get('/on-site-baseline/habitats-summary', function (req, res) {
           parcelId: 'HP-' + (index + 1).toString().padStart(3, '0'),
           areaHectares: parcelAreaHa,
           habitatLabel: feature.properties?.habitatType || null,
+          distinctiveness: null,
+          condition: null,
+          units: 0,
           status: 'Not started',
           actionUrl: '/on-site-baseline/parcel/' + (index + 1) + '/habitat-type'
         })
@@ -781,12 +784,22 @@ router.get('/on-site-baseline/habitats-summary', function (req, res) {
           status = 'In progress'
         }
 
+        // Calculate units
+        let units = 0
+        let distinctivenessScore = distinctivenessScores[distinctiveness] || 0
+        let conditionScore = conditionScores[condition] || 0
+
+        if (distinctivenessScore > 0 && conditionScore > 0) {
+          units = areaHa * distinctivenessScore * conditionScore
+        }
+
         habitatParcels.push({
           parcelId: parcelId,
           areaHectares: areaHa.toFixed(2),
           habitatLabel: habitat,
           distinctiveness: distinctiveness,
           condition: condition,
+          units: units,
           status: status,
           actionUrl: '/on-site-baseline/parcel/' + i + '/habitat-type'
         })
@@ -825,6 +838,9 @@ router.get('/on-site-baseline/habitats-summary', function (req, res) {
       { text: parcel.parcelId },
       { text: parcel.areaHectares },
       { text: parcel.habitatLabel || 'Not specified' },
+      { text: parcel.distinctiveness || 'Not specified' },
+      { text: parcel.condition || 'Not specified' },
+      { text: parcel.units ? parcel.units.toFixed(2) : '0.00' },
       { text: parcel.status },
       {
         html:
