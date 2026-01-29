@@ -520,7 +520,10 @@ function registerOnSiteBaselineRoutes(router) {
             condition = condition.replace(/^\d+\.\s*/, '')
           }
 
-          if (
+          if (habitat !== null && distinctiveness !== null && condition !== null){
+            status = 'Complete'
+          }
+          else if (
             habitat !== null ||
             distinctiveness !== null ||
             condition !== null
@@ -642,7 +645,10 @@ function registerOnSiteBaselineRoutes(router) {
             '</a>'
         },
         { text: lengthM.toFixed(1) },
-        { text: 'Not started' },
+        { text: feature.properties["Baseline Hedge Type"] || 'Not specified' },
+        { text: feature.properties["Baseline Distinctiveness"] || 'Not specified' },
+        { text: feature.properties["Baseline Condition"] || 'Not specified' },
+        { text: 'Complete' },
         {
           html:
             '<a class="govuk-link" href="/on-site-baseline/hedgerow/' +
@@ -663,6 +669,7 @@ function registerOnSiteBaselineRoutes(router) {
         lengthM = calculateLineLength(feature.geometry)
       }
       lengthM = lengthM || 0
+
       return [
         {
           html:
@@ -673,7 +680,12 @@ function registerOnSiteBaselineRoutes(router) {
             '</a>'
         },
         { text: lengthM.toFixed(1) },
-        { text: 'Not started' },
+        { text: feature.properties["Baseline River Type"] || 'Not specified' },
+        { text: feature.properties["Baseline Distinctiveness"] || 'Not specified' },
+        { text: feature.properties["Baseline Condition"].replace(/^\d+\.\s*/, '') || 'Not specified' },
+        { text: feature.properties["Baseline Encroachment into Watercourse"] || 'Not specified' },
+        { text: feature.properties["Baseline Encroachment into riparian zone"].replace(/^\d+\.\s*/, '') || 'Not specified' },
+        { text: 'Complete' },
         {
           html:
             '<a class="govuk-link" href="/on-site-baseline/watercourse/' +

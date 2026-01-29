@@ -67,7 +67,6 @@
 <div class="govuk-grid-row">
   <div class="govuk-grid-column-full">
 
-    <span class="govuk-caption-l">On-site baseline</span>
     <h1 class="govuk-heading-l">{{ pageName }}</h1>
 
     <p class="govuk-body">{{ baselineSummary.parcelCountMessage }}</p>
@@ -135,6 +134,10 @@
       head: [
         { text: "Reference" },
         { text: "Length (metres)" },
+        { text: "Hedgerow type" },
+        { text: "Distinctiveness" },
+        { text: "Condition" },
+        { text: "Units" },
         { text: "Status" },
         { text: "Action", classes: "govuk-visually-hidden" }
       ],
@@ -150,6 +153,11 @@
       head: [
         { text: "Reference" },
         { text: "Length (metres)" },
+        { text: "Watercourse type" },
+        { text: "Distinctiveness" },
+        { text: "Condition" },
+        { text: "Encroachment into Watercourse" },
+        { text: "Encroachment into riparian zone" },
         { text: "Status" },
         { text: "Action", classes: "govuk-visually-hidden" }
       ],

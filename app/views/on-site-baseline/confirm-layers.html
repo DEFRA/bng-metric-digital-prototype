@@ -5,7 +5,7 @@
 {% from "govuk/components/inset-text/macro.njk" import govukInsetText %}
 {% from "govuk/components/button/macro.njk" import govukButton %}
 
-{% set pageName = "Check your site boundary and habitat parcels" %}
+{% set pageName = "Check your baseline data" %}
 
 {% block pageTitle %}{{ pageName }} – {{ serviceName }} – GOV.UK{% endblock %}
 
@@ -133,7 +133,7 @@
           },
           value: {
             html: '<p class="govuk-body govuk-!-margin-bottom-1">' + layers.siteBoundary.polygonCount + ' polygon</p>
-                   <p class="govuk-body govuk-!-margin-bottom-1">' + layers.siteBoundary.areaHa + ' hectares</p>
+                   <p class="govuk-body govuk-!-margin-bottom-1">Total area: ' + layers.siteBoundary.areaHa + ' hectares</p>
                    <p class="govuk-body govuk-!-margin-bottom-0 govuk-!-font-size-16">Layer: ' + layers.siteBoundary.layerName + '</p>'
           }
         },
@@ -143,76 +143,32 @@
           },
           value: {
             html: '<p class="govuk-body govuk-!-margin-bottom-1">' + layers.habitatParcels.polygonCount + ' polygons</p>
-                   <p class="govuk-body govuk-!-margin-bottom-1">' + layers.habitatParcels.areaHa + ' hectares</p>
+                   <p class="govuk-body govuk-!-margin-bottom-1">Total area: ' + layers.habitatParcels.areaHa + ' hectares</p>
                    <p class="govuk-body govuk-!-margin-bottom-0 govuk-!-font-size-16">Layer: ' + layers.habitatParcels.layerName + '</p>'
           }
-        }
-      ]
-    }) }}
-
-    {% if layers.hedgerows.featureCount > 0 %}
-    <h2 class="govuk-heading-m">Hedgerows</h2>
-    {{ govukSummaryList({
-      rows: [
+        },
         {
           key: {
-            text: "Features"
+            text: "Hedgerows"
           },
           value: {
-            text: layers.hedgerows.featureCount + ' hedgerow' + ('s' if layers.hedgerows.featureCount != 1 else '')
+            html: '<p class="govuk-body govuk-!-margin-bottom-1">' + layers.hedgerows.featureCount + ' line' + ('s' if layers.hedgerows.featureCount != 1 else '') + '</p>
+                   <p class="govuk-body govuk-!-margin-bottom-1">Total length: ' + layers.hedgerows.totalLengthM + ' metres</p>
+                   <p class="govuk-body govuk-!-margin-bottom-0 govuk-!-font-size-16">Layer: ' + layers.hedgerows.layerName + '</p>'
           }
         },
         {
           key: {
-            text: "Total length"
+            text: "Watercourses"
           },
           value: {
-            text: layers.hedgerows.totalLengthM + ' metres'
-          }
-        },
-        {
-          key: {
-            text: "Layer"
-          },
-          value: {
-            text: layers.hedgerows.layerName
+            html: '<p class="govuk-body govuk-!-margin-bottom-1">' + layers.watercourses.featureCount + ' line' + ('s' if layers.watercourses.featureCount != 1 else '') + '</p>
+                   <p class="govuk-body govuk-!-margin-bottom-1">Total length: ' + layers.watercourses.totalLengthM + ' metres</p>
+                   <p class="govuk-body govuk-!-margin-bottom-0 govuk-!-font-size-16">Layer: ' + layers.watercourses.layerName + '</p>'
           }
         }
       ]
     }) }}
-    {% endif %}
-
-    {% if layers.watercourses.featureCount > 0 %}
-    <h2 class="govuk-heading-m">Watercourses</h2>
-    {{ govukSummaryList({
-      rows: [
-        {
-          key: {
-            text: "Features"
-          },
-          value: {
-            text: layers.watercourses.featureCount + ' watercourse' + ('s' if layers.watercourses.featureCount != 1 else '')
-          }
-        },
-        {
-          key: {
-            text: "Total length"
-          },
-          value: {
-            text: layers.watercourses.totalLengthM + ' metres'
-          }
-        },
-        {
-          key: {
-            text: "Layer"
-          },
-          value: {
-            text: layers.watercourses.layerName
-          }
-        }
-      ]
-    }) }}
-    {% endif %}
 
     <!-- Coverage Check -->
     {% if coverage.isFull %}
