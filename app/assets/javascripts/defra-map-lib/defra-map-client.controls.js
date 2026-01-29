@@ -405,6 +405,12 @@
 
     // Drawer open/close functions
     const openDrawer = () => {
+      // Finish any active editing before opening the menu
+      // This accepts/completes the current operation
+      if (this._finishActiveEditing) {
+        this._finishActiveEditing()
+      }
+
       drawerOpen = true
       // Drawer positioning is handled by CSS (absolute positioning relative to controls container)
       drawer.classList.add('defra-map-controls__drawer--open')
@@ -492,11 +498,24 @@
 
     // Show/hide floating actions based on active tool
     const showFloatingActions = (toolType) => {
+      // Slice tool doesn't need floating actions - it auto-completes
+      if (toolType === 'slice') {
+        return
+      }
+
       activeToolType = toolType
       floatingActions.style.display = 'flex'
 
-      // Hide cancel button for remove tool and edit-parcel (cancel is redundant)
-      if (toolType === 'remove' || toolType === 'edit-parcel') {
+      // Hide cancel button for tools where it's redundant:
+      // - remove: no cancel needed
+      // - edit-parcel: no cancel needed
+      // - fill-boundary/fill-parcels: cancel does nothing useful
+      if (
+        toolType === 'remove' ||
+        toolType === 'edit-parcel' ||
+        toolType === 'fill-boundary' ||
+        toolType === 'fill-parcels'
+      ) {
         floatingCancelBtn.style.display = 'none'
       } else {
         floatingCancelBtn.style.display = 'inline-flex'
@@ -883,8 +902,18 @@
       updateButtons()
     })
     this.on('parcel:added', () => {
-      hideFloatingActions()
-      updateButtons()
+      // Check if fill-parcels mode is still active - keep buttons visible for continued filling
+      const dbg = this.getDebugInfo ? this.getDebugInfo() : null
+      const fillActive = dbg && dbg.fill ? !!dbg.fill.active : false
+      const fillMode = dbg && dbg.fill ? dbg.fill.mode : null
+
+      if (fillActive && fillMode === 'parcels') {
+        // Keep floating actions visible for continued filling
+        updateButtons()
+      } else {
+        hideFloatingActions()
+        updateButtons()
+      }
     })
     this.on('parcel:editStarted', () => {
       showFloatingActions('edit-parcel')
@@ -996,5 +1025,64 @@
     updateButtons()
     updateSnapButtons()
     updateToolsEnabledState()
+  }
+  // ============================
+  // Finish active editing (accept/complete current operation)
+  // Called when opening the menu to auto-accept any in-progress edits
+  // ============================
+
+  DefraMapClient.prototype._finishActiveEditing = function () {
+    // Drawing mode: close polygon if we have at least 3 points
+    if (this._isDrawing) {
+      if (
+        this._currentPolygonCoords &&
+        this._currentPolygonCoords.length >= 3
+      ) {
+        this._closePolygon()
+      } else {
+        this.cancelDrawing()
+      }
+      return true
+    }
+
+    // Fill mode
+    if (this._fillActive) {
+      if (this._fillMode === 'boundary') {
+        // Confirm fill-boundary if there are selections
+        if (this._fillSelected && this._fillSelected.length > 0) {
+          this.confirmFill()
+        } else {
+          this.cancelFill()
+        }
+      } else {
+        // Fill-parcels mode: just finish (parcels are added immediately)
+        this.cancelFill()
+      }
+      return true
+    }
+
+    // Slice mode: cancel (can't auto-complete a slice)
+    if (this._sliceActive) {
+      this.cancelSlice()
+      return true
+    }
+
+    // Remove mode: finish
+    if (this._removeActive) {
+      this.finishRemove()
+      return true
+    }
+
+    // Line drawing (hedgerow/watercourse): finish if we have at least 2 points
+    if (this._isLineDrawing) {
+      if (this._currentLineCoords && this._currentLineCoords.length >= 2) {
+        this.finishLineDraw()
+      } else {
+        this.cancelLineDraw()
+      }
+      return true
+    }
+
+    return false // No active editing
   }
 })(window)

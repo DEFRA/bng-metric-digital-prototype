@@ -14,45 +14,43 @@ function registerBoundaryRoutes(router) {
   router.post('/api/save-red-line-boundary', async function (req, res) {
     const boundary = req.body
     req.session.data['redLineBoundary'] = boundary
-    console.log('Red line boundary saved to session')
-    console.log(
-      'Boundary type:',
-      boundary?.type,
-      'Has geometry:',
-      !!boundary?.geometry
-    )
 
     // Fetch LPA, NCA, and LNRS based on the boundary location
-    if (boundary && boundary.geometry) {
+    // Handle both Feature and FeatureCollection formats
+    let boundaryFeature = null
+    if (boundary && boundary.type === 'Feature' && boundary.geometry) {
+      boundaryFeature = boundary
+    } else if (
+      boundary &&
+      boundary.type === 'FeatureCollection' &&
+      boundary.features?.length > 0
+    ) {
+      boundaryFeature = boundary.features[0]
+    }
+
+    if (boundaryFeature && boundaryFeature.geometry) {
       // Wrap boundary in array as the API functions expect an array of features
-      const boundaryFeatures = [boundary]
+      const boundaryFeatures = [boundaryFeature]
 
       try {
-        console.log('Fetching location data from ArcGIS...')
-
         const lpaName = await getLPA(boundaryFeatures)
         req.session.data['lpaName'] = lpaName
-        console.log('Fetched LPA name:', lpaName)
 
         const ncaName = await getNCA(boundaryFeatures)
         req.session.data['ncaName'] = ncaName
-        console.log('Fetched NCA name:', ncaName)
 
         const lnrsName = await getLNRS(boundaryFeatures)
         req.session.data['lnrsName'] = lnrsName
-        console.log('Fetched LNRS name:', lnrsName)
       } catch (err) {
-        console.error('Error fetching location data from ArcGIS:', err)
+        console.error('[Boundary] Error fetching location data:', err.message)
         // Continue without failing - these are optional enhancements
       }
-    } else {
-      console.log('No valid boundary geometry - skipping ArcGIS queries')
     }
 
     // Explicitly save session to ensure data persists before redirect
     req.session.save(function (err) {
       if (err) {
-        console.error('Session save error:', err)
+        console.error('[Boundary] Session save error:', err)
         return res.status(500).json({ error: 'Failed to save session' })
       }
       res.json({ success: true, redirect: '/on-site-habitat-baseline' })

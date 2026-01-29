@@ -11,7 +11,6 @@ function registerHabitatParcelRoutes(router) {
   // Save habitat parcels to session
   router.post('/api/save-habitat-parcels', function (req, res) {
     req.session.data['habitatParcels'] = req.body
-    console.log('Habitat parcels saved to session')
 
     // If there's GeoPackage data but no hand-drawn boundary, migrate the boundary
     // This handles the case where user uploaded a GeoPackage then draws parcels manually
@@ -40,9 +39,6 @@ function registerHabitatParcelRoutes(router) {
           ) {
             req.session.data['redLineBoundary'] =
               boundaryFeatureCollection.features[0]
-            console.log(
-              'Migrated boundary from GeoPackage to redLineBoundary for drawing flow'
-            )
           }
         }
       }
@@ -62,7 +58,6 @@ function registerHabitatParcelRoutes(router) {
         if (hedgerowLayerInfo && geopackageGeometries[hedgerowLayerInfo.name]) {
           req.session.data['hedgerows'] =
             geopackageGeometries[hedgerowLayerInfo.name]
-          console.log('Migrated hedgerows from GeoPackage for drawing flow')
         }
       }
 
@@ -85,7 +80,6 @@ function registerHabitatParcelRoutes(router) {
         ) {
           req.session.data['watercourses'] =
             geopackageGeometries[watercourseLayerInfo.name]
-          console.log('Migrated watercourses from GeoPackage for drawing flow')
         }
       }
     }
@@ -96,11 +90,11 @@ function registerHabitatParcelRoutes(router) {
     req.session.data['geopackageLayers'] = null
     req.session.data['geopackageGeometries'] = null
     req.session.data['uploadedFiles'] = null
-    console.log('Cleared GeoPackage data - hand-drawn map is now authoritative')
+
     // Explicitly save session to ensure data persists before redirect
     req.session.save(function (err) {
       if (err) {
-        console.error('Session save error:', err)
+        console.error('[HabitatParcels] Session save error:', err)
         return res.status(500).json({ error: 'Failed to save session' })
       }
       res.json({

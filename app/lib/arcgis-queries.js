@@ -17,8 +17,6 @@ const lnrsQueryUrl =
  * @returns {Promise<Object>} The response data
  */
 async function queryArcgis(url, params) {
-  console.log('ArcGIS query to:', url)
-
   // Use POST with form-encoded body to avoid URL length limits
   const response = await fetch(url, {
     method: 'POST',
@@ -48,6 +46,9 @@ async function queryArcgis(url, params) {
   }
 
   const data = await response.json()
+  if (data.error) {
+    console.error('[ArcGIS] API error:', JSON.stringify(data.error))
+  }
   return data
 }
 
@@ -60,7 +61,7 @@ async function isWithinUK(features) {
   const esrijson_str = JSON.stringify(geojsonToEsri(features[0].geometry))
 
   const queryParams = {
-    layerDefs: '{\"0\":\"CTRY24NM=\'England\'\"}',
+    layerDefs: '{"0":"CTRY24NM=\'England\'"}',
     geometry: esrijson_str,
     geometryType: 'esriGeometryPolygon',
     inSR: '27700',
@@ -88,7 +89,7 @@ async function isWithinUK(features) {
  */
 async function getLPA(features) {
   if (!features || !features[0] || !features[0].geometry) {
-    console.error('getLPA: Invalid features input')
+    console.error('[getLPA] Invalid features input')
     return 'No LPA found'
   }
 
@@ -116,7 +117,7 @@ async function getLPA(features) {
   ) {
     return data.features[0].attributes.LPA22NM
   } else {
-    console.log('getLPA: No features returned from ArcGIS', data)
+    console.log('[getLPA] No features returned from ArcGIS')
     return 'No LPA found'
   }
 }
@@ -128,7 +129,7 @@ async function getLPA(features) {
  */
 async function getNCA(features) {
   if (!features || !features[0] || !features[0].geometry) {
-    console.error('getNCA: Invalid features input')
+    console.error('[getNCA] Invalid features input')
     return 'No NCA found'
   }
 
@@ -156,7 +157,7 @@ async function getNCA(features) {
   ) {
     return data.features[0].attributes.NCA_Name
   } else {
-    console.log('getNCA: No features returned from ArcGIS', data)
+    console.log('[getNCA] No features returned from ArcGIS')
     return 'No NCA found'
   }
 }
@@ -168,7 +169,7 @@ async function getNCA(features) {
  */
 async function getLNRS(features) {
   if (!features || !features[0] || !features[0].geometry) {
-    console.error('getLNRS: Invalid features input')
+    console.error('[getLNRS] Invalid features input')
     return 'No LNRS found'
   }
 
@@ -196,7 +197,7 @@ async function getLNRS(features) {
   ) {
     return data.features[0].attributes.Name
   } else {
-    console.log('getLNRS: No features returned from ArcGIS', data)
+    console.log('[getLNRS] No features returned from ArcGIS')
     return 'No LNRS found'
   }
 }
