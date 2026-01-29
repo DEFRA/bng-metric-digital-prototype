@@ -1,0 +1,180 @@
+// BNG Metric Architecture - LikeC4 Definition
+// Generic BNG Proposed Architecture - High Level
+
+specification {
+  element actor {
+    style {
+      shape person
+      color amber
+    }
+  }
+  element system {
+    style {
+      shape rectangle
+      color slate
+    }
+  }
+  element service {
+    style {
+      shape rectangle
+      color green
+    }
+  }
+  element database {
+    style {
+      shape cylinder
+      color blue
+    }
+  }
+  element storage {
+    style {
+      shape rectangle
+      color sky
+    }
+  }
+  element queue {
+    style {
+      shape queue
+      color amber
+    }
+  }
+  element cache {
+    style {
+      shape rectangle
+      color green
+    }
+  }
+  element platform {
+    style {
+      shape rectangle
+      color indigo
+    }
+  }
+  element visualisation {
+    style {
+      shape rectangle
+      color indigo
+    }
+  }
+  element boundary {
+    style {
+      color muted
+    }
+  }
+}
+
+model {
+  // External Boundary - Actors and Identity
+  system defraCustomerId "Defra Customer ID" {
+    description "Handles external users login and authentication"
+    style {
+      shape rectangle
+      color indigo
+    }
+  }
+
+  // Public Boundary CDP (AWS)
+  boundary publicBoundaryCDP "Public Boundary CDP" {
+    description "AWS Public Zone"
+
+    cache redis "Redis" {
+      description "Session cache for user sessions"
+      technology "Redis"
+    }
+
+    service publicApp "CDP BNG Metric Public App & API" {
+      description "Public-facing application and API for BNG metrics"
+      technology "Node.js / AWS"
+      style {
+        color green
+      }
+    }
+  }
+
+  // Private Boundary CDP (AWS)
+  boundary privateBoundaryCDP "Private Boundary CDP" {
+    description "AWS Private Zone"
+
+    service backendApi "CDP BNG Metric Backend API" {
+      description "Backend API handling BNG metric processing"
+      technology "Node.js / AWS"
+      style {
+        color green
+      }
+    }
+
+    storage fileStorageS3 "File Storage - S3" {
+      description "Used for any uploaded data by users, associated with case and user"
+      technology "AWS S3"
+      style {
+        shape rectangle
+        color sky
+      }
+    }
+
+    database mongoDb "CDP Mongo Database" {
+      description "Mongo preferred for application data: users and RBAC, BNG information, also secondary store of GIS for convenience"
+      technology "MongoDB"
+    }
+
+    database postgresDb "CDP Postgres / PostGIS Database" {
+      description "PostGIS used to store reference data e.g. Living England habitats. Also stores user uploaded/created GIS layers associated with application"
+      technology "PostgreSQL / PostGIS"
+    }
+  }
+
+  // Azure Data Platform
+  boundary azureDataPlatform "Azure Data Platform" {
+    description "Azure cloud services for reporting and data platform"
+
+    platform dynamicsPlatform "Dynamics Platform / GIO Data Platform" {
+      description "Core data platform for BNG data management"
+      technology "Microsoft Dynamics"
+    }
+  }
+
+  // Relationships
+
+  // External to Public CDP
+  defraCustomerId -> publicBoundaryCDP.publicApp "Authenticates users"
+
+  // Within Public CDP
+  publicBoundaryCDP.publicApp -> publicBoundaryCDP.redis "Session management"
+
+  // Public to Private CDP
+  publicBoundaryCDP.publicApp -> privateBoundaryCDP.backendApi "Internal API calls"
+
+  // Within Private CDP
+  privateBoundaryCDP.backendApi -> privateBoundaryCDP.fileStorageS3 "Stores uploaded files"
+  privateBoundaryCDP.backendApi -> privateBoundaryCDP.mongoDb "Application data CRUD"
+  privateBoundaryCDP.backendApi -> privateBoundaryCDP.postgresDb "GIS data operations"
+  privateBoundaryCDP.fileStorageS3 -> azureDataPlatform.dynamicsPlatform "Sync"
+}
+
+views {
+  view index {
+    title "BNG Metric - High Level Landscape"
+    description "Single landscape view: Defra Customer ID -> Public App (Redis + Backend) -> Data stores -> GIO Data Platform"
+
+    include defraCustomerId
+    include publicBoundaryCDP, publicBoundaryCDP.publicApp, publicBoundaryCDP.redis
+    include privateBoundaryCDP, privateBoundaryCDP.backendApi, privateBoundaryCDP.mongoDb, privateBoundaryCDP.postgresDb, privateBoundaryCDP.fileStorageS3
+    include azureDataPlatform, azureDataPlatform.dynamicsPlatform
+
+    style defraCustomerId {
+      color indigo
+    }
+
+    style publicBoundaryCDP {
+      color green
+    }
+
+    style privateBoundaryCDP {
+      color slate
+    }
+
+    style azureDataPlatform {
+      color sky
+    }
+  }
+}

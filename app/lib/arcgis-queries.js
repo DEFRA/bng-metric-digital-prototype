@@ -11,14 +11,42 @@ const lnrsQueryUrl =
 
 /**
  * Query an ArcGIS REST API endpoint
+ * Uses POST to avoid URL length limits with large geometries
  * @param {string} url - The ArcGIS endpoint URL
  * @param {Object} params - Query parameters
  * @returns {Promise<Object>} The response data
  */
 async function queryArcgis(url, params) {
-  const response = await fetch(
-    `${url}?${new URLSearchParams(params).toString()}`
-  )
+  console.log('ArcGIS query to:', url)
+
+  // Use POST with form-encoded body to avoid URL length limits
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded'
+    },
+    body: new URLSearchParams(params).toString()
+  })
+
+  // Check if response is OK
+  if (!response.ok) {
+    console.error('ArcGIS API error:', response.status, response.statusText)
+    throw new Error(
+      `ArcGIS API returned ${response.status}: ${response.statusText}`
+    )
+  }
+
+  // Check content type
+  const contentType = response.headers.get('content-type')
+  if (!contentType || !contentType.includes('application/json')) {
+    const text = await response.text()
+    console.error(
+      'ArcGIS API returned non-JSON response:',
+      text.substring(0, 500)
+    )
+    throw new Error(`ArcGIS API returned non-JSON content: ${contentType}`)
+  }
+
   const data = await response.json()
   return data
 }
@@ -59,6 +87,11 @@ async function isWithinUK(features) {
  * @returns {Promise<string>} The LPA name
  */
 async function getLPA(features) {
+  if (!features || !features[0] || !features[0].geometry) {
+    console.error('getLPA: Invalid features input')
+    return 'No LPA found'
+  }
+
   const esrijson_str = JSON.stringify(geojsonToEsri(features[0].geometry))
 
   const queryParams = {
@@ -76,9 +109,14 @@ async function getLPA(features) {
 
   const data = await queryArcgis(lpaQueryUrl, queryParams)
 
-  if (data.features) {
+  if (
+    data.features &&
+    data.features.length > 0 &&
+    data.features[0].attributes
+  ) {
     return data.features[0].attributes.LPA22NM
   } else {
+    console.log('getLPA: No features returned from ArcGIS', data)
     return 'No LPA found'
   }
 }
@@ -89,6 +127,11 @@ async function getLPA(features) {
  * @returns {Promise<string>} The NCA name
  */
 async function getNCA(features) {
+  if (!features || !features[0] || !features[0].geometry) {
+    console.error('getNCA: Invalid features input')
+    return 'No NCA found'
+  }
+
   const esrijson_str = JSON.stringify(geojsonToEsri(features[0].geometry))
 
   const queryParams = {
@@ -106,9 +149,14 @@ async function getNCA(features) {
 
   const data = await queryArcgis(ncaQueryUrl, queryParams)
 
-  if (data.features) {
+  if (
+    data.features &&
+    data.features.length > 0 &&
+    data.features[0].attributes
+  ) {
     return data.features[0].attributes.NCA_Name
   } else {
+    console.log('getNCA: No features returned from ArcGIS', data)
     return 'No NCA found'
   }
 }
@@ -119,6 +167,11 @@ async function getNCA(features) {
  * @returns {Promise<string>} The LNRS name
  */
 async function getLNRS(features) {
+  if (!features || !features[0] || !features[0].geometry) {
+    console.error('getLNRS: Invalid features input')
+    return 'No LNRS found'
+  }
+
   const esrijson_str = JSON.stringify(geojsonToEsri(features[0].geometry))
 
   const queryParams = {
@@ -136,10 +189,15 @@ async function getLNRS(features) {
 
   const data = await queryArcgis(lnrsQueryUrl, queryParams)
 
-  if (data.features) {
+  if (
+    data.features &&
+    data.features.length > 0 &&
+    data.features[0].attributes
+  ) {
     return data.features[0].attributes.Name
   } else {
-    return 'No LNR found'
+    console.log('getLNRS: No features returned from ArcGIS', data)
+    return 'No LNRS found'
   }
 }
 
