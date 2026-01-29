@@ -36,7 +36,6 @@
         },
         { keys: '+ or =', description: 'Zoom in' },
         { keys: '- or _', description: 'Zoom out' },
-        { keys: 'Shift + +/-', description: 'Zoom in/out (fine control)' },
         { keys: 'Home', description: 'Reset to initial view' }
       ]
     },
@@ -208,7 +207,7 @@
 
     html += `
       <div class="govuk-inset-text">
-        <p class="govuk-body-s">Hold <kbd>Shift</kbd> while using arrow keys or zoom keys for finer control.</p>
+        <p class="govuk-body-s">Hold <kbd>Shift</kbd> while using arrow keys for finer pan control.</p>
       </div>
     `
 
@@ -393,7 +392,8 @@
       this._isDrawing ||
       this._fillActive ||
       this._sliceActive ||
-      this._isLineDrawing
+      this._isLineDrawing ||
+      this._removeActive
     ) {
       this._showKeyboardTarget()
       this._updateKeyboardSnapIndicator()
@@ -422,7 +422,8 @@
       this._isDrawing ||
       this._fillActive ||
       this._sliceActive ||
-      this._isLineDrawing
+      this._isLineDrawing ||
+      this._removeActive
     )
   }
 
@@ -462,6 +463,12 @@
       return
     }
 
+    // Handle remove mode separately - it has its own hover logic
+    if (this._removeActive) {
+      this._updateKeyboardRemoveHover()
+      return
+    }
+
     // Get map center coordinate
     const center = this._map.getView().getCenter()
     if (!center) return
@@ -496,9 +503,9 @@
       this._updateLivePolygon(snapCoord)
     }
 
-    // Update slice preview line if slice is active with a start point
-    if (this._sliceActive && this._sliceStart) {
-      this._updateSlicePreviewForKeyboard(snapCoord)
+    // Update slice snap indicator and store for keyboard action
+    if (this._sliceActive) {
+      this._updateSliceSnapForKeyboard(snapCoord)
     }
 
     // Update live line preview if we have points (line drawing mode)
@@ -508,20 +515,30 @@
   }
 
   // ============================
-  // Slice preview for keyboard
+  // Slice snap for keyboard
   // ============================
 
-  DefraMapClient.prototype._updateSlicePreviewForKeyboard = function (
-    snapCoord
-  ) {
-    // Update the slice hover marker
+  DefraMapClient.prototype._updateSliceSnapForKeyboard = function (snapCoord) {
+    // Clear previous hover marker
     if (this._sliceHover) {
       this._sliceSource.removeFeature(this._sliceHover)
       this._sliceHover = null
     }
 
-    // Find snap point on source polygon for the current center
-    const sliceSnap = this._findSliceSnapPointOnSourcePolygon(snapCoord)
+    // Find slice snap point - different logic for first vs second point
+    let sliceSnap
+    if (this._sliceStart) {
+      // Second point: snap to the source polygon
+      sliceSnap = this._findSliceSnapPointOnSourcePolygon(snapCoord)
+    } else {
+      // First point: snap to any boundary or parcel edge
+      sliceSnap = this._findSliceSnapPoint(snapCoord)
+    }
+
+    // Store for use when Ctrl+Space is pressed
+    this._lastSliceSnapInfo = sliceSnap
+
+    // Show hover marker if we have a snap point
     if (sliceSnap) {
       let featureType
       if (sliceSnap.isVertex) {
@@ -539,16 +556,21 @@
       this._sliceSource.addFeature(this._sliceHover)
     }
 
-    // Update preview line
-    if (this._slicePreviewLine) {
-      this._sliceSource.removeFeature(this._slicePreviewLine)
+    // Update preview line if we have a start point
+    if (this._sliceStart) {
+      if (this._slicePreviewLine) {
+        this._sliceSource.removeFeature(this._slicePreviewLine)
+      }
+      const endCoord = sliceSnap ? sliceSnap.coordinate : snapCoord
+      this._slicePreviewLine = new ol.Feature({
+        geometry: new ol.geom.LineString([
+          this._sliceStart.coordinate,
+          endCoord
+        ]),
+        featureType: 'line'
+      })
+      this._sliceSource.addFeature(this._slicePreviewLine)
     }
-    const endCoord = sliceSnap ? sliceSnap.coordinate : snapCoord
-    this._slicePreviewLine = new ol.Feature({
-      geometry: new ol.geom.LineString([this._sliceStart.coordinate, endCoord]),
-      featureType: 'line'
-    })
-    this._sliceSource.addFeature(this._slicePreviewLine)
   }
 
   // ============================
@@ -570,10 +592,10 @@
     // Shift key reduces the step for finer control
     const resolution = view.getResolution()
     const basePanStep = resolution * 100 // Pan by 100 pixels worth
-    const panStep = e.shiftKey ? basePanStep * 0.2 : basePanStep // 20% when shift is held
+    const panStep = e.shiftKey ? basePanStep * 0.05 : basePanStep // 5% when shift is held
 
-    // Zoom step - normal is 1 level, shift is 0.25 level
-    const zoomStep = e.shiftKey ? 0.25 : 1
+    // Zoom step - always 1 level (fractional zoom not supported with constrainResolution)
+    const zoomStep = 1
 
     switch (e.key) {
       case 'ArrowUp':
@@ -686,6 +708,8 @@
       this._handleKeyboardSliceSelect()
     } else if (this._isLineDrawing) {
       this._handleKeyboardPlaceLinePoint()
+    } else if (this._removeActive) {
+      this._handleKeyboardRemoveSelect()
     }
   }
 
@@ -819,6 +843,11 @@
     if (isOpen) {
       this._closeDrawerMenu()
     } else {
+      // Finish any active editing before opening the menu
+      if (this._finishActiveEditing) {
+        this._finishActiveEditing()
+      }
+
       // Open drawer
       drawer.classList.add('defra-map-controls__drawer--open')
       drawer.setAttribute('aria-hidden', 'false')
@@ -989,24 +1018,26 @@
     }
 
     if (this._fillMode === 'parcels') {
-      const validation = this._validatePolygonWithinBoundary(
-        clickedPolygon.geometry
-      )
-      if (!validation.valid) {
-        this._announceAction(validation.error)
-        return
-      }
+      // Use the same handler as mouse clicks - it handles clipping properly
+      // Pass map center as the click coordinate for selecting the polygon part
+      const mapCenter = this._map.getView().getCenter()
 
-      const overlapCheck = this._checkOverlapWithExistingParcels(
-        clickedPolygon.geometry
-      )
-      if (!overlapCheck.valid) {
-        this._announceAction(overlapCheck.error)
-        return
-      }
+      // Track parcel count to determine if add was successful
+      const parcelCountBefore = this._habitatParcels
+        ? this._habitatParcels.length
+        : 0
 
-      this._addFillPolygonAsParcel(clickedPolygon)
-      this._announceAction('Parcel added')
+      this._handleOsPolygonFillClick(clickedPolygon, mapCenter)
+
+      // Check if a parcel was actually added
+      const parcelCountAfter = this._habitatParcels
+        ? this._habitatParcels.length
+        : 0
+
+      if (parcelCountAfter > parcelCountBefore) {
+        this._announceAction('Parcel added')
+      }
+      // If not added, _handleOsPolygonFillClick already emitted appropriate fill:message
       return
     }
 
@@ -1023,15 +1054,15 @@
   DefraMapClient.prototype._handleKeyboardSliceSelect = function () {
     if (!this._sliceActive) return
 
-    const center = this._map.getView().getCenter()
-    if (!center) return
+    // Use the stored slice snap info from _updateSliceSnapForKeyboard
+    // This ensures we use the same snap point shown in the visual indicator
+    const snapInfo = this._lastSliceSnapInfo
 
     if (!this._sliceStart) {
-      // First point - find snap point on boundary or parcel
-      const snapInfo = this._findSliceSnapPoint(center)
+      // First point - use the stored snap point on boundary or parcel
       if (!snapInfo) {
         this._announceAction(
-          'Please position crosshair on a boundary or parcel edge'
+          'Please position crosshair near a boundary or parcel edge'
         )
         return
       }
@@ -1047,6 +1078,10 @@
       })
       this._sliceSource.addFeature(this._sliceStartMarker)
 
+      // Update the snap indicator now that we have a start point
+      // This will switch to finding points on the source polygon
+      this._updateKeyboardSnapIndicator()
+
       this._announceAction(
         'Slice start point set. Move to end point and press Ctrl+Space again'
       )
@@ -1058,11 +1093,10 @@
       return
     }
 
-    // Second point - complete the slice
-    const snapInfo = this._findSliceSnapPointOnSourcePolygon(center)
+    // Second point - complete the slice using stored snap info
     if (!snapInfo) {
       this._announceAction(
-        'Please position crosshair on the same polygon to complete slice'
+        'Please position crosshair near the same polygon to complete slice'
       )
       return
     }
@@ -1078,6 +1112,114 @@
 
     this._executeSlice(this._sliceStart, snapInfo)
     this._announceAction('Slice completed')
+  }
+
+  // ============================
+  // Keyboard remove selection
+  // ============================
+
+  DefraMapClient.prototype._handleKeyboardRemoveSelect = function () {
+    if (!this._removeActive) return
+
+    const mapSize = this._map.getSize()
+    const centerPixel = [mapSize[0] / 2, mapSize[1] / 2]
+
+    if (this._mode === 'red-line-boundary') {
+      // Red-line boundary mode: remove the boundary polygon
+      if (this._polygonFeature) {
+        this.clearBoundary()
+        this._announceAction('Boundary removed')
+        // Finish remove mode after removing boundary
+        this.finishRemove()
+      } else {
+        this._announceAction('No boundary to remove')
+      }
+      return
+    }
+
+    // Habitat parcels mode: find parcel at center
+    // _findParcelAtPixel returns an index (number), -1 if not found
+    const parcelIndex = this._findParcelAtPixel(centerPixel)
+
+    if (parcelIndex < 0) {
+      this._announceAction('No parcel found at this location')
+      return
+    }
+
+    // Remove the parcel
+    this.removeParcel(parcelIndex)
+    this._announceAction('Parcel removed')
+
+    // Clear the hover highlight after removal
+    this._clearKeyboardRemoveHover()
+
+    // Stay in remove mode for additional removals
+    // Check if there are still parcels to remove
+    if (this._habitatParcels && this._habitatParcels.length === 0) {
+      this.finishRemove()
+    } else {
+      // Update hover for potential next selection
+      this._updateKeyboardRemoveHover()
+    }
+  }
+
+  // ============================
+  // Keyboard remove hover highlight
+  // ============================
+
+  DefraMapClient.prototype._updateKeyboardRemoveHover = function () {
+    if (!this._keyboardMode || !this._removeActive) {
+      return
+    }
+
+    const mapSize = this._map.getSize()
+    const centerPixel = [mapSize[0] / 2, mapSize[1] / 2]
+
+    if (this._mode === 'red-line-boundary') {
+      // Red-line boundary mode: highlight the boundary if it exists
+      if (this._polygonFeature) {
+        this._polygonFeature.set('removeHover', true)
+      }
+      return
+    }
+
+    // Habitat parcels mode: find parcel at center and apply hover
+    // _findParcelAtPixel returns an index (number), -1 if not found
+    const parcelIndex = this._findParcelAtPixel(centerPixel)
+
+    // Clear previous hover from all parcels
+    if (this._habitatParcels) {
+      this._habitatParcels.forEach((p) => {
+        if (p.feature) {
+          p.feature.set('removeHover', false)
+        }
+      })
+    }
+
+    // Apply hover to found parcel
+    if (
+      parcelIndex >= 0 &&
+      this._habitatParcels &&
+      this._habitatParcels[parcelIndex]
+    ) {
+      this._habitatParcels[parcelIndex].feature.set('removeHover', true)
+    }
+  }
+
+  DefraMapClient.prototype._clearKeyboardRemoveHover = function () {
+    // Clear hover from boundary (uses _polygonFeature in red-line-boundary mode)
+    if (this._polygonFeature) {
+      this._polygonFeature.set('removeHover', false)
+    }
+
+    // Clear hover from all parcels
+    if (this._habitatParcels) {
+      this._habitatParcels.forEach((p) => {
+        if (p.feature) {
+          p.feature.set('removeHover', false)
+        }
+      })
+    }
   }
 
   // ============================
@@ -1202,6 +1344,41 @@
   }
 
   // ============================
+  // Override remove methods to show/hide keyboard target
+  // ============================
+
+  const originalStartRemove = DefraMapClient.prototype.startRemove
+  if (originalStartRemove) {
+    DefraMapClient.prototype.startRemove = function () {
+      originalStartRemove.call(this)
+
+      // Show keyboard target if in keyboard mode
+      if (this._keyboardMode && this._removeActive) {
+        this._showKeyboardTarget()
+        this._updateKeyboardSnapIndicator()
+      }
+    }
+  }
+
+  const originalCancelRemove = DefraMapClient.prototype.cancelRemove
+  if (originalCancelRemove) {
+    DefraMapClient.prototype.cancelRemove = function () {
+      this._clearKeyboardRemoveHover()
+      originalCancelRemove.call(this)
+      this._hideKeyboardTarget()
+    }
+  }
+
+  const originalFinishRemove = DefraMapClient.prototype.finishRemove
+  if (originalFinishRemove) {
+    DefraMapClient.prototype.finishRemove = function () {
+      this._clearKeyboardRemoveHover()
+      originalFinishRemove.call(this)
+      this._hideKeyboardTarget()
+    }
+  }
+
+  // ============================
   // Listen for tool events to manage keyboard target visibility
   // ============================
 
@@ -1227,6 +1404,15 @@
     })
 
     this.on('parcel:added', () => {
+      // Check if fill-parcels mode is still active - keep target visible for continued filling
+      if (
+        this._keyboardMode &&
+        this._fillActive &&
+        this._fillMode === 'parcels'
+      ) {
+        // Keep keyboard target visible for continued filling
+        return
+      }
       this._hideKeyboardTarget()
     })
 
@@ -1283,6 +1469,24 @@
     })
 
     this.on('watercourse:added', () => {
+      this._hideKeyboardTarget()
+    })
+
+    // Remove tool events
+    this.on('remove:started', () => {
+      if (this._keyboardMode) {
+        this._showKeyboardTarget()
+        this._updateKeyboardSnapIndicator()
+      }
+    })
+
+    this.on('remove:cancelled', () => {
+      this._clearKeyboardRemoveHover()
+      this._hideKeyboardTarget()
+    })
+
+    this.on('remove:finished', () => {
+      this._clearKeyboardRemoveHover()
       this._hideKeyboardTarget()
     })
   }
