@@ -365,16 +365,21 @@ function registerOnSiteBaselineRoutes(router) {
     const drawnParcels = req.session.data['habitatParcels']
 
     // Use GeoPackage flow if layers were confirmed from upload
-    // Use drawing flow only if no GeoPackage data was confirmed
+    // Use drawing flow if we have drawn parcels (boundary is optional for display)
     const isGeoPackageFlow = layersConfirmed && hasGeoPackageData
-    const isDrawingFlow = !isGeoPackageFlow && drawnBoundary && drawnParcels
+    // Check if drawnParcels has valid features
+    const hasDrawnParcels =
+      drawnParcels && drawnParcels.features && drawnParcels.features.length > 0
+    const isDrawingFlow = !isGeoPackageFlow && hasDrawnParcels
 
     // Debug logging
     console.log('Habitats summary - session state:', {
       layersConfirmed: !!layersConfirmed,
       hasGeoPackageData: !!hasGeoPackageData,
       hasBoundary: !!drawnBoundary,
+      boundaryType: drawnBoundary?.type,
       hasParcels: !!drawnParcels,
+      hasDrawnParcels: hasDrawnParcels,
       parcelCount: drawnParcels?.features?.length || 0,
       isGeoPackageFlow: isGeoPackageFlow,
       isDrawingFlow: isDrawingFlow,
@@ -412,6 +417,7 @@ function registerOnSiteBaselineRoutes(router) {
       }
 
       // Build parcels data from drawn parcels (already a FeatureCollection)
+      let parcelsTotalAreaSqm = 0
       if (
         drawnParcels &&
         drawnParcels.features &&
@@ -422,6 +428,7 @@ function registerOnSiteBaselineRoutes(router) {
           if (feature.geometry) {
             const areaSqm = calculatePolygonArea(feature.geometry)
             parcelAreaHa = (areaSqm / 10000).toFixed(2)
+            parcelsTotalAreaSqm += areaSqm
           }
 
           habitatParcels.push({
@@ -436,6 +443,11 @@ function registerOnSiteBaselineRoutes(router) {
               '/on-site-baseline/parcel/' + (index + 1) + '/habitat-type'
           })
         })
+      }
+
+      // If boundary area wasn't calculated, use total parcels area as fallback
+      if (totalAreaHectares === 0 && parcelsTotalAreaSqm > 0) {
+        totalAreaHectares = (parcelsTotalAreaSqm / 10000).toFixed(2)
       }
 
       // Prepare map data from drawn geometries
