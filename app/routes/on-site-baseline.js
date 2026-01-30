@@ -682,9 +682,9 @@ function registerOnSiteBaselineRoutes(router) {
         { text: lengthM.toFixed(1) },
         { text: feature.properties["Baseline River Type"] || 'Not specified' },
         { text: feature.properties["Baseline Distinctiveness"] || 'Not specified' },
-        { text: feature.properties["Baseline Condition"].replace(/^\d+\.\s*/, '') || 'Not specified' },
+        { text: feature.properties["Baseline Condition"]?.replace(/^\d+\.\s*/, '') || 'Not specified' },
         { text: feature.properties["Baseline Encroachment into Watercourse"] || 'Not specified' },
-        { text: feature.properties["Baseline Encroachment into riparian zone"].replace(/^\d+\.\s*/, '') || 'Not specified' },
+        { text: feature.properties["Baseline Encroachment into riparian zone"]?.replace(/^\d+\.\s*/, '') || 'Not specified' },
         { text: 'Complete' },
         {
           html:

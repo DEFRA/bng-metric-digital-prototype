@@ -164,7 +164,7 @@
       <div class="defra-modal__overlay" data-close-modal></div>
       <div class="defra-modal__container">
         <div class="defra-modal__header">
-          <h2 class="defra-modal__title" id="keyboard-help-modal-title">Keyboard shortcuts</h2>
+          <h2 class="defra-modal__title govuk-heading-l" id="keyboard-help-modal-title">Keyboard shortcuts</h2>
           <button type="button" class="defra-modal__close" aria-label="Close keyboard shortcuts" data-close-modal>
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
           </button>
@@ -197,7 +197,7 @@
         html += `
           <div class="defra-keyboard-help__item">
             <dt class="defra-keyboard-help__keys"><kbd>${shortcut.keys}</kbd></dt>
-            <dd class="defra-keyboard-help__description">${shortcut.description}</dd>
+            <dd class="defra-keyboard-help__description govuk-body-s">${shortcut.description}</dd>
           </div>
         `
       }
