@@ -9,6 +9,7 @@ npm-debug.log
 
 # Prototype files/folders
 .tmp/
+.likec4/
 .env
 migrate.log
 usage-data-config.json

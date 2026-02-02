@@ -73,53 +73,67 @@ model {
     }
   }
 
-  // Public Boundary CDP (AWS)
-  boundary publicBoundaryCDP "Public Boundary CDP" {
-    description "AWS Public Zone"
+  // AWS eu-west-2 (London) Region
+  boundary awsEuWest2 "AWS eu-west-2 (London)" {
+    description "AWS London region hosting CDP infrastructure"
 
-    cache redis "Redis" {
-      description "Session cache for user sessions"
-      technology "Redis"
-    }
+    // Public Boundary CDP (AWS)
+    boundary publicBoundaryCDP "Public Boundary CDP" {
+      description "AWS Public Zone"
 
-    service publicApp "CDP BNG Metric Public App & API" {
-      description "Public-facing application and API for BNG metrics"
-      technology "Node.js / AWS"
-      style {
-        color green
+      cache redis "Redis" {
+        description "Session cache for user sessions"
+        technology "Redis"
       }
-    }
-  }
 
-  // Private Boundary CDP (AWS)
-  boundary privateBoundaryCDP "Private Boundary CDP" {
-    description "AWS Private Zone"
-
-    service backendApi "CDP BNG Metric Backend API" {
-      description "Backend API handling BNG metric processing"
-      technology "Node.js / AWS"
-      style {
-        color green
+      service publicApp "CDP BNG Metric Public App & API" {
+        description "Public-facing application and API for BNG metrics"
+        technology "Node.js / AWS"
+        style {
+          color green
+        }
       }
     }
 
-    storage fileStorageS3 "File Storage - S3" {
-      description "Used for any uploaded data by users, associated with case and user"
-      technology "AWS S3"
-      style {
-        shape rectangle
-        color sky
+    // Private Boundary CDP (AWS)
+    boundary privateBoundaryCDP "Private Boundary CDP" {
+      description "AWS Private Zone"
+
+      service backendApi "CDP BNG Metric Backend API" {
+        description "Backend API handling BNG metric processing"
+        technology "Node.js / AWS"
+        style {
+          color green
+        }
       }
-    }
 
-    database mongoDb "CDP Mongo Database" {
-      description "Mongo preferred for application data: users and RBAC, BNG information, also secondary store of GIS for convenience"
-      technology "MongoDB"
-    }
+      storage fileStorageS3 "File Storage - S3" {
+        description "Used for any uploaded data by users, associated with case and user"
+        technology "AWS S3"
+        style {
+          shape rectangle
+          color sky
+        }
+      }
 
-    database postgresDb "CDP Postgres / PostGIS Database" {
-      description "PostGIS used to store reference data e.g. Living England habitats. Also stores user uploaded/created GIS layers associated with application"
-      technology "PostgreSQL / PostGIS"
+      storage bngProjectDataS3 "BNG Project Data - S3" {
+        description "Stores BNG project updates/data for synchronisation with the GIO data platform"
+        technology "AWS S3"
+        style {
+          shape rectangle
+          color sky
+        }
+      }
+
+      database mongoDb "CDP Mongo Database" {
+        description "Mongo preferred for application data: users and RBAC, BNG information, also secondary store of GIS for convenience"
+        technology "MongoDB"
+      }
+
+      database postgresDb "CDP Postgres / PostGIS Database" {
+        description "PostGIS used to store reference data e.g. Living England habitats. Also stores user uploaded/created GIS layers associated with application"
+        technology "PostgreSQL / PostGIS"
+      }
     }
   }
 
@@ -136,45 +150,38 @@ model {
   // Relationships
 
   // External to Public CDP
-  defraCustomerId -> publicBoundaryCDP.publicApp "Authenticates users"
+  defraCustomerId -> awsEuWest2.publicBoundaryCDP.publicApp "Authenticates users"
 
   // Within Public CDP
-  publicBoundaryCDP.publicApp -> publicBoundaryCDP.redis "Session management"
+  awsEuWest2.publicBoundaryCDP.publicApp -> awsEuWest2.publicBoundaryCDP.redis "Session management"
 
   // Public to Private CDP
-  publicBoundaryCDP.publicApp -> privateBoundaryCDP.backendApi "Internal API calls"
+  awsEuWest2.publicBoundaryCDP.publicApp -> awsEuWest2.privateBoundaryCDP.backendApi "Internal API calls"
 
   // Within Private CDP
-  privateBoundaryCDP.backendApi -> privateBoundaryCDP.fileStorageS3 "Stores uploaded files"
-  privateBoundaryCDP.backendApi -> privateBoundaryCDP.mongoDb "Application data CRUD"
-  privateBoundaryCDP.backendApi -> privateBoundaryCDP.postgresDb "GIS data operations"
-  privateBoundaryCDP.fileStorageS3 -> azureDataPlatform.dynamicsPlatform "Sync"
+  awsEuWest2.privateBoundaryCDP.backendApi -> awsEuWest2.privateBoundaryCDP.fileStorageS3 "Stores uploaded files"
+  awsEuWest2.privateBoundaryCDP.backendApi -> awsEuWest2.privateBoundaryCDP.bngProjectDataS3 "Stores BNG project data"
+  awsEuWest2.privateBoundaryCDP.backendApi -> awsEuWest2.privateBoundaryCDP.mongoDb "Application data CRUD"
+  awsEuWest2.privateBoundaryCDP.backendApi -> awsEuWest2.privateBoundaryCDP.postgresDb "GIS data operations"
+  awsEuWest2.privateBoundaryCDP.bngProjectDataS3 -> azureDataPlatform.dynamicsPlatform "Sync"
 }
 
 views {
   view index {
-    title "BNG Metric - High Level Landscape"
-    description "Single landscape view: Defra Customer ID -> Public App (Redis + Backend) -> Data stores -> GIO Data Platform"
+    title "BNG Metric - Complete Flow"
+    description "Complete view showing all components and their connections"
 
+    // Include all actual components (not the boundary containers)
     include defraCustomerId
-    include publicBoundaryCDP, publicBoundaryCDP.publicApp, publicBoundaryCDP.redis
-    include privateBoundaryCDP, privateBoundaryCDP.backendApi, privateBoundaryCDP.mongoDb, privateBoundaryCDP.postgresDb, privateBoundaryCDP.fileStorageS3
-    include azureDataPlatform, azureDataPlatform.dynamicsPlatform
+    include awsEuWest2.publicBoundaryCDP.redis
+    include awsEuWest2.publicBoundaryCDP.publicApp
+    include awsEuWest2.privateBoundaryCDP.backendApi
+    include awsEuWest2.privateBoundaryCDP.fileStorageS3
+    include awsEuWest2.privateBoundaryCDP.bngProjectDataS3
+    include awsEuWest2.privateBoundaryCDP.mongoDb
+    include awsEuWest2.privateBoundaryCDP.postgresDb
+    include azureDataPlatform.dynamicsPlatform
 
-    style defraCustomerId {
-      color indigo
-    }
-
-    style publicBoundaryCDP {
-      color green
-    }
-
-    style privateBoundaryCDP {
-      color slate
-    }
-
-    style azureDataPlatform {
-      color sky
-    }
+    // This will automatically include all relationships between the included elements
   }
 }
