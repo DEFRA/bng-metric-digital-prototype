@@ -14,6 +14,12 @@ const {
 //const { isWithinUK, getLPA, getNCA, getLNRS } = require('../lib/arcgis-queries')
 const { isWithinUK } = require('../lib/arcgis-queries')
 
+// Import metric calculation data
+const metricCalcs = require('../lib/metric-calcs')
+const distinctivenessCategories = metricCalcs.distinctivenessCategories || {}
+const distinctivenesScores = metricCalcs.distinctivenesScores || {}
+const conditionScores = metricCalcs.conditionScores || {}
+
 const upload = multer({ storage: multer.memoryStorage() })
 
 // Validation thresholds
@@ -505,8 +511,7 @@ function registerOnSitePostInterventionRoutes(router) {
             spatialRiskCategory: spatialRiskCategory,
             retentionCategory: retentionCategory,
             units: units,
-            status: status,
-            actionUrl: '/on-site-post-intervention/parcel/' + i + '/habitat-type'
+            status: status
           })
         }
       }
@@ -570,83 +575,102 @@ function registerOnSitePostInterventionRoutes(router) {
         { text: parcel.status },
         {
           html:
-            '<a class="govuk-link" href="' +
-            parcel.actionUrl +
-            '">Edit</a>'
+            '<a class="govuk-link" href="/on-site-post-intervention/habitat/' +
+            encodeURIComponent(parcel.parcelId) +
+            '/details">Edit</a>'
         }
       ]
     })
 
-    // // Build hedgerow table rows
-    // const hedgerows = mapData.hedgerows?.features || []
-    // const hedgerowTableRows = hedgerows.map(function (feature, index) {
-    //   // Use lengthM property if available, otherwise calculate from geometry
-    //   let lengthM = feature.properties?.lengthM
-    //   if (lengthM === undefined && feature.geometry) {
-    //     lengthM = calculateLineLength(feature.geometry)
-    //   }
-    //   lengthM = lengthM || 0
-    //   return [
-    //     {
-    //       html:
-    //         '<a href="#" class="govuk-link habitat-ref-link" data-feature-type="hedgerow" data-feature-index="' +
-    //         index +
-    //         '">H-' +
-    //         (index + 1).toString().padStart(3, '0') +
-    //         '</a>'
-    //     },
-    //     { text: lengthM.toFixed(1) },
-    //     { text: feature.properties["Baseline Hedge Type"] || 'Not specified' },
-    //     { text: feature.properties["Baseline Distinctiveness"] || 'Not specified' },
-    //     { text: feature.properties["Baseline Condition"] || 'Not specified' },
-    //     { text: 'Complete' },
-    //     {
-    //       html:
-    //         '<a class="govuk-link" href="/on-site-baseline/hedgerow/' +
-    //         (index + 1) +
-    //         '/details">Add details<span class="govuk-visually-hidden"> for H-' +
-    //         (index + 1).toString().padStart(3, '0') +
-    //         '</span></a>'
-    //     }
-    //   ]
-    // })
+    // Build hedgerow table rows
+    const hedgerows = mapData.hedgerows?.features || []
+    const hedgerowTableRows = hedgerows.map(function (feature, index) {
+      // Use lengthM property if available, otherwise calculate from geometry
+      let lengthM = feature.properties?.lengthM
+      if (lengthM === undefined && feature.geometry) {
+        lengthM = calculateLineLength(feature.geometry)
+      }
+      lengthM = lengthM || 0
+      return [
+        {
+          html:
+            '<a href="#" class="govuk-link habitat-ref-link" data-feature-type="hedgerow" data-feature-index="' +
+            index +
+            '">H-' +
+            (index + 1).toString().padStart(3, '0') +
+            '</a>'
+        },
+        { text: lengthM.toFixed(1) },
+        { text: feature.properties["Baseline Hedge Type"] || 'Not specified' },
+        { text: feature.properties["Baseline Distinctiveness"] || 'Not specified' },
+        { text: feature.properties["Baseline Condition"] || 'Not specified' },
+        { text: 'Complete' },
+        {
+          html:
+            '<a class="govuk-link" href="/on-site-baseline/hedgerow/' +
+            (index + 1) +
+            '/details">Add details<span class="govuk-visually-hidden"> for H-' +
+            (index + 1).toString().padStart(3, '0') +
+            '</span></a>'
+        }
+      ]
+    })
 
-    // // Build watercourse table rows
-    // const watercourses = mapData.watercourses?.features || []
-    // const watercourseTableRows = watercourses.map(function (feature, index) {
-    //   // Use lengthM property if available, otherwise calculate from geometry
-    //   let lengthM = feature.properties?.lengthM
-    //   if (lengthM === undefined && feature.geometry) {
-    //     lengthM = calculateLineLength(feature.geometry)
-    //   }
-    //   lengthM = lengthM || 0
+    // Build watercourse table rows
+    const watercourses = mapData.watercourses?.features || []
+    const watercourseTableRows = watercourses.map(function (feature, index) {
+      // Use lengthM property if available, otherwise calculate from geometry
+      let lengthM = feature.properties?.lengthM
+      if (lengthM === undefined && feature.geometry) {
+        lengthM = calculateLineLength(feature.geometry)
+      }
+      lengthM = lengthM || 0
 
-    //   return [
-    //     {
-    //       html:
-    //         '<a href="#" class="govuk-link habitat-ref-link" data-feature-type="watercourse" data-feature-index="' +
-    //         index +
-    //         '">W-' +
-    //         (index + 1).toString().padStart(3, '0') +
-    //         '</a>'
-    //     },
-    //     { text: lengthM.toFixed(1) },
-    //     { text: feature.properties["Baseline River Type"] || 'Not specified' },
-    //     { text: feature.properties["Baseline Distinctiveness"] || 'Not specified' },
-    //     { text: feature.properties["Baseline Condition"].replace(/^\d+\.\s*/, '') || 'Not specified' },
-    //     { text: feature.properties["Baseline Encroachment into Watercourse"] || 'Not specified' },
-    //     { text: feature.properties["Baseline Encroachment into riparian zone"].replace(/^\d+\.\s*/, '') || 'Not specified' },
-    //     { text: 'Complete' },
-    //     {
-    //       html:
-    //         '<a class="govuk-link" href="/on-site-baseline/watercourse/' +
-    //         (index + 1) +
-    //         '/details">Add details<span class="govuk-visually-hidden"> for W-' +
-    //         (index + 1).toString().padStart(3, '0') +
-    //         '</span></a>'
-    //     }
-    //   ]
-    // })
+      return [
+        {
+          html:
+            '<a href="#" class="govuk-link habitat-ref-link" data-feature-type="watercourse" data-feature-index="' +
+            index +
+            '">W-' +
+            (index + 1).toString().padStart(3, '0') +
+            '</a>'
+        },
+        { text: lengthM.toFixed(1) },
+        { text: feature.properties["Baseline River Type"] || 'Not specified' },
+        { text: feature.properties["Baseline Distinctiveness"] || 'Not specified' },
+        { text: feature.properties["Baseline Condition"].replace(/^\d+\.\s*/, '') || 'Not specified' },
+        { text: feature.properties["Baseline Encroachment into Watercourse"] || 'Not specified' },
+        { text: feature.properties["Baseline Encroachment into riparian zone"].replace(/^\d+\.\s*/, '') || 'Not specified' },
+        { text: 'Complete' },
+        {
+          html:
+            '<a class="govuk-link" href="/on-site-baseline/watercourse/' +
+            (index + 1) +
+            '/details">Add details<span class="govuk-visually-hidden"> for W-' +
+            (index + 1).toString().padStart(3, '0') +
+            '</span></a>'
+        }
+      ]
+    })
+
+    // Build table rows for GovUK table component
+   const summary = [
+      [
+        {"text": "Habitat parcels"},
+        {"text": "1.5484"},
+        {"text": "1.6945"},
+        {"text": "0.15%"},
+        {"text": "No"}
+      ],
+      [
+        {"text": "Hedgerows"},
+        {"text": "0.0000"},
+        {"text": "2.1764"},
+        {"text": "-"},
+        {"text": "No"}
+      ]
+    ]
+    
 
     res.render('on-site-post-intervention/habitats-summary', {
       baselineSummary: {
@@ -660,8 +684,9 @@ function registerOnSitePostInterventionRoutes(router) {
       mapData: mapData,
       habitatParcels: habitatParcels,
       tableRows: tableRows,
-      // hedgerowTableRows: hedgerowTableRows,
-      // watercourseTableRows: watercourseTableRows,
+      summary: summary,
+      hedgerowTableRows: hedgerowTableRows,
+      watercourseTableRows: watercourseTableRows,
       actions: {
         // startPostIntervention: {
         //   url: '/on-site-post-intervention/upload-single-file'
@@ -669,6 +694,352 @@ function registerOnSitePostInterventionRoutes(router) {
       }
     })
   })
+
+  // Helper function to organize habitat types by broad habitat
+  function getHabitatTypesByBroadHabitat() {
+    const habitatTypesByBroad = {}
+    const allHabitatTypes = Object.keys(distinctivenessCategories)
+    
+    allHabitatTypes.forEach(habitatType => {
+      if (habitatType.includes(' - ')) {
+        const [broad, specific] = habitatType.split(' - ', 2)
+        if (!habitatTypesByBroad[broad]) {
+          habitatTypesByBroad[broad] = []
+        }
+        habitatTypesByBroad[broad].push(habitatType)
+      }
+    })
+    
+    return habitatTypesByBroad
+  }
+
+  // Helper function to get habitat data for a parcel
+  function getHabitatData(parcelRef, req) {
+    const layers = req.session.data['geopackageLayersPostIntervention'] || []
+    const geometries = req.session.data['geopackageGeometriesPostIntervention'] || {}
+
+    // Find parcels layer
+    const parcelsLayerInfo = layers.find(
+      (l) =>
+        l.name.toLowerCase().includes('parcel') ||
+        l.name.toLowerCase().includes('habitat')
+    )
+
+    if (!parcelsLayerInfo) {
+      return null
+    }
+
+    const parcelsLayer = geometries[parcelsLayerInfo.name]
+    if (!parcelsLayer || !parcelsLayer.features) {
+      return null
+    }
+
+    // Find the feature by parcel ref
+    let feature = null
+    let featureIndex = -1
+    for (let i = 0; i < parcelsLayer.features.length; i++) {
+      const f = parcelsLayer.features[i]
+      const ref = f.properties['Parcel Ref'] || 'HP-' + (i + 1).toString().padStart(3, '0')
+      if (ref === parcelRef) {
+        feature = f
+        featureIndex = i
+        break
+      }
+    }
+
+    if (!feature) {
+      return null
+    }
+
+    // Calculate area
+    let areaHa = 0
+    if (
+      feature.geometry.type === 'Polygon' ||
+      feature.geometry.type === 'MultiPolygon'
+    ) {
+      const areaSqm = calculatePolygonArea(feature.geometry)
+      areaHa = areaSqm / 10000
+    }
+
+    // Extract properties
+    const props = feature.properties
+    
+    // Post-intervention properties
+    const habitatType = props['Proposed Habitat Type'] || ''
+    const distinctiveness = props['Proposed Distinctiveness'] || ''
+    let condition = props['Proposed Condition'] || ''
+    
+    // Remove the number and period from the condition
+    if (condition) {
+      condition = condition.replace(/^\d+\.\s*/, '')
+    }
+
+    // Extract broad habitat - check for separate property first, then extract from habitat type
+    let broadHabitat = props['Proposed Broad Habitat Type'] || props['Broad Habitat Type'] || ''
+    if (!broadHabitat && habitatType.includes(' - ')) {
+      broadHabitat = habitatType.split(' - ')[0]
+    }
+
+    // Extract additional post-intervention properties
+    const strategicSignificance = props['Proposed Strategic Significance'] || props['Strategic significance'] || ''
+    const createdInAdvance = props['Habitat created in advance/years'] || ''
+    const delayInStarting = props['Delay in starting habitat creation/years'] || ''
+    const spatialRiskCategory = props['Spatial risk category'] || ''
+
+    return {
+      feature,
+      featureIndex,
+      parcelRef,
+      areaHa,
+      broadHabitat,
+      habitatType,
+      distinctiveness,
+      condition,
+      strategicSignificance,
+      createdInAdvance,
+      delayInStarting,
+      spatialRiskCategory,
+      props
+    }
+  }
+
+  // Habitat details page
+  router.get('/on-site-post-intervention/habitat/:parcelRef/details', function (req, res) {
+    const parcelRef = decodeURIComponent(req.params.parcelRef)
+    const habitatData = getHabitatData(parcelRef, req)
+
+    if (!habitatData) {
+      return res.status(404).send('Habitat parcel not found')
+    }
+
+    // Calculate habitat units (placeholder - may need actual calculation)
+    let habitatUnits = 0
+
+    // Build habitat object for template
+    const habitat = {
+      id: habitatData.parcelRef,
+      broad_habitat: habitatData.broadHabitat || 'Not specified',
+      habitat_type: habitatData.habitatType || 'Not specified',
+      area_hectares: habitatData.areaHa,
+      distinctiveness: habitatData.distinctiveness || 'Not specified',
+      condition: habitatData.condition || 'Not specified',
+      habitat_units: habitatUnits,
+      units: habitatUnits,
+      strategic_significance: habitatData.strategicSignificance || 'Not specified',
+      created_in_advance: habitatData.createdInAdvance || 'Not specified',
+      delay_in_starting: habitatData.delayInStarting || 'Not specified',
+      spatial_risk_category: habitatData.spatialRiskCategory || 'Not specified',
+      comments: habitatData.props['Comments'] || null
+    }
+
+    // Baseline properties
+    const baselineHabitatType = habitatData.props['Baseline Habitat Type'] || 'Not specified'
+    const baselineDistinctiveness = habitatData.props['Baseline Distinctiveness'] || 'Not specified'
+    let baselineCondition = habitatData.props['Baseline Condition'] || 'Not specified'
+    
+    // Remove the number and period from the baseline condition
+    if (baselineCondition !== 'Not specified') {
+      baselineCondition = baselineCondition.replace(/^\d+\.\s*/, '')
+    }
+
+    // Extract baseline broad habitat - check for separate property first, then extract from habitat type
+    let baselineBroadHabitat = habitatData.props['Baseline Broad Habitat Type'] || habitatData.props['Broad Habitat Type'] || ''
+    if (!baselineBroadHabitat && baselineHabitatType.includes(' - ')) {
+      baselineBroadHabitat = baselineHabitatType.split(' - ')[0]
+    }
+    if (!baselineBroadHabitat) {
+      baselineBroadHabitat = 'Not specified'
+    }
+
+    // Build baseline object
+    const baseline = {
+      id: habitatData.parcelRef,
+      broad_habitat: baselineBroadHabitat,
+      habitat_type: baselineHabitatType,
+      distinctiveness: baselineDistinctiveness,
+      condition: baselineCondition,
+      strategic_significance: habitatData.props['Baseline Strategic Significance'] || habitatData.props['Baseline Strategic significance'] || 'Not specified',
+      retention_category: habitatData.props['Retention Category'] || 'Not specified',
+      area_lost: null,
+      units_lost: null,
+      trading_rule: null
+    }
+
+    // Render template
+    res.render('on-site-post-intervention/habitat-details', {
+      habitat: habitat,
+      baseline: baseline,
+      projectName: req.session.data['projectName'] || 'On-site post-development',
+      proposedStatus: 'Post-intervention'
+    })
+  })
+
+  // Habitat edit page - GET
+  router.get('/on-site-post-intervention/habitat/:parcelRef/edit', function (req, res) {
+    const parcelRef = decodeURIComponent(req.params.parcelRef)
+    const habitatData = getHabitatData(parcelRef, req)
+
+    if (!habitatData) {
+      return res.status(404).send('Habitat parcel not found')
+    }
+
+    // Calculate habitat units
+    let habitatUnits = 0
+    const dScore = distinctivenesScores[habitatData.distinctiveness]?.Score || 0
+    const cScore = conditionScores[habitatData.condition] || 0
+    const strategicMultiplier = 1 // TODO: Get from strategic significance multiplier
+    if (dScore > 0 && cScore > 0) {
+      habitatUnits = habitatData.areaHa * dScore * cScore * strategicMultiplier
+    }
+
+    // Ensure habitat type is in full format for dropdown matching
+    // Dropdown options are in format "[Broad habitat] - [Habitat type]"
+    let habitatTypeForForm = habitatData.habitatType || ''
+    if (habitatTypeForForm && habitatData.broadHabitat) {
+      // Check if habitat type already includes the broad habitat
+      const alreadyHasBroadHabitat = habitatTypeForForm.startsWith(habitatData.broadHabitat + ' - ')
+      // If habitat type doesn't already include broad habitat in the correct format, construct it
+      if (!alreadyHasBroadHabitat && !habitatTypeForForm.includes(' - ')) {
+        habitatTypeForForm = habitatData.broadHabitat + ' - ' + habitatTypeForForm
+      }
+      // If it has a different broad habitat prefix, replace it with the correct one
+      else if (!alreadyHasBroadHabitat && habitatTypeForForm.includes(' - ')) {
+        const parts = habitatTypeForForm.split(' - ', 2)
+        if (parts.length === 2) {
+          habitatTypeForForm = habitatData.broadHabitat + ' - ' + parts[1]
+        }
+      }
+    }
+
+    // Build habitat object for template
+    const habitat = {
+      ref: habitatData.parcelRef,
+      id: habitatData.parcelRef,
+      broad_habitat: habitatData.broadHabitat || '',
+      habitat_type: habitatTypeForForm,
+      area_hectares: habitatData.areaHa,
+      distinctiveness: habitatData.distinctiveness || '',
+      condition: habitatData.condition || '',
+      habitat_units: habitatUnits,
+      strategic_significance: habitatData.strategicSignificance || '',
+      created_in_advance: habitatData.createdInAdvance || '',
+      delay_in_starting: habitatData.delayInStarting || '',
+      spatial_risk_category: habitatData.spatialRiskCategory || '',
+      comments: habitatData.props['Comments'] || ''
+    }
+
+    // Organize habitat types by broad habitat
+    const habitatTypesByBroadHabitat = getHabitatTypesByBroadHabitat()
+
+    // Build habitat type items for current broad habitat
+    const currentBroadHabitat = habitat.broad_habitat
+    const habitatTypeItems = currentBroadHabitat && habitatTypesByBroadHabitat[currentBroadHabitat]
+      ? [{ value: '', text: 'Select' }, ...habitatTypesByBroadHabitat[currentBroadHabitat].map(ht => ({ value: ht, text: ht }))]
+      : [{ value: '', text: 'Select' }]
+
+    // Prepare metric lookups for client-side calculation
+    const metricLookups = {
+      distinctivenessScores: Object.keys(distinctivenesScores).reduce((acc, key) => {
+        acc[key] = distinctivenesScores[key].Score
+        return acc
+      }, {}),
+      conditionScores: conditionScores,
+      strategicMultipliers: {
+        'Formally identified in local strategy': 1.2,
+        'Location ecologically desirable but not in local strategy': 1.1,
+        'Area/compensation not in local strategy/ no local strategy': 1
+      }
+    }
+
+    res.render('on-site-post-intervention/habitat-edit', {
+      habitat: habitat,
+      id: parcelRef,
+      habitatTypesByBroadHabitat: JSON.stringify(habitatTypesByBroadHabitat),
+      habitatTypeItems: habitatTypeItems,
+      metricLookups: JSON.stringify(metricLookups),
+      proposedStatus: 'Post-intervention'
+    })
+  })
+
+  // Habitat edit page - POST
+  router.post('/on-site-post-intervention/habitat/:parcelRef/edit', function (req, res) {
+    const parcelRef = decodeURIComponent(req.params.parcelRef)
+    const layers = req.session.data['geopackageLayersPostIntervention'] || []
+    const geometries = req.session.data['geopackageGeometriesPostIntervention'] || {}
+
+    // Find parcels layer
+    const parcelsLayerInfo = layers.find(
+      (l) =>
+        l.name.toLowerCase().includes('parcel') ||
+        l.name.toLowerCase().includes('habitat')
+    )
+
+    if (!parcelsLayerInfo) {
+      return res.status(404).send('Parcels layer not found')
+    }
+
+    const parcelsLayer = geometries[parcelsLayerInfo.name]
+    if (!parcelsLayer || !parcelsLayer.features) {
+      return res.status(404).send('Parcels data not found')
+    }
+
+    // Find the feature by parcel ref
+    let feature = null
+    let featureIndex = -1
+    for (let i = 0; i < parcelsLayer.features.length; i++) {
+      const f = parcelsLayer.features[i]
+      const ref = f.properties['Parcel Ref'] || 'HP-' + (i + 1).toString().padStart(3, '0')
+      if (ref === parcelRef) {
+        feature = f
+        featureIndex = i
+        break
+      }
+    }
+
+    if (!feature) {
+      return res.status(404).send('Habitat parcel not found')
+    }
+
+    // Update feature properties with form data
+    // Save broad habitat to both possible property names to ensure it's found
+    const broadHabitat = req.body.broad_habitat || ''
+    feature.properties['Proposed Broad Habitat Type'] = broadHabitat
+    feature.properties['Broad Habitat Type'] = broadHabitat
+    
+    // Extract habitat type without broad habitat prefix (format: "[Broad habitat] - [Habitat type]")
+    let habitatTypeToSave = req.body.habitat_type || ''
+    if (habitatTypeToSave.includes(' - ')) {
+      // Remove the broad habitat prefix (everything before and including " - ")
+      habitatTypeToSave = habitatTypeToSave.split(' - ').slice(1).join(' - ')
+    }
+    feature.properties['Proposed Habitat Type'] = habitatTypeToSave
+    feature.properties['Proposed Distinctiveness'] = req.body.distinctiveness || ''
+    feature.properties['Proposed Condition'] = req.body.condition || ''
+    
+    // Save strategic significance to both possible property names to ensure it's found
+    const strategicSignificance = req.body.strategic_significance || ''
+    feature.properties['Proposed Strategic Significance'] = strategicSignificance
+    feature.properties['Strategic significance'] = strategicSignificance
+    
+    feature.properties['Habitat created in advance/years'] = req.body.created_in_advance || ''
+    feature.properties['Delay in starting habitat creation/years'] = req.body.delay_in_starting || ''
+    feature.properties['Spatial risk category'] = req.body.spatial_risk_category || ''
+    feature.properties['Comments'] = req.body.comments || ''
+
+    // Save updated geometries back to session
+    req.session.data['geopackageGeometriesPostIntervention'] = geometries
+
+    // Explicitly save session to ensure data persists before redirect
+    req.session.save(function (err) {
+      if (err) {
+        console.error('[PostIntervention] Session save error:', err)
+        return res.status(500).send('Failed to save session')
+      }
+      // Redirect back to details page
+      res.redirect('/on-site-post-intervention/habitat/' + encodeURIComponent(parcelRef) + '/details')
+    })
+  })
+
 
   // API endpoint for getting parsed geometries (for map display)
   router.get('/api/on-site-post-intervention/geometries', function (req, res) {

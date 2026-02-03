@@ -1,0 +1,69 @@
+{% extends "layouts/main.html" %}
+
+{% from "govuk/components/back-link/macro.njk" import govukBackLink %}
+{% from "govuk/components/summary-list/macro.njk" import govukSummaryList %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+
+{% set pageName="Habitat " + habitat.id %}
+
+{% block beforeContent %}
+  {{ govukBackLink({
+    text: "Back",
+    href: "/on-site-post-intervention/habitats-summary"
+  }) }}
+{% endblock %}
+
+{% block content %}
+
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-two-thirds">
+
+      <span class="govuk-caption-l">{{ projectName or 'On-site post-development' }}</span>
+      <h1 class="govuk-heading-l">{{ pageName }}</h1>
+
+      {% if baseline %}
+        {{ govukSummaryList({
+          card: { title: { text: "Baseline" }, classes: "govuk-!-margin-top-6", actions: { items: [] } },
+          rows: [
+            { key: { text: "Broad Habitat Type" }, value: { text: baseline.broad_habitat } },
+            { key: { text: "Habitat Type" }, value: { text: baseline.habitat_type } },
+            { key: { text: "Distinctiveness" }, value: { text: baseline.distinctiveness } },
+            { key: { text: "Condition" }, value: { text: baseline.condition } },
+            { key: { text: "Strategic Significance" }, value: { text: baseline.strategic_significance } },
+            { key: { text: "Retention Category" }, value: { text: baseline.retention_category } },
+            { key: { text: "Area lost (ha)" }, value: { text: baseline.area_lost | default('') } },
+            { key: { text: "Units lost" }, value: { text: baseline.units_lost | default('') } },
+            { key: { text: "Trading rule" }, value: { text: baseline.trading_rule | default('') } }
+          ]
+        }) }}
+      {% endif %}
+
+      {% if habitat %}
+        {{ govukSummaryList({
+          card: { title: { text: proposedStatus }, classes: "govuk-!-margin-top-6", actions: { items: [{ href: "/on-site-post-intervention/habitat/" + habitat.id + "/edit", text: "Edit", visuallyHiddenText: " post-intervention details" }] } },
+          rows: [
+            { key: { text: "Ref" }, value: { text: habitat.id } },
+            { key: { text: "Area (ha)" }, value: { text: habitat.area_hectares | round(4) } },
+            { key: { text: "Broad habitat" }, value: { text: habitat.broad_habitat } },
+            { key: { text: "Habitat type" }, value: { text: habitat.habitat_type } },
+            { key: { text: "Distinctiveness" }, value: { text: habitat.distinctiveness } },
+            { key: { text: "Condition" }, value: { text: habitat.condition } },
+            { key: { text: "Strategic significance" }, value: { text: habitat.strategic_significance } },
+            { key: { text: "Habitat created in advance/years" }, value: { text: habitat.created_in_advance } },
+            { key: { text: "Delay in starting habitat creation/years" }, value: { text: habitat.delay_in_starting } },
+            { key: { text: "Spatial risk category" }, value: { text: habitat.spatial_risk_category } },
+            { key: { text: "Units" }, value: { text: habitat.units | round(4) | default('0.00') } }
+          ]
+        }) }}
+      {% endif %}
+
+      {{ govukButton({
+        text: "Back to post-intervention habitats",
+        href: "/on-site-post-intervention/habitats-summary",
+        classes: "govuk-!-margin-top-6"
+      }) }}
+
+    </div>
+  </div>
+
+{% endblock %}
