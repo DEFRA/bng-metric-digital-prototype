@@ -339,9 +339,14 @@
     document.querySelectorAll('.habitat-ref-link').forEach(function (link) {
       link.addEventListener('click', function (e) {
         e.preventDefault()
+        var featureType = this.dataset.featureType
+        var parcelRef = this.dataset.parcelRef
+        var featureIndex = parseInt(this.dataset.featureIndex, 10)
+        // For parcels, use parcel ref; for others, use index
         handleFeatureClick(
-          this.dataset.featureType,
-          parseInt(this.dataset.featureIndex, 10),
+          featureType,
+          featureIndex,
+          parcelRef || null,
           this
         )
       })
@@ -409,6 +414,7 @@
           // Determine feature type and index
           var featureType = null
           var featureIndex = -1
+          var parcelRef = null
 
           if (layer === parcelsLayer) {
             featureType = 'parcel'
@@ -416,6 +422,9 @@
               .getSource()
               .getFeatures()
               .indexOf(feature)
+            // Get parcel ref from feature properties
+            var props = feature.getProperties()
+            parcelRef = props['Parcel Ref'] || null
           } else if (layer === hedgerowsLayer) {
             featureType = 'hedgerow'
             featureIndex = hedgerowsLayer
@@ -432,13 +441,24 @@
 
           if (featureType && featureIndex >= 0) {
             // Find the corresponding table link
-            var link = document.querySelector(
-              '.habitat-ref-link[data-feature-type="' +
-                featureType +
-                '"][data-feature-index="' +
-                featureIndex +
-                '"]'
-            )
+            var link = null
+            if (featureType === 'parcel' && parcelRef) {
+              // Match by parcel ref for parcels
+              link = document.querySelector(
+                '.habitat-ref-link[data-feature-type="parcel"][data-parcel-ref="' +
+                  parcelRef +
+                  '"]'
+              )
+            } else {
+              // Match by index for hedgerows and watercourses
+              link = document.querySelector(
+                '.habitat-ref-link[data-feature-type="' +
+                  featureType +
+                  '"][data-feature-index="' +
+                  featureIndex +
+                  '"]'
+              )
+            }
 
             if (link) {
               featureFound = true
@@ -588,7 +608,7 @@
     }
   }
 
-  function handleFeatureClick(featureType, featureIndex, linkElement) {
+  function handleFeatureClick(featureType, featureIndex, parcelRef, linkElement) {
     // Clear previous highlight from different feature
     if (highlightSource) {
       highlightSource.clear()
@@ -615,7 +635,40 @@
     }
 
     var features = layer.getSource().getFeatures()
-    var feature = features[featureIndex]
+    var feature = null
+
+    // For parcels, find by parcel ref; for others, use index
+    if (featureType === 'parcel' && parcelRef) {
+      // First try to match by Parcel Ref property
+      for (var i = 0; i < features.length; i++) {
+        var props = features[i].getProperties()
+        if (props['Parcel Ref'] === parcelRef) {
+          feature = features[i]
+          break
+        }
+      }
+      // If not found and parcelRef looks like a generated ID (HP-XXX), try to match by index
+      // Generated IDs are like 'HP-001', 'HP-002', etc., where the number is 1-based
+      if (!feature && parcelRef.match(/^HP-\d+$/)) {
+        var match = parcelRef.match(/^HP-(\d+)$/)
+        if (match) {
+          var generatedIndex = parseInt(match[1], 10) - 1 // Convert to 0-based index
+          if (generatedIndex >= 0 && generatedIndex < features.length) {
+            feature = features[generatedIndex]
+          }
+        }
+      }
+      // Final fallback to provided index
+      if (!feature && featureIndex >= 0 && featureIndex < features.length) {
+        feature = features[featureIndex]
+      }
+    } else {
+      // Use index for hedgerows and watercourses
+      if (featureIndex >= 0 && featureIndex < features.length) {
+        feature = features[featureIndex]
+      }
+    }
+
     if (!feature) {
       return
     }

@@ -35,6 +35,7 @@ const { registerHabitatParcelRoutes } = require('./routes/habitat-parcels')
 const { registerLinearFeatureRoutes } = require('./routes/linear-features')
 const { registerFileConversionRoutes } = require('./routes/file-conversion')
 const { registerOnSiteBaselineRoutes } = require('./routes/on-site-baseline')
+const { registerOnSitePostInterventionRoutes } = require('./routes/on-site-post-intervention')
 const { registerTestRoutes } = require('./routes/test')
 
 // Register all route modules
@@ -44,4 +45,5 @@ registerHabitatParcelRoutes(router)
 registerLinearFeatureRoutes(router)
 registerFileConversionRoutes(router)
 registerOnSiteBaselineRoutes(router)
+registerOnSitePostInterventionRoutes(router)
 registerTestRoutes(router)

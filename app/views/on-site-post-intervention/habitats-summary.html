@@ -4,7 +4,7 @@
 {% from "govuk/components/table/macro.njk" import govukTable %}
 {% from "govuk/components/button/macro.njk" import govukButton %}
 
-{% set pageName = "On-site baseline habitats" %}
+{% set pageName = "On-site post-intervention habitats" %}
 
 {% block pageTitle %}{{ pageName }} – {{ serviceName }} – GOV.UK{% endblock %}
 
@@ -69,37 +69,6 @@
 
     <h1 class="govuk-heading-l">{{ pageName }}</h1>
 
-    <p class="govuk-body">{{ baselineSummary.parcelCountMessage }}</p>
-
-    {{ govukSummaryList({
-      rows: [
-        {
-          key: {
-            text: "Site area"
-          },
-          value: {
-            text: siteSummary.totalAreaHectares
-          }
-        },
-        {
-          key: {
-            text: "Local Planning Authority"
-          },
-          value: {
-            text: siteSummary.localPlanningAuthority
-          }
-        },
-        {
-          key: {
-            text: "National Character Area"
-          },
-          value: {
-            text: siteSummary.nationalCharacterArea
-          }
-        }
-      ]
-    }) }}
-
     <div class="map-preview-container">
       <div id="map-preview" class="map-preview" role="img" aria-label="Map showing habitat parcels within the site boundary">
         <p class="govuk-visually-hidden">
@@ -110,15 +79,15 @@
     </div>
 
     <h2 class="govuk-heading-m">Habitat parcels</h2>
-
     {{ govukTable({
       firstCellIsHeader: true,
       head: [
         { text: "Parcel reference" },
         { text: "Area (hectares)" },
-        { text: "Habitat" },
-        { text: "Distinctiveness" },
-        { text: "Condition" },
+        { text: "Proposed Habitat" },
+        { text: "Proposed Distinctiveness" },
+        { text: "Proposed Condition" },
+        { text: "Retention category" },
         { text: "Units" },
         { text: "Status" },
         { text: "Action", classes: "govuk-visually-hidden" }
@@ -156,7 +125,8 @@
         { text: "Watercourse type" },
         { text: "Distinctiveness" },
         { text: "Condition" },
-        { text: "Units" },
+        { text: "Encroachment into Watercourse" },
+        { text: "Encroachment into riparian zone" },
         { text: "Status" },
         { text: "Action", classes: "govuk-visually-hidden" }
       ],
@@ -165,8 +135,8 @@
     {% endif %}
 
     {{ govukButton({
-      text: "Start post-intervention",
-      href: actions.startPostIntervention.url
+      text: "Continue",
+      href: actions.reviewMetric.url
     }) }}
 
   </div>
