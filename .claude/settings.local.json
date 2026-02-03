@@ -14,5 +14,6 @@
       "Bash(git add:*)",
       "Bash(git commit:*)"
     ]
-  }
+  },
+  "outputStyle": "Explanatory"
 }
