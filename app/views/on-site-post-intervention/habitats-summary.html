@@ -4,7 +4,7 @@
 {% from "govuk/components/table/macro.njk" import govukTable %}
 {% from "govuk/components/button/macro.njk" import govukButton %}
 
-{% set pageName = "On-site post-intervention habitats" %}
+{% set pageName = "Post-intervention habitats" %}
 
 {% block pageTitle %}{{ pageName }} – {{ serviceName }} – GOV.UK{% endblock %}
 
@@ -68,6 +68,20 @@
   <div class="govuk-grid-column-full">
 
     <h1 class="govuk-heading-l">{{ pageName }}</h1>
+
+    <h2 class="govuk-heading-m">Summary</h2>
+
+    {{ govukTable({
+      firstCellIsHeader: true,
+      head: [
+        { text: "Unit type" },
+        { text: "Baseline units" },
+        { text: "Post-intervention units" },
+        { text: "Net change" },
+        { text: "Trading rules satisfied" }
+      ],
+      rows: summary
+    }) }}
 
     <div class="map-preview-container">
       <div id="map-preview" class="map-preview" role="img" aria-label="Map showing habitat parcels within the site boundary">
