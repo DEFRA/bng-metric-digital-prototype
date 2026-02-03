@@ -68,7 +68,7 @@ model {
   system defraCustomerId "Defra Customer ID" {
     description "Handles external users login and authentication"
     style {
-      shape rectangle
+      shape person
       color indigo
     }
   }
@@ -76,19 +76,23 @@ model {
   // AWS eu-west-2 (London) Region
   boundary awsEuWest2 "AWS eu-west-2 (London)" {
     description "AWS London region hosting CDP infrastructure"
+    icon https://icons.terrastruct.com/dev%2Famazonwebservices.svg
 
     // Public Boundary CDP (AWS)
     boundary publicBoundaryCDP "Public Boundary CDP" {
       description "AWS Public Zone"
+      icon https://icon.icepanel.io/AWS/svg/Compute/Fargate.svg
 
       cache redis "Redis" {
         description "Session cache for user sessions"
         technology "Redis"
+        icon https://icons.terrastruct.com/dev%2Fredis.svg
       }
 
       service publicApp "CDP BNG Metric Public App & API" {
         description "Public-facing application and API for BNG metrics"
         technology "Node.js / AWS"
+        icon https://icons.terrastruct.com/dev%2Fnodejs.svg
         style {
           color green
         }
@@ -98,10 +102,12 @@ model {
     // Private Boundary CDP (AWS)
     boundary privateBoundaryCDP "Private Boundary CDP" {
       description "AWS Private Zone"
+      icon https://icon.icepanel.io/AWS/svg/Compute/Fargate.svg
 
       service backendApi "CDP BNG Metric Backend API" {
         description "Backend API handling BNG metric processing"
         technology "Node.js / AWS"
+        icon https://icons.terrastruct.com/dev%2Fnodejs.svg
         style {
           color green
         }
@@ -110,6 +116,7 @@ model {
       storage fileStorageS3 "File Storage - S3" {
         description "Used for any uploaded data by users, associated with case and user"
         technology "AWS S3"
+        icon https://icons.terrastruct.com/aws%2FStorage%2FAmazon-Simple-Storage-Service-S3.svg
         style {
           shape rectangle
           color sky
@@ -119,6 +126,7 @@ model {
       storage bngProjectDataS3 "BNG Project Data - S3" {
         description "Stores BNG project updates/data for synchronisation with the GIO data platform"
         technology "AWS S3"
+        icon https://icons.terrastruct.com/aws%2FStorage%2FAmazon-Simple-Storage-Service-S3.svg
         style {
           shape rectangle
           color sky
@@ -128,22 +136,30 @@ model {
       database mongoDb "CDP Mongo Database" {
         description "Mongo preferred for application data: users and RBAC, BNG information, also secondary store of GIS for convenience"
         technology "MongoDB"
+        icon https://icons.terrastruct.com/dev%2Fmongodb.svg
       }
 
       database postgresDb "CDP Postgres / PostGIS Database" {
         description "PostGIS used to store reference data e.g. Living England habitats. Also stores user uploaded/created GIS layers associated with application"
         technology "PostgreSQL / PostGIS"
+        icon https://icons.terrastruct.com/dev%2Fpostgresql.svg
       }
     }
   }
 
-  // Azure Data Platform
-  boundary azureDataPlatform "Azure Data Platform" {
-    description "Azure cloud services for reporting and data platform"
+  // Azure UK South (London) Region
+  boundary azureUkSouth "Azure UK South (London)" {
+    description "Azure London region hosting data platform"
+    icon https://az-icons.com/export/icons/0e64f85d4661e42d46e4e2bc1602eadb.svg
 
-    platform dynamicsPlatform "Dynamics Platform / GIO Data Platform" {
-      description "Core data platform for BNG data management"
-      technology "Microsoft Dynamics"
+    boundary azureDataPlatform "Azure Data Platform" {
+      description "Azure cloud services for reporting and data platform"
+
+      platform dynamicsPlatform "Dynamics Platform / GIO Data Platform" {
+        description "Core data platform for BNG data management"
+        technology "Microsoft Dynamics"
+        icon https://az-icons.com/export/icons/118053ce776aecf10590bb75db4a9b3b.svg
+      }
     }
   }
 
@@ -163,7 +179,9 @@ model {
   awsEuWest2.privateBoundaryCDP.backendApi -> awsEuWest2.privateBoundaryCDP.bngProjectDataS3 "Stores BNG project data"
   awsEuWest2.privateBoundaryCDP.backendApi -> awsEuWest2.privateBoundaryCDP.mongoDb "Application data CRUD"
   awsEuWest2.privateBoundaryCDP.backendApi -> awsEuWest2.privateBoundaryCDP.postgresDb "GIS data operations"
-  awsEuWest2.privateBoundaryCDP.bngProjectDataS3 -> azureDataPlatform.dynamicsPlatform "Sync"
+  
+  // AWS to Azure cross-cloud sync
+  awsEuWest2.privateBoundaryCDP.bngProjectDataS3 -> azureUkSouth.azureDataPlatform.dynamicsPlatform "Sync"
 }
 
 views {
@@ -180,7 +198,7 @@ views {
     include awsEuWest2.privateBoundaryCDP.bngProjectDataS3
     include awsEuWest2.privateBoundaryCDP.mongoDb
     include awsEuWest2.privateBoundaryCDP.postgresDb
-    include azureDataPlatform.dynamicsPlatform
+    include azureUkSouth.azureDataPlatform.dynamicsPlatform
 
     // This will automatically include all relationships between the included elements
   }

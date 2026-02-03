@@ -1,4 +1,5 @@
 const { geojsonToEsri } = require('./geometry-utils')
+const { proxyFetch } = require('./proxy-fetch')
 
 const withinUKArcgisUrl =
   'https://services1.arcgis.com/ESMARspQHYMw9BZ9/arcgis/rest/services/Countries_December_2024_Boundaries_UK_BFE/FeatureServer/0/query'
@@ -18,7 +19,7 @@ const lnrsQueryUrl =
  */
 async function queryArcgis(url, params) {
   // Use POST with form-encoded body to avoid URL length limits
-  const response = await fetch(url, {
+  const response = await proxyFetch(url, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded'
