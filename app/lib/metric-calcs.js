@@ -1933,10 +1933,8 @@ const timeToTarget = {
   ">30": 0.32
 }
 
-function doSomething(){
-  return 1
-}
-
 module.exports = {
-  doSomething
+  distinctivenesScores,
+  conditionScores,
+  distinctivenessCategories
 }

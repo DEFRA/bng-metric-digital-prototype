@@ -1,0 +1,309 @@
+{% extends "layouts/main.html" %}
+
+{% from "govuk/components/back-link/macro.njk" import govukBackLink %}
+{% from "govuk/components/input/macro.njk" import govukInput %}
+{% from "govuk/components/select/macro.njk" import govukSelect %}
+{% from "govuk/components/textarea/macro.njk" import govukTextarea %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+
+{% set pageName="Habitat " ~ (habitat.ref or id) %}
+
+{% block beforeContent %}
+  {{ govukBackLink({
+    text: "Back",
+    href: "/on-site-post-intervention/habitat/" + id + "/details"
+  }) }}
+{% endblock %}
+
+{% block content %}
+
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-two-thirds">
+
+      <span class="govuk-caption-l">Habitat {{ habitat.ref or id }}{% if proposedStatus %} – {{ proposedStatus }}{% endif %}</span>
+      <h1 class="govuk-heading-l">Edit post-intervention habitat</h1>
+
+      <form method="post" action="/on-site-post-intervention/habitat/{{ id }}/edit">
+
+        {{ govukSelect({
+          label: { text: "Broad habitat", classes: "govuk-label--m" },
+          id: "broad_habitat",
+          name: "broad_habitat",
+          items: [
+            { value: "", text: "Select" },
+            { value: "Cropland", text: "Cropland" },
+            { value: "Grassland", text: "Grassland" },
+            { value: "Heathland and shrub", text: "Heathland and shrub" },
+            { value: "Individual trees", text: "Individual trees" },
+            { value: "Lakes", text: "Lakes" },
+            { value: "Sparsely vegetated land", text: "Sparsely vegetated land" },
+            { value: "Urban", text: "Urban" },
+            { value: "Wetland", text: "Wetland" },
+            { value: "Woodland and forest", text: "Woodland and forest" },
+            { value: "Coastal lagoons", text: "Coastal lagoons" },
+            { value: "Rocky shore", text: "Rocky shore" },
+            { value: "Coastal saltmarsh", text: "Coastal saltmarsh" },
+            { value: "Intertidal sediment", text: "Intertidal sediment" },
+            { value: "Intertidal hard structures", text: "Intertidal hard structures" },
+            { value: "Infrastructure (IGGI)", text: "Infrastructure (IGGI)" },
+            { value: "Watercourse footprint", text: "Watercourse footprint" }
+          ],
+          value: habitat.broad_habitat
+        }) }}
+
+        {{ govukSelect({
+          label: { text: "Habitat type", classes: "govuk-label--m" },
+          id: "habitat_type",
+          name: "habitat_type",
+          items: habitatTypeItems,
+          value: habitat.habitat_type
+        }) }}
+
+        {{ govukSelect({
+          label: { text: "Distinctiveness", classes: "govuk-label--m" },
+          id: "distinctiveness",
+          name: "distinctiveness",
+          items: [
+            { value: "", text: "Select" },
+            { value: "V.Low", text: "V.Low" },
+            { value: "Low", text: "Low" },
+            { value: "Medium", text: "Medium" },
+            { value: "High", text: "High" },
+            { value: "V.High", text: "V.High" }
+          ],
+          value: habitat.distinctiveness
+        }) }}
+
+        {{ govukSelect({
+          label: { text: "Condition", classes: "govuk-label--m" },
+          id: "condition",
+          name: "condition",
+          items: [
+            { value: "", text: "Select" },
+            { value: "N/A - Other", text: "N/A - Other" },
+            { value: "Poor", text: "Poor" },
+            { value: "Fairly Poor", text: "Fairly Poor" },
+            { value: "Moderate", text: "Moderate" },
+            { value: "Fairly Good", text: "Fairly Good" },
+            { value: "Good", text: "Good" },
+            { value: "Condition Assessment N/A", text: "Condition Assessment N/A" }
+          ],
+          value: habitat.condition
+        }) }}
+
+        {{ govukSelect({
+          label: { text: "Strategic significance", classes: "govuk-label--m" },
+          id: "strategic_significance",
+          name: "strategic_significance",
+          items: [
+            { value: "", text: "Select" },
+            { value: "Formally identified in local strategy", text: "Formally identified in local strategy" },
+            { value: "Location ecologically desirable but not in local strategy", text: "Location ecologically desirable but not in local strategy" },
+            { value: "Area/compensation not in local strategy/ no local strategy", text: "Area/compensation not in local strategy/ no local strategy" }
+          ],
+          value: habitat.strategic_significance
+        }) }}
+
+        {% set yearOptions = [
+          { value: "", text: "Select" },
+          { value: "0", text: "0" },
+          { value: "1", text: "1" },
+          { value: "2", text: "2" },
+          { value: "3", text: "3" },
+          { value: "4", text: "4" },
+          { value: "5", text: "5" },
+          { value: "6", text: "6" },
+          { value: "7", text: "7" },
+          { value: "8", text: "8" },
+          { value: "9", text: "9" },
+          { value: "10", text: "10" },
+          { value: "11", text: "11" },
+          { value: "12", text: "12" },
+          { value: "13", text: "13" },
+          { value: "14", text: "14" },
+          { value: "15", text: "15" },
+          { value: "16", text: "16" },
+          { value: "17", text: "17" },
+          { value: "18", text: "18" },
+          { value: "19", text: "19" },
+          { value: "20", text: "20" },
+          { value: "21", text: "21" },
+          { value: "22", text: "22" },
+          { value: "23", text: "23" },
+          { value: "24", text: "24" },
+          { value: "25", text: "25" },
+          { value: "26", text: "26" },
+          { value: "27", text: "27" },
+          { value: "28", text: "28" },
+          { value: "29", text: "29" },
+          { value: "30", text: "30" },
+          { value: "30+", text: "30+" }
+        ] %}
+
+        {{ govukSelect({
+          label: { text: "Habitat created in advance/years", classes: "govuk-label--m" },
+          id: "created_in_advance",
+          name: "created_in_advance",
+          items: yearOptions,
+          value: habitat.created_in_advance
+        }) }}
+
+        {{ govukSelect({
+          label: { text: "Delay in starting habitat creation/years", classes: "govuk-label--m" },
+          id: "delay_in_starting",
+          name: "delay_in_starting",
+          items: yearOptions,
+          value: habitat.delay_in_starting
+        }) }}
+
+        {{ govukSelect({
+          label: { text: "Spatial risk category", classes: "govuk-label--m" },
+          id: "spatial_risk_category",
+          name: "spatial_risk_category",
+          items: [
+            { value: "", text: "Select" },
+            { value: "N/A", text: "N/A" }
+          ],
+          value: habitat.spatial_risk_category
+        }) }}
+
+        <div class="govuk-form-group">
+          <label class="govuk-label govuk-label--m" for="habitat_units">
+            Units
+          </label>
+          <p class="govuk-body" id="habitat_units">{{ habitat.habitat_units | round(4) | default('0.0000') }}</p>
+        </div>
+
+        {{ govukTextarea({
+          label: { text: "Comments", classes: "govuk-label--m" },
+          id: "comments",
+          name: "comments",
+          value: habitat.comments,
+          rows: 4
+        }) }}
+
+        <div class="govuk-button-group">
+          {{ govukButton({
+            text: "Save and return to habitat details"
+          }) }}
+          {{ govukButton({
+            text: "Cancel",
+            href: "/on-site-post-intervention/habitat/" + id + "/details",
+            classes: "govuk-button--secondary"
+          }) }}
+        </div>
+
+      </form>
+
+    </div>
+  </div>
+
+  <script type="application/json" id="habitat-types-by-broad">{{ habitatTypesByBroadHabitat | safe }}</script>
+  <script>
+    (function () {
+      // Wait for DOM to be ready
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init)
+      } else {
+        init()
+      }
+      
+      function init() {
+        var dataEl = document.getElementById('habitat-types-by-broad')
+        var mapping = dataEl ? JSON.parse(dataEl.textContent) : {}
+        var broadSelect = document.getElementById('broad_habitat')
+        var typeSelect = document.getElementById('habitat_type')
+        if (!broadSelect || !typeSelect) return
+        
+        // Store the initial value from the server-rendered select
+        // Get it from the selected option if available, otherwise from the value attribute
+        var initialHabitatType = ''
+        if (typeSelect.selectedIndex >= 0 && typeSelect.options[typeSelect.selectedIndex]) {
+          initialHabitatType = typeSelect.options[typeSelect.selectedIndex].value || ''
+        }
+        if (!initialHabitatType) {
+          initialHabitatType = typeSelect.value || ''
+        }
+        
+        function setHabitatTypeOptions(broadValue, preserveValue) {
+          var types = broadValue && mapping[broadValue] ? mapping[broadValue] : []
+          var currentValue = preserveValue !== undefined ? preserveValue : (typeSelect.value || '')
+          typeSelect.length = 0
+          var opt = document.createElement('option')
+          opt.value = ''
+          opt.textContent = 'Select'
+          typeSelect.appendChild(opt)
+          var foundMatch = false
+          for (var i = 0; i < types.length; i++) {
+            opt = document.createElement('option')
+            opt.value = types[i]
+            opt.textContent = types[i]
+            // Use trim() to handle any whitespace issues, and exact match
+            if (types[i].trim() === currentValue.trim()) {
+              opt.selected = true
+              foundMatch = true
+            }
+            typeSelect.appendChild(opt)
+          }
+          // If no match found and we had a value, log for debugging (can be removed later)
+          if (!foundMatch && currentValue && currentValue.trim() !== '') {
+            console.log('Habitat type value not found in options:', currentValue, 'for broad habitat:', broadValue, 'Available types:', types)
+          }
+        }
+        broadSelect.addEventListener('change', function () {
+          setHabitatTypeOptions(this.value)
+        })
+        // Initialize habitat type options on page load, preserving the initial value
+        if (broadSelect.value) {
+          setHabitatTypeOptions(broadSelect.value, initialHabitatType)
+        } else if (initialHabitatType) {
+          // If broad habitat isn't set but we have a habitat type, try to extract it
+          if (initialHabitatType.includes(' - ')) {
+            var extractedBroad = initialHabitatType.split(' - ')[0]
+            if (mapping[extractedBroad]) {
+              broadSelect.value = extractedBroad
+              setHabitatTypeOptions(extractedBroad, initialHabitatType)
+            }
+          }
+        }
+      }
+    })()
+  </script>
+  <script type="application/json" id="metric-lookups">{{ metricLookups | safe }}</script>
+  <script type="application/json" id="habitat-area">{{ habitat.area_hectares | safe }}</script>
+  <script>
+    (function () {
+      var lookupsEl = document.getElementById('metric-lookups')
+      var lookups = lookupsEl ? JSON.parse(lookupsEl.textContent) : {}
+      var areaEl = document.getElementById('habitat-area')
+      var area = areaEl ? parseFloat(areaEl.textContent, 10) : 0
+      var dScores = lookups.distinctivenessScores || {}
+      var cScores = lookups.conditionScores || {}
+      var strategicMultipliers = lookups.strategicMultipliers || {}
+      var distinctivenessSelect = document.getElementById('distinctiveness')
+      var conditionSelect = document.getElementById('condition')
+      var strategicSelect = document.getElementById('strategic_significance')
+      var habitatUnitsDisplay = document.getElementById('habitat_units')
+
+      function round4 (n) { return n === '' || isNaN(n) ? '0.0000' : Number(Number(n).toFixed(4)) }
+      function updateHabitatUnits () {
+        var dVal = distinctivenessSelect.value
+        var cVal = conditionSelect.value
+        var sVal = strategicSelect.value
+        var dScore = dVal ? (dScores[dVal] != null ? dScores[dVal] : 0) : 0
+        var cScore = cVal ? (cScores[cVal] != null ? cScores[cVal] : 1) : 1
+        var sMult = sVal ? (strategicMultipliers[sVal] != null ? strategicMultipliers[sVal] : 1) : 1
+        var units = (area && !isNaN(area)) ? area * dScore * cScore * sMult : 0
+        if (habitatUnitsDisplay) habitatUnitsDisplay.textContent = round4(units)
+      }
+      if (distinctivenessSelect && conditionSelect && strategicSelect && habitatUnitsDisplay) {
+        distinctivenessSelect.addEventListener('change', updateHabitatUnits)
+        conditionSelect.addEventListener('change', updateHabitatUnits)
+        strategicSelect.addEventListener('change', updateHabitatUnits)
+        // Calculate initial units on page load
+        updateHabitatUnits()
+      }
+    })()
+  </script>
+
+{% endblock %}
