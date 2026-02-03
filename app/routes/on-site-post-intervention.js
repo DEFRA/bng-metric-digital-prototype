@@ -10,7 +10,9 @@ const {
   calculateLineLength,
   isPolygonSelfIntersecting
 } = require('../lib/geometry-utils')
-const { isWithinUK, getLPA, getNCA, getLNRS } = require('../lib/arcgis-queries')
+
+//const { isWithinUK, getLPA, getNCA, getLNRS } = require('../lib/arcgis-queries')
+const { isWithinUK } = require('../lib/arcgis-queries')
 
 const upload = multer({ storage: multer.memoryStorage() })
 
@@ -20,6 +22,7 @@ const boundaryLayerName = 'Red Line Boundary'
 const maxBoundaryFeatures = 10
 const maxPolygonSize = 1000000000 // 1000 sq km
 
+/*
 const distinctivenessScores = {
   'V.High': 8,
   High: 6,
@@ -38,74 +41,77 @@ const conditionScores = {
   'N/A - Other': 0
 }
 
+*/
+
 /**
- * Register on-site baseline routes
+ * Register on-site post-intervention routes
  * @param {Router} router - Express router instance
  */
-function registerOnSiteBaselineRoutes(router) {
-  // Upload Choice Page - GET
-  router.get('/on-site-baseline/start', function (req, res) {
-    res.render('on-site-baseline/start', {
-      error: req.query.error || null
-    })
-  })
+function registerOnSitePostInterventionRoutes(router) {
+  
+  // // Upload Choice Page - GET
+  // router.get('/on-site-baseline/start', function (req, res) {
+  //   res.render('on-site-baseline/start', {
+  //     error: req.query.error || null
+  //   })
+  // })
 
-  // Upload Choice Page - POST
-  router.post('/on-site-baseline/start', function (req, res) {
-    const uploadChoice = req.body.uploadChoice
+  // // Upload Choice Page - POST
+  // router.post('/on-site-baseline/start', function (req, res) {
+  //   const uploadChoice = req.body.uploadChoice
 
-    if (!uploadChoice) {
-      return res.redirect(
-        '/on-site-baseline/start?error=Select how you want to add your habitat data'
-      )
-    }
+  //   if (!uploadChoice) {
+  //     return res.redirect(
+  //       '/on-site-baseline/start?error=Select how you want to add your habitat data'
+  //     )
+  //   }
 
-    // Store the choice in session
-    req.session.data['uploadChoice'] = uploadChoice
+  //   // Store the choice in session
+  //   req.session.data['uploadChoice'] = uploadChoice
 
-    // Route based on selection
-    switch (uploadChoice) {
-      case 'single-file':
-        return res.redirect('/on-site-baseline/upload-single-file')
-      case 'separate-files':
-        // Future implementation
-        return res.redirect('/on-site-baseline/upload-boundary')
-      case 'no-files':
-        return res.redirect('/define-red-line-boundary')
-      default:
-        return res.redirect('/on-site-baseline/start?error=Invalid selection')
-    }
-  })
+  //   // Route based on selection
+  //   switch (uploadChoice) {
+  //     case 'single-file':
+  //       return res.redirect('/on-site-baseline/upload-single-file')
+  //     case 'separate-files':
+  //       // Future implementation
+  //       return res.redirect('/on-site-baseline/upload-boundary')
+  //     case 'no-files':
+  //       return res.redirect('/define-red-line-boundary')
+  //     default:
+  //       return res.redirect('/on-site-baseline/start?error=Invalid selection')
+  //   }
+  // })
 
   // Upload Single File Page - GET
-  router.get('/on-site-baseline/upload-single-file', function (req, res) {
-    res.render('on-site-baseline/upload-single-file', {
+  router.get('/on-site-post-intervention/upload-single-file', function (req, res) {
+    res.render('on-site-post-intervention/upload-single-file', {
       error: req.query.error || null
     })
   })
 
   // Upload Single File Page - POST (handles GeoPackage upload)
   router.post(
-    '/on-site-baseline/upload-single-file',
+    '/on-site-post-intervention/upload-single-file',
     upload.single('fileUpload'),
     async function (req, res) {
       if (!req.file) {
         return res.redirect(
-          '/on-site-baseline/upload-single-file?error=Select a file to upload'
+          '/on-site-post-intervention/upload-single-file?error=Select a file to upload'
         )
       }
 
       const originalName = req.file.originalname.toLowerCase()
       if (!originalName.endsWith('.gpkg')) {
         return res.redirect(
-          '/on-site-baseline/upload-single-file?error=Upload a GeoPackage (.gpkg) file'
+          '/on-site-post-intervention/upload-single-file?error=Upload a GeoPackage (.gpkg) file'
         )
       }
 
       // Check that the file is not too large
       if (req.file.size > maxFileSizeMB * 1024 * 1024) {
         return res.redirect(
-          `/on-site-baseline/upload-single-file?error=File is too large. Please upload a file smaller than ${maxFileSizeMB}MB`
+          `/on-site-post-intervention/upload-single-file?error=File is too large. Please upload a file smaller than ${maxFileSizeMB}MB`
         )
       }
 
@@ -115,12 +121,12 @@ function registerOnSiteBaselineRoutes(router) {
 
         if (!gpkgData.layers || gpkgData.layers.length === 0) {
           return res.redirect(
-            '/on-site-baseline/upload-single-file?error=No layers found in the GeoPackage file'
+            '/on-site-post-intervention/upload-single-file?error=No layers found in the GeoPackage file'
           )
         }
 
         // Store parsed data in session
-        req.session.data['uploadedFiles'] = {
+        req.session.data['uploadedPostInterventionFiles'] = {
           habitatFile: {
             originalName: req.file.originalname,
             mimeType: req.file.mimetype,
@@ -136,91 +142,36 @@ function registerOnSiteBaselineRoutes(router) {
         if (!isWithinUK(gpkgData.geometries[boundaryLayerName].features)) {
           console.log('Geometries are not within England')
           return res.redirect(
-            `/on-site-baseline/upload-single-file?error=Geometries are not within England`
+            `/on-site-post-intervention/upload-single-file?error=Geometries are not within England`
           )
         }
 
-        // Check that there are not too many Red Line Boundary features
-        if (
-          gpkgData.geometries[boundaryLayerName].features.length >
-          maxBoundaryFeatures
-        ) {
-          console.log('Red Line Boundary has too many features')
+        // Check the Red Line Boundary is the same as the baseline boundary
+        if (gpkgData.geometries[boundaryLayerName].features.length !== req.session.data['geopackageGeometries'][boundaryLayerName].features.length) {
           return res.redirect(
-            `/on-site-baseline/upload-single-file?error=Red Line Boundary has too many features. Please upload a file with no more than ${maxBoundaryFeatures} features`
+            `/on-site-post-intervention/upload-single-file?error=The Red Line Boundary is not the same as the baseline boundary. Please upload the same boundary as the baseline.`
           )
         }
 
-        // Check that geometries are not too large
-        if (
-          gpkgData.geometries[boundaryLayerName].features.some((f) => {
-            const area = calculatePolygonArea(f.geometry)
-            return area > maxPolygonSize
-          })
-        ) {
-          console.log('Geometries are too large')
-          return res.redirect(
-            `/on-site-baseline/upload-single-file?error=Geometries are too large. Please upload a file with polygons smaller than ${maxPolygonSize / 1000000} square kilometers`
-          )
-        }
+        req.session.data['geopackageLayersPostIntervention'] = gpkgData.layers
+        req.session.data['geopackageGeometriesPostIntervention'] = gpkgData.geometries
 
-        // Check that geometries do not self-intersect
-        if (
-          gpkgData.geometries[boundaryLayerName].features.some((f) => {
-            if (
-              f.geometry.type === 'Polygon' ||
-              f.geometry.type === 'MultiPolygon'
-            ) {
-              if (isPolygonSelfIntersecting(f.geometry)) {
-                return true
-              }
-            }
-            return false
-          })
-        ) {
-          console.log('Geometries self-intersect')
-          return res.redirect(
-            `/on-site-baseline/upload-single-file?error=Geometries self-intersect. Please upload a file with non-self-intersecting polygons`
-          )
-        }
-
-        // Get the LPA name
-        const lpaName = await getLPA(
-          gpkgData.geometries[boundaryLayerName].features
-        )
-        console.log('LPA name:', lpaName)
-
-        const ncaName = await getNCA(
-          gpkgData.geometries[boundaryLayerName].features
-        )
-        console.log('NCA name:', ncaName)
-
-        const lnrsName = await getLNRS(
-          gpkgData.geometries[boundaryLayerName].features
-        )
-        console.log('LNRS name:', lnrsName)
-
-        req.session.data['geopackageLayers'] = gpkgData.layers
-        req.session.data['geopackageGeometries'] = gpkgData.geometries
-        req.session.data['lpaName'] = lpaName
-        req.session.data['ncaName'] = ncaName
-        req.session.data['lnrsName'] = lnrsName
         // Redirect to confirm page
-        res.redirect('/on-site-baseline/confirm-layers')
+        res.redirect('/on-site-post-intervention/confirm-layers')
       } catch (err) {
         console.error('GeoPackage parsing error:', err)
         return res.redirect(
-          '/on-site-baseline/upload-single-file?error=Could not read the GeoPackage file. Please check the file is valid.'
+          '/on-site-post-intervention/upload-single-file?error=Could not read the GeoPackage file. Please check the file is valid.'
         )
       }
     }
   )
 
   // Confirm Layers Page - GET
-  router.get('/on-site-baseline/confirm-layers', function (req, res) {
-    const layers = req.session.data['geopackageLayers'] || []
-    const geometries = req.session.data['geopackageGeometries'] || {}
-    const uploadedFiles = req.session.data['uploadedFiles'] || {}
+  router.get('/on-site-post-intervention/confirm-layers', function (req, res) {
+    const layers = req.session.data['geopackageLayersPostIntervention'] || []
+    const geometries = req.session.data['geopackageGeometriesPostIntervention'] || {}
+    //const uploadedFiles = req.session.data['uploadedFiles'] || {}
 
     // Find boundary and parcel layers (heuristic based on layer names)
     let siteBoundary =
@@ -318,51 +269,42 @@ function registerOnSiteBaselineRoutes(router) {
       coverage: {
         isFull: true // Simplified for prototype
       },
-      location: {
-        lpaName: req.session.data['lpaName'] || '<LPA Name>',
-        nationalCharacterArea:
-          req.session.data['ncaName'] || '<National Character Area>',
-        lnrsName: req.session.data['lnrsName'] || '<LNRS Name>'
-      },
       geometries: geometries,
       boundaryLayerName: siteBoundary ? siteBoundary.name : null,
       parcelsLayerName: habitatParcels ? habitatParcels.name : null
     }
 
-    res.render('on-site-baseline/confirm-layers', viewData)
+    res.render('on-site-post-intervention/confirm-layers', viewData)
   })
 
   // Confirm Layers Page - POST
-  router.post('/on-site-baseline/confirm-layers', function (req, res) {
+  router.post('/on-site-post-intervention/confirm-layers', function (req, res) {
     // Mark layers as confirmed
-    req.session.data['layersConfirmed'] = true
+    req.session.data['layersConfirmedPostIntervention'] = true
 
     // Clear hand-drawn data when confirming GeoPackage layers
     // This ensures the GeoPackage flow is used on the habitats-summary page
-    req.session.data['redLineBoundary'] = null
-    req.session.data['habitatParcels'] = null
-    req.session.data['hedgerows'] = null
-    req.session.data['watercourses'] = null
-    console.log(
-      'Cleared hand-drawn data - GeoPackage upload is now authoritative'
-    )
+    req.session.data['redLineBoundaryPostIntervention'] = null
+    req.session.data['habitatParcelsPostIntervention'] = null
+    req.session.data['hedgerowsPostIntervention'] = null
+    req.session.data['watercoursesPostIntervention'] = null
 
     // Redirect to habitats summary (future implementation)
-    res.redirect('/on-site-baseline/habitats-summary')
+    res.redirect('/on-site-post-intervention/habitats-summary')
   })
 
   // Habitats Summary page
-  router.get('/on-site-baseline/habitats-summary', function (req, res) {
+  router.get('/on-site-post-intervention/habitats-summary', function (req, res) {
     // Check which flow the user came from:
     // - GeoPackage flow: layersConfirmed is true (set when user confirms uploaded layers)
     // - Drawing flow: has redLineBoundary and habitatParcels but no layersConfirmed
 
-    const layersConfirmed = req.session.data['layersConfirmed']
+    const layersConfirmed = req.session.data['layersConfirmedPostIntervention']
     const hasGeoPackageData =
-      req.session.data['geopackageLayers'] &&
-      req.session.data['geopackageLayers'].length > 0
-    const drawnBoundary = req.session.data['redLineBoundary']
-    const drawnParcels = req.session.data['habitatParcels']
+      req.session.data['geopackageLayersPostIntervention'] &&
+      req.session.data['geopackageLayersPostIntervention'].length > 0
+    const drawnBoundary = req.session.data['redLineBoundaryPostIntervention']
+    const drawnParcels = req.session.data['habitatParcelsPostIntervention']
 
     // Use GeoPackage flow if layers were confirmed from upload
     // Use drawing flow if we have drawn parcels (boundary is optional for display)
@@ -392,8 +334,8 @@ function registerOnSiteBaselineRoutes(router) {
     let totalAreaHectares = 0
     let habitatParcels = []
     let mapData = {}
-    let lpaName = req.session.data['lpaName'] || 'Not specified'
-    let ncaName = req.session.data['ncaName'] || 'Not specified'
+    // let lpaName = req.session.data['lpaName'] || 'Not specified'
+    // let ncaName = req.session.data['ncaName'] || 'Not specified'
 
     if (isDrawingFlow) {
       // Drawing flow - use drawn geometries from session
@@ -465,8 +407,8 @@ function registerOnSiteBaselineRoutes(router) {
       }
     } else {
       // GeoPackage flow - use uploaded data
-      const layers = req.session.data['geopackageLayers'] || []
-      const geometries = req.session.data['geopackageGeometries'] || {}
+      const layers = req.session.data['geopackageLayersPostIntervention'] || []
+      const geometries = req.session.data['geopackageGeometriesPostIntervention'] || {}
 
       // Find boundary and parcels layers
       const boundaryLayerInfo = layers.find(
@@ -510,35 +452,47 @@ function registerOnSiteBaselineRoutes(router) {
           let parcelId =
             feature.properties['Parcel Ref'] ||
             'HP-' + i.toString().padStart(3, '0')
-          let habitat = feature.properties['Baseline Habitat Type'] || null
+          let retentionCategory = feature.properties['Retention Category'] || null
+          let habitat = feature.properties['Proposed Habitat Type'] || null
           let distinctiveness =
-            feature.properties['Baseline Distinctiveness'] || null
-          let condition = feature.properties['Baseline Condition'] || null
+            feature.properties['Proposed Distinctiveness'] || null
+          let condition = feature.properties['Proposed Condition'] || null
+
+          let createdInAdvance = feature.properties['Habitat created in advance/years'] || null
+          let delayInStarting = feature.properties['Delay in starting habitat creation/years'] || null
+          let spatialRiskCategory = feature.properties['Spatial risk category'] || null
 
           // Remove the number and period from the condition
           if (condition !== null) {
             condition = condition.replace(/^\d+\.\s*/, '')
           }
 
-          if (habitat !== null && distinctiveness !== null && condition !== null){
+          if (habitat !== null && distinctiveness !== null && condition !== null && createdInAdvance !== null && delayInStarting !== null && spatialRiskCategory !== null && retentionCategory !== null){
             status = 'Complete'
           }
           else if (
             habitat !== null ||
             distinctiveness !== null ||
-            condition !== null
+            condition !== null ||
+            createdInAdvance !== null ||
+            delayInStarting !== null ||
+            spatialRiskCategory !== null ||
+            retentionCategory !== null
           ) {
             status = 'In progress'
           }
 
           // Calculate units
           let units = 0
+
+          /*
           let distinctivenessScore = distinctivenessScores[distinctiveness] || 0
           let conditionScore = conditionScores[condition] || 0
 
           if (distinctivenessScore > 0 && conditionScore > 0) {
             units = areaHa * distinctivenessScore * conditionScore
           }
+          */
 
           habitatParcels.push({
             parcelId: parcelId,
@@ -546,45 +500,41 @@ function registerOnSiteBaselineRoutes(router) {
             habitatLabel: habitat,
             distinctiveness: distinctiveness,
             condition: condition,
+            createdInAdvance: createdInAdvance,
+            delayInStarting: delayInStarting,
+            spatialRiskCategory: spatialRiskCategory,
+            retentionCategory: retentionCategory,
             units: units,
             status: status,
-            actionUrl: '/on-site-baseline/parcel/' + i + '/habitat-type'
+            actionUrl: '/on-site-post-intervention/parcel/' + i + '/habitat-type'
           })
         }
       }
 
       // Find hedgerow and watercourse layers from uploaded GeoPackage
-      const hedgerowLayerInfo = layers.find(
-        (l) =>
-          l.name.toLowerCase().includes('hedgerow') ||
-          l.name.toLowerCase().includes('hedge')
-      )
-      const watercourseLayerInfo = layers.find(
-        (l) =>
-          l.name.toLowerCase().includes('watercourse') ||
-          l.name.toLowerCase().includes('river') ||
-          l.name.toLowerCase().includes('stream')
-      )
+      // const hedgerowLayerInfo = layers.find(
+      //   (l) =>
+      //     l.name.toLowerCase().includes('hedgerow') ||
+      //     l.name.toLowerCase().includes('hedge')
+      // )
+      // const watercourseLayerInfo = layers.find(
+      //   (l) =>
+      //     l.name.toLowerCase().includes('watercourse') ||
+      //     l.name.toLowerCase().includes('river') ||
+      //     l.name.toLowerCase().includes('stream')
+      // )
 
-      const hedgerowLayer = hedgerowLayerInfo
-        ? geometries[hedgerowLayerInfo.name]
-        : null
-      const watercourseLayer = watercourseLayerInfo
-        ? geometries[watercourseLayerInfo.name]
-        : null
+      // const hedgerowLayer = hedgerowLayerInfo
+      //   ? geometries[hedgerowLayerInfo.name]
+      //   : null
+      // const watercourseLayer = watercourseLayerInfo
+      //   ? geometries[watercourseLayerInfo.name]
+      //   : null
 
       // Prepare map data
       mapData = {
         siteBoundary: boundaryLayer,
-        parcels: parcelsLayer,
-        hedgerows: hedgerowLayer || {
-          type: 'FeatureCollection',
-          features: []
-        },
-        watercourses: watercourseLayer || {
-          type: 'FeatureCollection',
-          features: []
-        }
+        parcels: parcelsLayer
       }
     }
 
@@ -605,6 +555,8 @@ function registerOnSiteBaselineRoutes(router) {
           html:
             '<a href="#" class="govuk-link habitat-ref-link" data-feature-type="parcel" data-feature-index="' +
             index +
+            '" data-parcel-ref="' +
+            parcel.parcelId +
             '">' +
             parcel.parcelId +
             '</a>'
@@ -613,6 +565,7 @@ function registerOnSiteBaselineRoutes(router) {
         { text: parcel.habitatLabel || 'Not specified' },
         { text: parcel.distinctiveness || 'Not specified' },
         { text: parcel.condition || 'Not specified' },
+        { text: parcel.retentionCategory || 'Not specified' },
         { text: parcel.units ? parcel.units.toFixed(2) : '0.00' },
         { text: parcel.status },
         {
@@ -624,100 +577,104 @@ function registerOnSiteBaselineRoutes(router) {
       ]
     })
 
-    // Build hedgerow table rows
-    const hedgerows = mapData.hedgerows?.features || []
-    const hedgerowTableRows = hedgerows.map(function (feature, index) {
-      // Use lengthM property if available, otherwise calculate from geometry
-      let lengthM = feature.properties?.lengthM
-      if (lengthM === undefined && feature.geometry) {
-        lengthM = calculateLineLength(feature.geometry)
-      }
-      lengthM = lengthM || 0
-      return [
-        {
-          html:
-            '<a href="#" class="govuk-link habitat-ref-link" data-feature-type="hedgerow" data-feature-index="' +
-            index +
-            '">H-' +
-            (index + 1).toString().padStart(3, '0') +
-            '</a>'
-        },
-        { text: lengthM.toFixed(1) },
-        { text: feature.properties["Baseline Hedge Type"] || 'Not specified' },
-        { text: feature.properties["Baseline Distinctiveness"] || 'Not specified' },
-        { text: feature.properties["Baseline Condition"] || 'Not specified' },
-        { text: '0.00' },
-        { text: 'Complete' },
-        {
-          html:
-            '<a class="govuk-link" href="/on-site-baseline/hedgerow/' +
-            (index + 1) +
-            '/details">Edit</a>'
-        }
-      ]
-    })
+    // // Build hedgerow table rows
+    // const hedgerows = mapData.hedgerows?.features || []
+    // const hedgerowTableRows = hedgerows.map(function (feature, index) {
+    //   // Use lengthM property if available, otherwise calculate from geometry
+    //   let lengthM = feature.properties?.lengthM
+    //   if (lengthM === undefined && feature.geometry) {
+    //     lengthM = calculateLineLength(feature.geometry)
+    //   }
+    //   lengthM = lengthM || 0
+    //   return [
+    //     {
+    //       html:
+    //         '<a href="#" class="govuk-link habitat-ref-link" data-feature-type="hedgerow" data-feature-index="' +
+    //         index +
+    //         '">H-' +
+    //         (index + 1).toString().padStart(3, '0') +
+    //         '</a>'
+    //     },
+    //     { text: lengthM.toFixed(1) },
+    //     { text: feature.properties["Baseline Hedge Type"] || 'Not specified' },
+    //     { text: feature.properties["Baseline Distinctiveness"] || 'Not specified' },
+    //     { text: feature.properties["Baseline Condition"] || 'Not specified' },
+    //     { text: 'Complete' },
+    //     {
+    //       html:
+    //         '<a class="govuk-link" href="/on-site-baseline/hedgerow/' +
+    //         (index + 1) +
+    //         '/details">Add details<span class="govuk-visually-hidden"> for H-' +
+    //         (index + 1).toString().padStart(3, '0') +
+    //         '</span></a>'
+    //     }
+    //   ]
+    // })
 
-    // Build watercourse table rows
-    const watercourses = mapData.watercourses?.features || []
-    const watercourseTableRows = watercourses.map(function (feature, index) {
-      // Use lengthM property if available, otherwise calculate from geometry
-      let lengthM = feature.properties?.lengthM
-      if (lengthM === undefined && feature.geometry) {
-        lengthM = calculateLineLength(feature.geometry)
-      }
-      lengthM = lengthM || 0
+    // // Build watercourse table rows
+    // const watercourses = mapData.watercourses?.features || []
+    // const watercourseTableRows = watercourses.map(function (feature, index) {
+    //   // Use lengthM property if available, otherwise calculate from geometry
+    //   let lengthM = feature.properties?.lengthM
+    //   if (lengthM === undefined && feature.geometry) {
+    //     lengthM = calculateLineLength(feature.geometry)
+    //   }
+    //   lengthM = lengthM || 0
 
-      return [
-        {
-          html:
-            '<a href="#" class="govuk-link habitat-ref-link" data-feature-type="watercourse" data-feature-index="' +
-            index +
-            '">W-' +
-            (index + 1).toString().padStart(3, '0') +
-            '</a>'
-        },
-        { text: lengthM.toFixed(1) },
-        { text: feature.properties["Baseline River Type"] || 'Not specified' },
-        { text: feature.properties["Baseline Distinctiveness"] || 'Not specified' },
-        { text: feature.properties["Baseline Condition"]?.replace(/^\d+\.\s*/, '') || 'Not specified' },
-        { text: '0.00' },
-        { text: 'Complete' },
-        {
-          html:
-            '<a class="govuk-link" href="/on-site-baseline/watercourse/' +
-            (index + 1) +
-            '/details">Edit</a>'
-        }
-      ]
-    })
+    //   return [
+    //     {
+    //       html:
+    //         '<a href="#" class="govuk-link habitat-ref-link" data-feature-type="watercourse" data-feature-index="' +
+    //         index +
+    //         '">W-' +
+    //         (index + 1).toString().padStart(3, '0') +
+    //         '</a>'
+    //     },
+    //     { text: lengthM.toFixed(1) },
+    //     { text: feature.properties["Baseline River Type"] || 'Not specified' },
+    //     { text: feature.properties["Baseline Distinctiveness"] || 'Not specified' },
+    //     { text: feature.properties["Baseline Condition"].replace(/^\d+\.\s*/, '') || 'Not specified' },
+    //     { text: feature.properties["Baseline Encroachment into Watercourse"] || 'Not specified' },
+    //     { text: feature.properties["Baseline Encroachment into riparian zone"].replace(/^\d+\.\s*/, '') || 'Not specified' },
+    //     { text: 'Complete' },
+    //     {
+    //       html:
+    //         '<a class="govuk-link" href="/on-site-baseline/watercourse/' +
+    //         (index + 1) +
+    //         '/details">Add details<span class="govuk-visually-hidden"> for W-' +
+    //         (index + 1).toString().padStart(3, '0') +
+    //         '</span></a>'
+    //     }
+    //   ]
+    // })
 
-    res.render('on-site-baseline/habitats-summary', {
+    res.render('on-site-post-intervention/habitats-summary', {
       baselineSummary: {
         parcelCountMessage: parcelCountMessage
       },
       siteSummary: {
-        totalAreaHectares: totalAreaHectares + ' hectares',
-        localPlanningAuthority: lpaName,
-        nationalCharacterArea: ncaName
+        totalAreaHectares: totalAreaHectares + ' hectares'
+        // localPlanningAuthority: lpaName,
+        // nationalCharacterArea: ncaName
       },
       mapData: mapData,
       habitatParcels: habitatParcels,
       tableRows: tableRows,
-      hedgerowTableRows: hedgerowTableRows,
-      watercourseTableRows: watercourseTableRows,
+      // hedgerowTableRows: hedgerowTableRows,
+      // watercourseTableRows: watercourseTableRows,
       actions: {
-        startPostIntervention: {
-          url: '/on-site-post-intervention/upload-single-file'
-        }
+        // startPostIntervention: {
+        //   url: '/on-site-post-intervention/upload-single-file'
+        // }
       }
     })
   })
 
   // API endpoint for getting parsed geometries (for map display)
-  router.get('/api/on-site-baseline/geometries', function (req, res) {
-    const geometries = req.session.data['geopackageGeometries'] || {}
+  router.get('/api/on-site-post-intervention/geometries', function (req, res) {
+    const geometries = req.session.data['geopackageGeometriesPostIntervention'] || {}
     res.json(geometries)
   })
 }
 
-module.exports = { registerOnSiteBaselineRoutes }
+module.exports = { registerOnSitePostInterventionRoutes }
