@@ -40,7 +40,7 @@
 
       {% if habitat %}
         {{ govukSummaryList({
-          card: { title: { text: proposedStatus }, classes: "govuk-!-margin-top-6", actions: { items: [{ href: "/on-site-post-intervention/habitat/" + habitat.id + "/edit", text: "Edit", visuallyHiddenText: " post-intervention details" }] } },
+          card: { title: { text: proposedStatus }, classes: "govuk-!-margin-top-6", actions: { items: [{ href: "/on-site-post-intervention/habitat/" + habitat.id + "/edit", text: "Update", visuallyHiddenText: " post-intervention details" }] } },
           rows: [
             { key: { text: "Ref" }, value: { text: habitat.id } },
             { key: { text: "Area (ha)" }, value: { text: habitat.area_hectares | round(4) } },
@@ -51,7 +51,6 @@
             { key: { text: "Strategic significance" }, value: { text: habitat.strategic_significance } },
             { key: { text: "Habitat created in advance/years" }, value: { text: habitat.created_in_advance } },
             { key: { text: "Delay in starting habitat creation/years" }, value: { text: habitat.delay_in_starting } },
-            { key: { text: "Spatial risk category" }, value: { text: habitat.spatial_risk_category } },
             { key: { text: "Units" }, value: { text: habitat.units | round(4) | default('0.00') } }
           ]
         }) }}
@@ -67,3 +66,7 @@
   </div>
 
 {% endblock %}
+
+<!--
+{ key: { text: "Spatial risk category" }, value: { text: habitat.spatial_risk_category } },
+-->

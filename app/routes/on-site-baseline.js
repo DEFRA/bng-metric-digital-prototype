@@ -707,7 +707,7 @@ function registerOnSiteBaselineRoutes(router) {
       watercourseTableRows: watercourseTableRows,
       actions: {
         startPostIntervention: {
-          url: '/on-site-post-intervention/upload-single-file'
+          url: '/on-site-post-intervention/post-intervention-start'
         }
       }
     })

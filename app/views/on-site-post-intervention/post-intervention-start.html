@@ -1,0 +1,51 @@
+{% extends "layouts/main.html" %}
+
+{% from "govuk/components/phase-banner/macro.njk" import govukPhaseBanner %}
+{% from "govuk/components/back-link/macro.njk" import govukBackLink %}
+{% from "govuk/components/inset-text/macro.njk" import govukInsetText %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+
+{% set pageName="Upload your post-intervention data" %}
+
+{% block beforeContent %}
+  {{ govukPhaseBanner({
+    tag: {
+      text: "Alpha"
+    },
+    html: 'This is a new service – your <a class="govuk-link" href="#">feedback</a> will help us to improve it.'
+  }) }}
+
+  {{ govukBackLink({
+    text: "Back",
+    href: "/on-site-baseline/habitats-summary"
+  }) }}
+{% endblock %}
+
+{% block content %}
+
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-two-thirds">
+
+      <!-- <span class="govuk-caption-l">{{ baselineData.site.siteName | default("Project name") }}</span> -->
+      <span class="govuk-caption-l">Get your biodiversity net gain calculation</span>
+      <h1 class="govuk-heading-l">Upload your post-intervention data</h1>
+
+      <p class="govuk-body">You've recorded the baseline habitats for your site. Now you need to tell us what will happen to these habitats post development.</p>
+
+      <h2 class="govuk-heading-m">Before you begin, you will need:</h2>
+      <ul class="govuk-list govuk-list--bullet">
+        <li>A GIS file containing your site boundary AND post-intervention habitat parcels</li>
+      </ul>
+
+      <div class="govuk-button-group govuk-!-margin-top-6">
+        {{ govukButton({
+          text: "Continue",
+          href: "/on-site-post-intervention/upload-single-file"
+        }) }}
+      </div>
+
+    </div>
+  </div>
+
+{% endblock %}
+

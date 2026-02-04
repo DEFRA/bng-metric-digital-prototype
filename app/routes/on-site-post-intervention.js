@@ -89,6 +89,13 @@ function registerOnSitePostInterventionRoutes(router) {
   //   }
   // })
 
+  // Post-intervention start page - GET
+  router.get('/on-site-post-intervention/post-intervention-start', function (req, res) {
+    res.render('on-site-post-intervention/post-intervention-start', {
+      baselineData: req.session.data['baselineData'] || {}
+    });
+  });
+
   // Upload Single File Page - GET
   router.get('/on-site-post-intervention/upload-single-file', function (req, res) {
     res.render('on-site-post-intervention/upload-single-file', {
@@ -162,6 +169,33 @@ function registerOnSitePostInterventionRoutes(router) {
         req.session.data['geopackageLayersPostIntervention'] = gpkgData.layers
         req.session.data['geopackageGeometriesPostIntervention'] = gpkgData.geometries
 
+        // Set predefined Units values for specific parcel references
+        const predefinedUnits = {
+          'H2-2': 0.5,
+          'H2-3': 4,
+          'H1': 0.5,
+          'H3': 1.09
+        }
+        
+        // Find parcels layer and update Units property
+        const parcelsLayerInfo = gpkgData.layers.find(
+          (l) =>
+            l.name.toLowerCase().includes('parcel') ||
+            l.name.toLowerCase().includes('habitat')
+        )
+        
+        if (parcelsLayerInfo && gpkgData.geometries[parcelsLayerInfo.name]) {
+          const parcelsLayer = gpkgData.geometries[parcelsLayerInfo.name]
+          if (parcelsLayer.features) {
+            parcelsLayer.features.forEach((feature, index) => {
+              const parcelRef = feature.properties['Parcel Ref'] || 'HP-' + (index + 1).toString().padStart(3, '0')
+              if (predefinedUnits.hasOwnProperty(parcelRef)) {
+                feature.properties['Units'] = predefinedUnits[parcelRef]
+              }
+            })
+          }
+        }
+
         // Redirect to confirm page
         res.redirect('/on-site-post-intervention/confirm-layers')
       } catch (err) {
@@ -197,10 +231,10 @@ function registerOnSitePostInterventionRoutes(router) {
 
     // Calculate areas in hectares
     const boundaryAreaHa = siteBoundary
-      ? (siteBoundary.totalAreaSqm / 10000).toFixed(2)
+      ? (siteBoundary.totalAreaSqm / 10000).toFixed(4)
       : 0
     const parcelsAreaHa = habitatParcels
-      ? (habitatParcels.totalAreaSqm / 10000).toFixed(2)
+      ? (habitatParcels.totalAreaSqm / 10000).toFixed(4)
       : 0
 
     // Find hedgerow layer
@@ -361,7 +395,7 @@ function registerOnSitePostInterventionRoutes(router) {
         }
         // Calculate boundary area
         const totalAreaSqm = calculatePolygonArea(drawnBoundary.geometry)
-        totalAreaHectares = (totalAreaSqm / 10000).toFixed(2)
+        totalAreaHectares = (totalAreaSqm / 10000).toFixed(4)
       }
 
       // Build parcels data from drawn parcels (already a FeatureCollection)
@@ -395,7 +429,7 @@ function registerOnSitePostInterventionRoutes(router) {
 
       // If boundary area wasn't calculated, use total parcels area as fallback
       if (totalAreaHectares === 0 && parcelsTotalAreaSqm > 0) {
-        totalAreaHectares = (parcelsTotalAreaSqm / 10000).toFixed(2)
+        totalAreaHectares = (parcelsTotalAreaSqm / 10000).toFixed(4)
       }
 
       // Prepare map data from drawn geometries
@@ -437,7 +471,7 @@ function registerOnSitePostInterventionRoutes(router) {
 
       // Calculate total site area
       if (boundaryLayerInfo) {
-        totalAreaHectares = (boundaryLayerInfo.totalAreaSqm / 10000).toFixed(2)
+        totalAreaHectares = (boundaryLayerInfo.totalAreaSqm / 10000).toFixed(4)
       }
 
       // Build parcels data with property extraction
@@ -473,7 +507,8 @@ function registerOnSitePostInterventionRoutes(router) {
             condition = condition.replace(/^\d+\.\s*/, '')
           }
 
-          if (habitat !== null && distinctiveness !== null && condition !== null && createdInAdvance !== null && delayInStarting !== null && spatialRiskCategory !== null && retentionCategory !== null){
+          // Spatial Risk is always considered as "N/A", so it doesn't affect status calculation
+          if (habitat !== null && distinctiveness !== null && condition !== null && createdInAdvance !== null && delayInStarting !== null && retentionCategory !== null){
             status = 'Complete'
           }
           else if (
@@ -482,27 +517,39 @@ function registerOnSitePostInterventionRoutes(router) {
             condition !== null ||
             createdInAdvance !== null ||
             delayInStarting !== null ||
-            spatialRiskCategory !== null ||
             retentionCategory !== null
           ) {
-            status = 'In progress'
+            status = 'Incomplete'
           }
 
-          // Calculate units
+          // Calculate units - use predefined values for specific parcel references
           let units = 0
-
-          /*
-          let distinctivenessScore = distinctivenessScores[distinctiveness] || 0
-          let conditionScore = conditionScores[condition] || 0
-
-          if (distinctivenessScore > 0 && conditionScore > 0) {
-            units = areaHa * distinctivenessScore * conditionScore
+          const predefinedUnits = {
+            'H2-2': 0.5,
+            'H2-3': 4,
+            'H1': 0.5,
+            'H3': 1.09
           }
-          */
+          
+          // Check if this parcel has a predefined Units value
+          if (predefinedUnits.hasOwnProperty(parcelId)) {
+            units = predefinedUnits[parcelId]
+            // Also update the feature property so it persists
+            feature.properties['Units'] = units
+          } else {
+            /*
+            let distinctivenessScore = distinctivenessScores[distinctiveness] || 0
+            let conditionScore = conditionScores[condition] || 0
+
+            if (distinctivenessScore > 0 && conditionScore > 0) {
+              units = areaHa * distinctivenessScore * conditionScore
+            }
+            */
+          }
 
           habitatParcels.push({
             parcelId: parcelId,
-            areaHectares: areaHa.toFixed(2),
+            areaHectares: areaHa.toFixed(4),
             habitatLabel: habitat,
             distinctiveness: distinctiveness,
             condition: condition,
@@ -577,7 +624,9 @@ function registerOnSitePostInterventionRoutes(router) {
           html:
             '<a class="govuk-link" href="/on-site-post-intervention/habitat/' +
             encodeURIComponent(parcel.parcelId) +
-            '/details">Edit</a>'
+            '/details">' +
+            (parcel.status === 'Complete' ? 'View' : parcel.status === 'Incomplete' ? 'Add details' : 'Edit') +
+            '</a>'
         }
       ]
     })
@@ -657,16 +706,9 @@ function registerOnSitePostInterventionRoutes(router) {
    const summary = [
       [
         {"text": "Habitat parcels"},
-        {"text": "1.5484"},
-        {"text": "1.6945"},
-        {"text": "0.15%"},
-        {"text": "No"}
-      ],
-      [
-        {"text": "Hedgerows"},
-        {"text": "0.0000"},
-        {"text": "2.1764"},
-        {"text": "-"},
+        {"text": "5.67"},
+        {"text": "6.09"},
+        {"text": "7.5%"},
         {"text": "No"}
       ]
     ]
@@ -785,6 +827,22 @@ function registerOnSitePostInterventionRoutes(router) {
     const createdInAdvance = props['Habitat created in advance/years'] || ''
     const delayInStarting = props['Delay in starting habitat creation/years'] || ''
     const spatialRiskCategory = props['Spatial risk category'] || ''
+    
+    // Get Units - check predefined values first, then feature property
+    const predefinedUnits = {
+      'H2-2': 0.5,
+      'H2-3': 4,
+      'H1': 0.5,
+      'H3': 1.09
+    }
+    let units = 0
+    if (predefinedUnits.hasOwnProperty(parcelRef)) {
+      units = predefinedUnits[parcelRef]
+      // Ensure the feature property is set
+      feature.properties['Units'] = units
+    } else if (props['Units'] !== undefined && props['Units'] !== null) {
+      units = parseFloat(props['Units']) || 0
+    }
 
     return {
       feature,
@@ -799,6 +857,7 @@ function registerOnSitePostInterventionRoutes(router) {
       createdInAdvance,
       delayInStarting,
       spatialRiskCategory,
+      units,
       props
     }
   }
@@ -812,8 +871,8 @@ function registerOnSitePostInterventionRoutes(router) {
       return res.status(404).send('Habitat parcel not found')
     }
 
-    // Calculate habitat units (placeholder - may need actual calculation)
-    let habitatUnits = 0
+    // Use Units from habitatData (which includes predefined values)
+    let habitatUnits = habitatData.units || 0
 
     // Build habitat object for template
     const habitat = {
@@ -883,13 +942,16 @@ function registerOnSitePostInterventionRoutes(router) {
       return res.status(404).send('Habitat parcel not found')
     }
 
-    // Calculate habitat units
-    let habitatUnits = 0
-    const dScore = distinctivenesScores[habitatData.distinctiveness]?.Score || 0
-    const cScore = conditionScores[habitatData.condition] || 0
-    const strategicMultiplier = 1 // TODO: Get from strategic significance multiplier
-    if (dScore > 0 && cScore > 0) {
-      habitatUnits = habitatData.areaHa * dScore * cScore * strategicMultiplier
+    // Use Units from habitatData (which includes predefined values)
+    // If not predefined, calculate based on distinctiveness, condition, and area
+    let habitatUnits = habitatData.units || 0
+    if (habitatUnits === 0) {
+      const dScore = distinctivenesScores[habitatData.distinctiveness]?.Score || 0
+      const cScore = conditionScores[habitatData.condition] || 0
+      const strategicMultiplier = 1 // TODO: Get from strategic significance multiplier
+      if (dScore > 0 && cScore > 0) {
+        habitatUnits = habitatData.areaHa * dScore * cScore * strategicMultiplier
+      }
     }
 
     // Ensure habitat type is in full format for dropdown matching
@@ -924,7 +986,6 @@ function registerOnSitePostInterventionRoutes(router) {
       strategic_significance: habitatData.strategicSignificance || '',
       created_in_advance: habitatData.createdInAdvance || '',
       delay_in_starting: habitatData.delayInStarting || '',
-      spatial_risk_category: habitatData.spatialRiskCategory || '',
       comments: habitatData.props['Comments'] || ''
     }
 
@@ -1023,7 +1084,6 @@ function registerOnSitePostInterventionRoutes(router) {
     
     feature.properties['Habitat created in advance/years'] = req.body.created_in_advance || ''
     feature.properties['Delay in starting habitat creation/years'] = req.body.delay_in_starting || ''
-    feature.properties['Spatial risk category'] = req.body.spatial_risk_category || ''
     feature.properties['Comments'] = req.body.comments || ''
 
     // Save updated geometries back to session
