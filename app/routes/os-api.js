@@ -4,12 +4,32 @@
  */
 
 const { proxyFetch } = require('../lib/proxy-fetch')
+const { LRUCache } = require('lru-cache')
+
+// In-memory cache for vector tiles
+// Limits: 500 entries OR 20MB (whichever hits first), 24-hour TTL
+const tileCache = new LRUCache({
+  max: 500,
+  maxSize: 20_000_000, // 20MB hard cap
+  sizeCalculation: (value) => value.length,
+  ttl: 1000 * 60 * 60 * 24 // 24 hours
+})
 
 /**
  * Register OS API proxy routes
  * @param {Router} router - Express router instance
  */
 function registerOsApiRoutes(router) {
+  // Debug endpoint to check tile cache stats (remove in production)
+  router.get('/api/os/tiles/cache-stats', function (req, res) {
+    res.json({
+      size: tileCache.size,
+      calculatedSize: tileCache.calculatedSize,
+      maxSize: 20_000_000,
+      maxEntries: 500
+    })
+  })
+
   // Tiles Style Endpoint - proxies OS NGD Vector Tile Styles API
   // Supports both EPSG:27700 (British National Grid) and EPSG:3857 (Web Mercator)
   router.get('/api/os/tiles/style/:crs?', async function (req, res) {
@@ -70,7 +90,7 @@ function registerOsApiRoutes(router) {
     }
   })
 
-  // Tiles Endpoint - proxies OS NGD Vector Tile requests
+  // Tiles Endpoint - proxies OS NGD Vector Tile requests with in-memory caching
   // OGC API Tiles standard uses {z}/{y}/{x} order (TileMatrix/TileRow/TileCol)
   // Supports optional CRS parameter: /api/os/tiles/:collection/:crs/:z/:y/:x
   // Default CRS is 27700 (British National Grid) for better alignment with WFS features
@@ -85,12 +105,19 @@ function registerOsApiRoutes(router) {
       }
 
       const { collection, crs, z, y, x } = req.params
-      const osUrl = `https://api.os.uk/maps/vector/ngd/ota/v1/collections/${collection}/tiles/${crs}/${z}/${y}/${x}?key=${apiKey}`
+      const cacheKey = `${collection}/${crs}/${z}/${y}/${x}`
 
-      console.log(
-        `Fetching tile: ${collection}/${crs}/${z}/${y}/${x} (CRS/TileMatrix/TileRow/TileCol)`
-      )
-      console.log(`OS URL: ${osUrl.replace(apiKey, 'REDACTED')}`)
+      // Check cache first
+      const cached = tileCache.get(cacheKey)
+      if (cached) {
+        res.set('Content-Type', 'application/vnd.mapbox-vector-tile')
+        res.set('Access-Control-Allow-Origin', '*')
+        res.set('Cache-Control', 'public, max-age=86400')
+        res.set('X-Cache', 'HIT')
+        return res.send(cached)
+      }
+
+      const osUrl = `https://api.os.uk/maps/vector/ngd/ota/v1/collections/${collection}/tiles/${crs}/${z}/${y}/${x}?key=${apiKey}`
 
       try {
         const response = await proxyFetch(osUrl, { method: 'GET' })
@@ -99,8 +126,6 @@ function registerOsApiRoutes(router) {
           console.error(
             `OS NGD Tiles API error: ${response.status} ${response.statusText} for tile ${z}/${y}/${x}`
           )
-          const errorText = await response.text()
-          console.error('Error details:', errorText)
           return res.status(response.status).send('Tile not found')
         }
 
@@ -109,13 +134,15 @@ function registerOsApiRoutes(router) {
         const arrayBuffer = await response.arrayBuffer()
         const buffer = Buffer.from(arrayBuffer)
 
-        console.log(`✓ Tile fetched: ${buffer.length} bytes (decompressed)`)
+        // Store in cache
+        tileCache.set(cacheKey, buffer)
 
         // Set appropriate headers for MVT
         // DO NOT set Content-Encoding - the data is already decompressed by Node.js fetch
         res.set('Content-Type', 'application/vnd.mapbox-vector-tile')
         res.set('Access-Control-Allow-Origin', '*')
-        res.set('Cache-Control', 'public, max-age=3600')
+        res.set('Cache-Control', 'public, max-age=86400')
+        res.set('X-Cache', 'MISS')
 
         res.send(buffer)
       } catch (error) {
@@ -172,6 +199,128 @@ function registerOsApiRoutes(router) {
     } catch (error) {
       console.error('Error fetching OS NGD features:', error)
       res.status(500).json({ error: 'Failed to fetch features' })
+    }
+  })
+
+  // Batch Features Endpoint - fetches multiple collections in parallel server-side
+  // Reduces browser requests from N individual calls to 1 batch call per theme group
+  router.post('/api/os/features/batch', async function (req, res) {
+    const apiKey = process.env.OS_PROJECT_API_KEY
+
+    if (!apiKey) {
+      console.error('OS_PROJECT_API_KEY not found in environment variables')
+      return res.status(500).json({ error: 'API key not configured' })
+    }
+
+    const { collections, bbox, limit } = req.body
+    const bboxCrs =
+      req.body['bbox-crs'] || 'http://www.opengis.net/def/crs/EPSG/0/27700'
+    const crs = req.body.crs || 'http://www.opengis.net/def/crs/EPSG/0/27700'
+
+    if (!Array.isArray(collections) || collections.length === 0) {
+      return res
+        .status(400)
+        .json({ error: 'collections must be a non-empty array' })
+    }
+
+    if (collections.length > 40) {
+      return res
+        .status(400)
+        .json({ error: 'Maximum 40 collections per batch request' })
+    }
+
+    // Validate collection IDs to prevent injection
+    const collectionPattern = /^[a-z]{3}-[a-z]+-[a-z]+-\d+$/
+    const invalidIds = collections.filter((id) => !collectionPattern.test(id))
+    if (invalidIds.length > 0) {
+      return res
+        .status(400)
+        .json({ error: 'Invalid collection IDs', invalid: invalidIds })
+    }
+
+    if (!bbox) {
+      return res.status(400).json({ error: 'bbox is required' })
+    }
+
+    const pageLimit = limit || 100
+
+    // Fetch all pages for a single collection
+    async function fetchCollection(collectionId) {
+      const features = []
+      let offset = 0
+      let hasMore = true
+
+      while (hasMore && offset < 1000) {
+        const params = new URLSearchParams({
+          key: apiKey,
+          bbox: bbox,
+          'bbox-crs': bboxCrs,
+          crs: crs,
+          limit: String(pageLimit),
+          offset: String(offset)
+        })
+
+        const osUrl = `https://api.os.uk/features/ngd/ofa/v1/collections/${collectionId}/items?${params.toString()}`
+        const response = await proxyFetch(osUrl, { method: 'GET' })
+
+        if (!response.ok) {
+          throw new Error(`${collectionId}: HTTP ${response.status}`)
+        }
+
+        const geojson = await response.json()
+
+        if (geojson.features && geojson.features.length > 0) {
+          // Tag each feature with its source collection
+          geojson.features.forEach((f) => {
+            if (!f.properties) f.properties = {}
+            f.properties._collectionId = collectionId
+          })
+          features.push(...geojson.features)
+
+          if (geojson.features.length < pageLimit) {
+            hasMore = false
+          } else {
+            offset += pageLimit
+          }
+        } else {
+          hasMore = false
+        }
+      }
+
+      return features
+    }
+
+    try {
+      const results = await Promise.allSettled(
+        collections.map((id) => fetchCollection(id))
+      )
+
+      const allFeatures = []
+      const errors = []
+
+      results.forEach((result, i) => {
+        if (result.status === 'fulfilled') {
+          allFeatures.push(...result.value)
+        } else {
+          errors.push({
+            collection: collections[i],
+            error: result.reason?.message || 'Unknown error'
+          })
+        }
+      })
+
+      if (errors.length > 0) {
+        console.error('Batch features partial errors:', errors)
+      }
+
+      res.json({
+        type: 'FeatureCollection',
+        features: allFeatures,
+        _errors: errors
+      })
+    } catch (error) {
+      console.error('Error in batch features:', error)
+      res.status(500).json({ error: 'Failed to fetch batch features' })
     }
   })
 }

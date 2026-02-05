@@ -12,7 +12,8 @@
       "Bash(git log:*)",
       "Bash(git show:*)",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "WebFetch(domain:docs.os.uk)"
     ]
   },
   "outputStyle": "Explanatory"
