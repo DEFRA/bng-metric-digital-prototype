@@ -159,12 +159,13 @@ function registerOnSitePostInterventionRoutes(router) {
           )
         }
 
-        // Check the Red Line Boundary is the same as the baseline boundary
-        if (gpkgData.geometries[boundaryLayerName].features.length !== req.session.data['geopackageGeometries'][boundaryLayerName].features.length) {
-          return res.redirect(
-            `/on-site-post-intervention/upload-single-file?error=The Red Line Boundary is not the same as the baseline boundary. Please upload the same boundary as the baseline.`
-          )
-        }
+        // Commented out for user testing
+        // // Check the Red Line Boundary is the same as the baseline boundary
+        // if (gpkgData.geometries[boundaryLayerName].features.length !== req.session.data['geopackageGeometries'][boundaryLayerName].features.length) {
+        //   return res.redirect(
+        //     `/on-site-post-intervention/upload-single-file?error=The Red Line Boundary is not the same as the baseline boundary. Please upload the same boundary as the baseline.`
+        //   )
+        // }
 
         req.session.data['geopackageLayersPostIntervention'] = gpkgData.layers
         req.session.data['geopackageGeometriesPostIntervention'] = gpkgData.geometries
