@@ -79,6 +79,19 @@
     }, this._fetchThrottleMs)
   }
 
+  // Groups layer IDs by their first 3 characters (theme prefix)
+  // e.g. ['bld-fts-building-1', 'bld-fts-building-2', 'wtr-fts-water-1']
+  //   -> { bld: ['bld-fts-building-1', 'bld-fts-building-2'], wtr: ['wtr-fts-water-1'] }
+  DefraMapClient.prototype._groupLayersByTheme = function (layers) {
+    var groups = {}
+    layers.forEach(function (id) {
+      var prefix = id.substring(0, 3)
+      if (!groups[prefix]) groups[prefix] = []
+      groups[prefix].push(id)
+    })
+    return groups
+  }
+
   DefraMapClient.prototype._fetchSnapData = async function () {
     const zoom = this.getZoom()
     if (typeof zoom === 'number' && zoom < this._minZoomForSnap) {
@@ -110,9 +123,13 @@
     try {
       this._snapIndexSource.clear()
 
+      // Group layers by theme prefix and make one batch call per group
+      const themeGroups = this._groupLayersByTheme(layers)
+      const groupValues = Object.values(themeGroups)
+
       const results = await Promise.allSettled(
-        layers.map((typeName) =>
-          this._fetchLayerData(baseUrl, typeName, extent)
+        groupValues.map((collectionIds) =>
+          this._fetchBatchLayerData(baseUrl, collectionIds, extent)
         )
       )
       const allFeatures = []
@@ -193,6 +210,63 @@
       } catch (e) {
         hasMore = false
       }
+    }
+
+    return features
+  }
+
+  // Fetches features for multiple collections in a single batch POST request
+  // The server fans out to OS API in parallel and returns merged GeoJSON
+  DefraMapClient.prototype._fetchBatchLayerData = async function (
+    baseUrl,
+    collectionIds,
+    extent
+  ) {
+    const bbox = `${extent[0]},${extent[1]},${extent[2]},${extent[3]}`
+    const batchUrl = baseUrl + '/batch'
+
+    const response = await fetch(batchUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        collections: collectionIds,
+        bbox: bbox,
+        'bbox-crs': 'http://www.opengis.net/def/crs/EPSG/0/27700',
+        crs: 'http://www.opengis.net/def/crs/EPSG/0/27700',
+        limit: this._maxFeaturesPerRequest
+      })
+    })
+
+    if (!response.ok) {
+      throw new Error('Batch HTTP ' + response.status)
+    }
+
+    const geojson = await response.json()
+    const features = []
+
+    if (geojson.features && geojson.features.length > 0) {
+      const format = new ol.format.GeoJSON()
+      const olFeatures = format.readFeatures(geojson, {
+        dataProjection: 'EPSG:27700',
+        featureProjection: this._projection
+      })
+
+      olFeatures.forEach((feature) => {
+        const geom = feature.getGeometry()
+        if (geom) {
+          if (this._simplifyTolerance > 0) {
+            const simplified = geom.simplify(this._simplifyTolerance)
+            feature.setGeometry(simplified)
+          }
+          // Map _collectionId from batch response to layerType for fill compatibility
+          var collectionId = feature.get('_collectionId')
+          if (collectionId) {
+            feature.set('layerType', collectionId)
+          }
+        }
+      })
+
+      features.push(...olFeatures)
     }
 
     return features

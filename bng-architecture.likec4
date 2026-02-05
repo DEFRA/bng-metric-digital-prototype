@@ -113,6 +113,15 @@ model {
         }
       }
 
+      service virusScanService "CDP Virus Scanning Service" {
+        description "Scans uploaded files for malware before storage"
+        technology "ClamAV / AWS"
+        icon https://icon.icepanel.io/AWS/svg/Security-Identity-Compliance/Inspector.svg
+        style {
+          color green
+        }
+      }
+
       storage fileStorageS3 "File Storage - S3" {
         description "Used for any uploaded data by users, associated with case and user"
         technology "AWS S3"
@@ -175,7 +184,8 @@ model {
   awsEuWest2.publicBoundaryCDP.publicApp -> awsEuWest2.privateBoundaryCDP.backendApi "Internal API calls"
 
   // Within Private CDP
-  awsEuWest2.privateBoundaryCDP.backendApi -> awsEuWest2.privateBoundaryCDP.fileStorageS3 "Stores uploaded files"
+  awsEuWest2.privateBoundaryCDP.backendApi -> awsEuWest2.privateBoundaryCDP.virusScanService "Sends files for scanning"
+  awsEuWest2.privateBoundaryCDP.virusScanService -> awsEuWest2.privateBoundaryCDP.fileStorageS3 "Stores scanned files"
   awsEuWest2.privateBoundaryCDP.backendApi -> awsEuWest2.privateBoundaryCDP.bngProjectDataS3 "Stores BNG project data"
   awsEuWest2.privateBoundaryCDP.backendApi -> awsEuWest2.privateBoundaryCDP.mongoDb "Application data CRUD"
   awsEuWest2.privateBoundaryCDP.backendApi -> awsEuWest2.privateBoundaryCDP.postgresDb "GIS data operations"
@@ -194,6 +204,7 @@ views {
     include awsEuWest2.publicBoundaryCDP.redis
     include awsEuWest2.publicBoundaryCDP.publicApp
     include awsEuWest2.privateBoundaryCDP.backendApi
+    include awsEuWest2.privateBoundaryCDP.virusScanService
     include awsEuWest2.privateBoundaryCDP.fileStorageS3
     include awsEuWest2.privateBoundaryCDP.bngProjectDataS3
     include awsEuWest2.privateBoundaryCDP.mongoDb
