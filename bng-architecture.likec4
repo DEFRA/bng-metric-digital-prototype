@@ -73,6 +73,14 @@ model {
     }
   }
 
+  system defraCustomerIdLpa "Defra Customer ID (LPA)" {
+    description "Trusted Third-Party flow for LPA authentication"
+    style {
+      shape person
+      color indigo
+    }
+  }
+
   // AWS eu-west-2 (London) Region
   boundary awsEuWest2 "AWS eu-west-2 (London)" {
     description "AWS London region hosting CDP infrastructure"
@@ -83,14 +91,17 @@ model {
       description "AWS Public Zone"
       icon https://icon.icepanel.io/AWS/svg/Compute/Fargate.svg
 
-      cache redis "Redis" {
-        description "Session cache for user sessions"
-        technology "Redis"
-        icon https://icons.terrastruct.com/dev%2Fredis.svg
+      service publicApp "BNG Completion Front-end" {
+        description "Public-facing application for BNG completion"
+        technology "Node.js / AWS"
+        icon https://icons.terrastruct.com/dev%2Fnodejs.svg
+        style {
+          color green
+        }
       }
 
-      service publicApp "CDP BNG Metric Public App & API" {
-        description "Public-facing application and API for BNG metrics"
+      service lpaApp "LPA BNG Assessment front-end" {
+        description "LPA-facing application for BNG assessment"
         technology "Node.js / AWS"
         icon https://icons.terrastruct.com/dev%2Fnodejs.svg
         style {
@@ -104,7 +115,7 @@ model {
       description "AWS Private Zone"
       icon https://icon.icepanel.io/AWS/svg/Compute/Fargate.svg
 
-      service backendApi "CDP BNG Metric Backend API" {
+      service backendApi "BNG Service Core API" {
         description "Backend API handling BNG metric processing"
         technology "Node.js / AWS"
         icon https://icons.terrastruct.com/dev%2Fnodejs.svg
@@ -172,16 +183,25 @@ model {
     }
   }
 
+  // External Services
+  service govukNotify "GOV.UK Notify Service" {
+    description "GOV.UK platform for sending emails, SMS and letters to users"
+    technology "GOV.UK Notify"
+    icon https://icons.terrastruct.com/aws%2FCustomer%20Engagement%2FAmazon-Simple-Email-Service-SES.svg
+    style {
+      color amber
+    }
+  }
+
   // Relationships
 
   // External to Public CDP
   defraCustomerId -> awsEuWest2.publicBoundaryCDP.publicApp "Authenticates users"
-
-  // Within Public CDP
-  awsEuWest2.publicBoundaryCDP.publicApp -> awsEuWest2.publicBoundaryCDP.redis "Session management"
+  defraCustomerIdLpa -> awsEuWest2.publicBoundaryCDP.lpaApp "Authenticates LPA users"
 
   // Public to Private CDP
   awsEuWest2.publicBoundaryCDP.publicApp -> awsEuWest2.privateBoundaryCDP.backendApi "Internal API calls"
+  awsEuWest2.publicBoundaryCDP.lpaApp -> awsEuWest2.privateBoundaryCDP.backendApi "Internal API calls"
 
   // Within Private CDP
   awsEuWest2.privateBoundaryCDP.backendApi -> awsEuWest2.privateBoundaryCDP.virusScanService "Sends files for scanning"
@@ -190,6 +210,9 @@ model {
   awsEuWest2.privateBoundaryCDP.backendApi -> awsEuWest2.privateBoundaryCDP.mongoDb "Application data CRUD"
   awsEuWest2.privateBoundaryCDP.backendApi -> awsEuWest2.privateBoundaryCDP.postgresDb "GIS data operations"
   
+  // AWS to GOV.UK Notify
+  awsEuWest2.privateBoundaryCDP.backendApi -> govukNotify "Sends BNG submission notifications to LPAs"
+
   // AWS to Azure cross-cloud sync
   awsEuWest2.privateBoundaryCDP.bngProjectDataS3 -> azureUkSouth.azureDataPlatform.dynamicsPlatform "Sync"
 }
@@ -201,8 +224,9 @@ views {
 
     // Include all actual components (not the boundary containers)
     include defraCustomerId
-    include awsEuWest2.publicBoundaryCDP.redis
+    include defraCustomerIdLpa
     include awsEuWest2.publicBoundaryCDP.publicApp
+    include awsEuWest2.publicBoundaryCDP.lpaApp
     include awsEuWest2.privateBoundaryCDP.backendApi
     include awsEuWest2.privateBoundaryCDP.virusScanService
     include awsEuWest2.privateBoundaryCDP.fileStorageS3
@@ -210,6 +234,7 @@ views {
     include awsEuWest2.privateBoundaryCDP.mongoDb
     include awsEuWest2.privateBoundaryCDP.postgresDb
     include azureUkSouth.azureDataPlatform.dynamicsPlatform
+    include govukNotify
 
     // This will automatically include all relationships between the included elements
   }
