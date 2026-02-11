@@ -1,14 +1,14 @@
-const conditionScores = {
-    "Good": 3,
-    "Fairly Good": 2.5,
-    "Moderate": 2,
-    "Fairly Poor": 1.5,
-    "Poor": 1,
-    "Condition Assessment N/A": 1,
-    "N/A - Other": 0
-}
+// const conditionScores = {
+//     "Good": 3,
+//     "Fairly Good": 2.5,
+//     "Moderate": 2,
+//     "Fairly Poor": 1.5,
+//     "Poor": 1,
+//     "Condition Assessment N/A": 1,
+//     "N/A - Other": 0
+// }
 
-const conditionMultiplier = {
+const conditionScores = {
     "Cropland - Arable field margins cultivated annually": {
       "Good": "Not Possible",
       "Fairly Good": "Not Possible",
@@ -1197,6 +1197,8 @@ const conditionMultiplier = {
       "Condition Assessment N/A": "Not Possible",
       "N/A - Other": "Not Possible"
     }
-}
+};
 
-export { conditionScores, conditionMultiplier }
+module.exports = {
+  conditionScores
+};

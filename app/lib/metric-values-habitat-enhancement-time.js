@@ -5017,4 +5017,6 @@ const enhancementTimeToTarget = {
   }
 };
 
-export { enhancementTimeToTarget };
+module.exports = {
+  enhancementTimeToTarget
+};

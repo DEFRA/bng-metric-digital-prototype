@@ -154,8 +154,9 @@ const distinctivenessCategories = {
     "Intertidal hard structures - Artificial features of hard structures": "Low",
     "Infrastructure (IGGI) - Infrastructure (IGGI)": "Medium",
     "Watercourse footprint - Watercourse footprint": "V.Low",
-}
+};
 
-export { distinctivenesScores, distinctivenessCategories }
-  
-
+module.exports = {
+  distinctivenesScores,
+  distinctivenessCategories
+};

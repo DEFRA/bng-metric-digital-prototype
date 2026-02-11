@@ -3,7 +3,7 @@ const habitatDifficultyMultiplier = {
     "Medium": 0.67,
     "High": 0.33,
     "Very High": 0.1
-}
+};
 
 const habitatDifficulty = {
     "Coastal lagoons": {
@@ -535,7 +535,9 @@ const habitatDifficulty = {
       "Creation": "Low",
       "Enhancement": "Low"
     },
-}
+};
 
-export { habitatDifficultyMultiplier, habitatDifficulty }
- 
+module.exports = {
+  habitatDifficultyMultiplier,
+  habitatDifficulty
+};

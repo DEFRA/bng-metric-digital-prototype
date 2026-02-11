@@ -31,6 +31,8 @@ const timeToTarget = {
     "29": 0.356,
     "30": 0.343,
     ">30": 0.32
-}
+};
 
-export { timeToTarget }
+module.exports = {
+  timeToTarget
+};

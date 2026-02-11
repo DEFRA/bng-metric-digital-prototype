@@ -11,6 +11,8 @@ const {
   isPolygonSelfIntersecting
 } = require('../lib/geometry-utils')
 const { isWithinUK, getLPA, getNCA, getLNRS } = require('../lib/arcgis-queries')
+const metricCalcs = require('../lib/metric-calcs')
+const { getBaselineUnits, distinctivenessCategories } = metricCalcs
 
 const upload = multer({ storage: multer.memoryStorage() })
 
@@ -20,6 +22,7 @@ const boundaryLayerName = 'Red Line Boundary'
 const maxBoundaryFeatures = 10
 const maxPolygonSize = 1000000000 // 1000 sq km
 
+/*
 const distinctivenessScores = {
   'V.High': 8,
   High: 6,
@@ -37,6 +40,7 @@ const conditionScores = {
   'Condition Assessment N/A': 1,
   'N/A - Other': 0
 }
+*/
 
 /**
  * Register on-site baseline routes
@@ -511,8 +515,13 @@ function registerOnSiteBaselineRoutes(router) {
             feature.properties['Parcel Ref'] ||
             'HP-' + i.toString().padStart(3, '0')
           let habitat = feature.properties['Baseline Habitat Type'] || null
-          let distinctiveness =
-            feature.properties['Baseline Distinctiveness'] || null
+          let broadHabitat = feature.properties['Baseline Broad Habitat Type'] || null
+          //let distinctiveness =
+          //  feature.properties['Baseline Distinctiveness'] || null
+
+          let fullHabitat = broadHabitat + ' - ' + habitat
+
+          let distinctiveness = distinctivenessCategories[fullHabitat] || null
           let condition = feature.properties['Baseline Condition'] || null
 
           // Remove the number and period from the condition
@@ -532,13 +541,16 @@ function registerOnSiteBaselineRoutes(router) {
           }
 
           // Calculate units
-          let units = 0
-          let distinctivenessScore = distinctivenessScores[distinctiveness] || 0
-          let conditionScore = conditionScores[condition] || 0
+          // let units = 0
+          // let distinctivenessScore = distinctivenessScores[distinctiveness] || 0
+          // let conditionScore = conditionScores[condition] || 0
 
-          if (distinctivenessScore > 0 && conditionScore > 0) {
-            units = areaHa * distinctivenessScore * conditionScore
-          }
+          // if (distinctivenessScore > 0 && conditionScore > 0) {
+          //   units = areaHa * distinctivenessScore * conditionScore
+          // }
+
+          let units = getBaselineUnits(fullHabitat, areaHa, condition)
+
 
           habitatParcels.push({
             parcelId: parcelId,
@@ -623,6 +635,13 @@ function registerOnSiteBaselineRoutes(router) {
         }
       ]
     })
+
+    // Sum habitat parcel units and store in session for later use
+    const baselineUnits = habitatParcels.reduce(function (sum, parcel) {
+      const units = typeof parcel.units === 'number' ? parcel.units : 0;
+      return sum + units;
+    }, 0);
+    req.session.data['baselineUnits'] = baselineUnits;
 
     // Build hedgerow table rows
     const hedgerows = mapData.hedgerows?.features || []

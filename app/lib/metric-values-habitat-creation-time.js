@@ -1187,6 +1187,8 @@ const creationTimeToTarget = {
       "Condition Assessment N/A": "Not Possible",
       "N/A - Other": "Not Possible"
     }
-}
+};
   
-export { creationTimeToTarget }
+module.exports = {
+  creationTimeToTarget
+};
