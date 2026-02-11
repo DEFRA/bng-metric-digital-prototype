@@ -47,3 +47,37 @@ registerFileConversionRoutes(router)
 registerOnSiteBaselineRoutes(router)
 registerOnSitePostInterventionRoutes(router)
 registerTestRoutes(router)
+
+// Import metric calculation functions for API endpoint
+const metricCalcs = require('./lib/metric-calcs')
+const getRetentionUnits = metricCalcs.getRetentionUnits
+const getCreationUnits = metricCalcs.getCreationUnits
+const getEnhancementUnits = metricCalcs.getEnhancementUnits
+
+// API endpoint for calculating post-intervention units (added directly to main routes for reliability)
+router.get('/api/on-site-post-intervention/calculate-units', function (req, res) {
+  const retentionCategory = req.query.retentionCategory || null
+  const fullHabitatBefore = req.query.fullHabitatBefore || null
+  const conditionBefore = req.query.conditionBefore || null
+  const fullHabitatAfter = req.query.fullHabitatAfter || null
+  const conditionAfter = req.query.conditionAfter || null
+  const area = parseFloat(req.query.area) || 0
+  const delayYears = parseInt(req.query.delayYears, 10) || 0
+  const advanceYears = parseInt(req.query.advanceYears, 10) || 0
+
+  let units = 0
+  try {
+    if (retentionCategory === 'Retained') {
+      units = getRetentionUnits(fullHabitatAfter, area, conditionAfter, fullHabitatBefore, conditionBefore)
+    } else if (retentionCategory === 'Enhanced') {
+      units = getEnhancementUnits(fullHabitatBefore, conditionBefore, fullHabitatAfter, area, conditionAfter, delayYears, advanceYears)
+    } else if (retentionCategory === 'Lost') {
+      units = getCreationUnits(fullHabitatBefore, area, conditionBefore, fullHabitatAfter, conditionAfter, delayYears, advanceYears)
+    }
+  } catch (err) {
+    console.error('[Routes] Error calculating units via API:', err.message)
+    units = 0
+  }
+
+  res.json({ units: units })
+})

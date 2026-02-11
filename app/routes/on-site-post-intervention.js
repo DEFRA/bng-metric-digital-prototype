@@ -19,6 +19,10 @@ const metricCalcs = require('../lib/metric-calcs')
 const distinctivenessCategories = metricCalcs.distinctivenessCategories || {}
 const distinctivenesScores = metricCalcs.distinctivenesScores || {}
 const conditionScores = metricCalcs.conditionScores || {}
+const getRetentionUnits = metricCalcs.getRetentionUnits || {}
+const getCreationUnits = metricCalcs.getCreationUnits || {}
+const getEnhancementUnits = metricCalcs.getEnhancementUnits || {}
+const getBaselineUnits = metricCalcs.getBaselineUnits || {}
 
 const upload = multer({ storage: multer.memoryStorage() })
 
@@ -495,8 +499,12 @@ function registerOnSitePostInterventionRoutes(router) {
             'HP-' + i.toString().padStart(3, '0')
           let retentionCategory = feature.properties['Retention Category'] || null
           let habitat = feature.properties['Proposed Habitat Type'] || null
-          let distinctiveness =
-            feature.properties['Proposed Distinctiveness'] || null
+          let broadHabitat = feature.properties['Proposed Broad Habitat Type'] || null
+          let fullHabitat = broadHabitat + ' - ' + habitat
+
+          //let distinctiveness =
+          //feature.properties['Proposed Distinctiveness'] || null
+          let distinctiveness = distinctivenessCategories[fullHabitat] || null
           let condition = feature.properties['Proposed Condition'] || null
 
           let createdInAdvance = feature.properties['Habitat created in advance/years'] || null
@@ -523,30 +531,92 @@ function registerOnSitePostInterventionRoutes(router) {
             status = 'Incomplete'
           }
 
-          // Calculate units - use predefined values for specific parcel references
-          let units = 0
-          const predefinedUnits = {
-            'H2-2': 0.5,
-            'H2-3': 4,
-            'H1': 0.5,
-            'H3': 1.09
-          }
-          
-          // Check if this parcel has a predefined Units value
-          if (predefinedUnits.hasOwnProperty(parcelId)) {
-            units = predefinedUnits[parcelId]
-            // Also update the feature property so it persists
-            feature.properties['Units'] = units
-          } else {
-            /*
-            let distinctivenessScore = distinctivenessScores[distinctiveness] || 0
-            let conditionScore = conditionScores[condition] || 0
 
-            if (distinctivenessScore > 0 && conditionScore > 0) {
-              units = areaHa * distinctivenessScore * conditionScore
-            }
-            */
+          let habitatBefore = feature.properties['Baseline Habitat Type'] || null
+          let broadHabitatBefore = feature.properties['Baseline Broad Habitat Type'] || null
+          let fullHabitatBefore = broadHabitatBefore + ' - ' + habitatBefore
+          let conditionBefore = feature.properties['Baseline Condition'] || null
+          if (conditionBefore !== null) {
+            conditionBefore = conditionBefore.replace(/^\d+\.\s*/, '')
           }
+
+          let numericDelayInStarting = null;
+          let numericCreatedInAdvance = null;
+
+          if (delayInStarting !== null) {
+            if (delayInStarting === '30+') {
+              numericDelayInStarting = 30;
+            } else {
+              const parsedDelay = Number(delayInStarting);
+              numericDelayInStarting = isNaN(parsedDelay) ? null : parsedDelay;
+            }
+          }
+
+          if (createdInAdvance !== null) {
+            if (createdInAdvance === '30+') {
+              numericCreatedInAdvance = 30;
+            } else {
+              const parsedAdvance = Number(createdInAdvance);
+              numericCreatedInAdvance = isNaN(parsedAdvance) ? null : parsedAdvance;
+            }
+          }
+
+          if (retentionCategory === "Retained") {
+            units = getRetentionUnits(fullHabitat, areaHa, condition, fullHabitatBefore, conditionBefore)
+          }
+          else if (retentionCategory === "Enhanced") {
+            
+
+            units = getEnhancementUnits(
+              fullHabitatBefore,
+              conditionBefore,
+              fullHabitat,
+              areaHa,
+              condition,
+              numericDelayInStarting,
+              numericCreatedInAdvance
+            )
+          }
+          else if (retentionCategory === "Lost") {
+            units = getCreationUnits(
+              fullHabitatBefore,
+              areaHa,
+              conditionBefore,
+              fullHabitat,
+              condition,
+              numericDelayInStarting,
+              numericCreatedInAdvance
+            )
+          }
+          else {
+            units = 0
+          }
+
+          // // Calculate units - use predefined values for specific parcel references
+          // let units = 0
+
+          // const predefinedUnits = {
+          //   'H2-2': 0.5,
+          //   'H2-3': 4,
+          //   'H1': 0.5,
+          //   'H3': 1.09
+          // }
+          
+          // // Check if this parcel has a predefined Units value
+          // if (predefinedUnits.hasOwnProperty(parcelId)) {
+          //   units = predefinedUnits[parcelId]
+          //   // Also update the feature property so it persists
+          //   feature.properties['Units'] = units
+          // } else {
+          //   /*
+          //   let distinctivenessScore = distinctivenessScores[distinctiveness] || 0
+          //   let conditionScore = conditionScores[condition] || 0
+
+          //   if (distinctivenessScore > 0 && conditionScore > 0) {
+          //     units = areaHa * distinctivenessScore * conditionScore
+          //   }
+          //   */
+          // }
 
           habitatParcels.push({
             parcelId: parcelId,
@@ -618,7 +688,7 @@ function registerOnSitePostInterventionRoutes(router) {
         { text: parcel.habitatLabel || 'Not specified' },
         { text: parcel.distinctiveness || 'Not specified' },
         { text: parcel.condition || 'Not specified' },
-        { text: parcel.retentionCategory || 'Not specified' },
+        { text: parcel.retentionCategory === 'Lost' ? 'Created' : (parcel.retentionCategory || 'Not specified') },
         { text: parcel.units ? parcel.units.toFixed(2) : '0.00' },
         { text: parcel.status },
         {
@@ -631,6 +701,7 @@ function registerOnSitePostInterventionRoutes(router) {
         }
       ]
     })
+
 
     // Build hedgerow table rows
     const hedgerows = mapData.hedgerows?.features || []
@@ -703,14 +774,35 @@ function registerOnSitePostInterventionRoutes(router) {
       ]
     })
 
+
+
     // Build table rows for GovUK table component
-   const summary = [
+    // Sum habitat parcel units for post-intervention total
+    const postInterventionUnits = habitatParcels.reduce(function (sum, parcel) {
+      const units = typeof parcel.units === 'number' ? parcel.units : 0;
+      return sum + units;
+    }, 0);
+    const postInterventionUnitsFormatted = postInterventionUnits.toFixed(2);
+
+    const baselineUnitsRaw = req.session.data['baselineUnits'];
+    const baselineUnits =
+      typeof baselineUnitsRaw === 'number'
+        ? baselineUnitsRaw
+        : parseFloat(baselineUnitsRaw) || 0;
+    
+    const netChangeValue = baselineUnits === 0
+      ? 0
+      : ((postInterventionUnits - baselineUnits) / baselineUnits) * 100;
+    const netChange = netChangeValue.toFixed(1) + '%';
+    const tradingRulesSatisfied = "No";
+    
+    const summary = [
       [
-        {"text": "Habitat parcels"},
-        {"text": "5.67"},
-        {"text": "6.09"},
-        {"text": "7.5%"},
-        {"text": "No"}
+        { "text": "Habitat parcels" },
+        { "text": baselineUnits.toFixed(2) },
+        { "text": postInterventionUnitsFormatted },
+        { "text": netChange },
+        { "text": tradingRulesSatisfied }
       ]
     ]
     
@@ -872,8 +964,73 @@ function registerOnSitePostInterventionRoutes(router) {
       return res.status(404).send('Habitat parcel not found')
     }
 
-    // Use Units from habitatData (which includes predefined values)
-    let habitatUnits = habitatData.units || 0
+    // Calculate post-intervention units based on Retention Category
+    const retentionCategory = habitatData.props['Retention Category'] || null
+    const fullHabitatAfter = (habitatData.broadHabitat && habitatData.habitatType)
+      ? habitatData.broadHabitat + ' - ' + habitatData.habitatType
+      : null
+
+    // Get baseline data
+    const baselineHabitatTypeRaw = habitatData.props['Baseline Habitat Type'] || null
+    const baselineBroadHabitatRaw = habitatData.props['Baseline Broad Habitat Type'] || null
+    const fullHabitatBefore = (baselineBroadHabitatRaw && baselineHabitatTypeRaw)
+      ? baselineBroadHabitatRaw + ' - ' + baselineHabitatTypeRaw
+      : null
+    let conditionBefore = habitatData.props['Baseline Condition'] || null
+    if (conditionBefore !== null) {
+      conditionBefore = conditionBefore.replace(/^\d+\.\s*/, '')
+    }
+
+    // Parse time values
+    let numericDelayInStarting = 0
+    let numericCreatedInAdvance = 0
+    if (habitatData.delayInStarting) {
+      if (habitatData.delayInStarting === '30+') {
+        numericDelayInStarting = 30
+      } else {
+        const parsed = Number(habitatData.delayInStarting)
+        numericDelayInStarting = isNaN(parsed) ? 0 : parsed
+      }
+    }
+    if (habitatData.createdInAdvance) {
+      if (habitatData.createdInAdvance === '30+') {
+        numericCreatedInAdvance = 30
+      } else {
+        const parsed = Number(habitatData.createdInAdvance)
+        numericCreatedInAdvance = isNaN(parsed) ? 0 : parsed
+      }
+    }
+
+    // Calculate units based on retention category
+    let habitatUnits = 0
+    try {
+      if (retentionCategory === 'Retained') {
+        habitatUnits = getRetentionUnits(fullHabitatAfter, habitatData.areaHa, habitatData.condition, fullHabitatBefore, conditionBefore)
+      } else if (retentionCategory === 'Enhanced') {
+        habitatUnits = getEnhancementUnits(
+          fullHabitatBefore,
+          conditionBefore,
+          fullHabitatAfter,
+          habitatData.areaHa,
+          habitatData.condition,
+          numericDelayInStarting,
+          numericCreatedInAdvance
+        )
+      } else if (retentionCategory === 'Lost') {
+        habitatUnits = getCreationUnits(
+          fullHabitatBefore,
+          habitatData.areaHa,
+          conditionBefore,
+          fullHabitatAfter,
+          habitatData.condition,
+          numericDelayInStarting,
+          numericCreatedInAdvance
+        )
+      }
+    } catch (err) {
+      console.error('[PostIntervention] Error calculating units for parcel ' + habitatData.parcelRef + ':', err.message)
+      habitatUnits = 0
+    }
 
     // Build habitat object for template
     const habitat = {
@@ -911,6 +1068,11 @@ function registerOnSitePostInterventionRoutes(router) {
       baselineBroadHabitat = 'Not specified'
     }
 
+    let baselineFullHabitat = baselineBroadHabitat + ' - ' + baselineHabitatType;
+
+    let unitsLost = habitatData.props['Retention Category'] === "Lost" ? getBaselineUnits(baselineFullHabitat, habitatData.areaHa, baselineCondition) : 0;
+    let areaLost = habitatData.props['Retention Category'] === "Lost" ? habitatData.areaHa.toFixed(4) : 0;
+
     // Build baseline object
     const baseline = {
       id: habitatData.parcelRef,
@@ -920,8 +1082,8 @@ function registerOnSitePostInterventionRoutes(router) {
       condition: baselineCondition,
       strategic_significance: habitatData.props['Baseline Strategic Significance'] || habitatData.props['Baseline Strategic significance'] || 'Not specified',
       retention_category: habitatData.props['Retention Category'] || 'Not specified',
-      area_lost: null,
-      units_lost: null,
+      area_lost: areaLost,
+      units_lost: unitsLost.toFixed(2),
       trading_rule: null
     }
 
@@ -943,16 +1105,72 @@ function registerOnSitePostInterventionRoutes(router) {
       return res.status(404).send('Habitat parcel not found')
     }
 
-    // Use Units from habitatData (which includes predefined values)
-    // If not predefined, calculate based on distinctiveness, condition, and area
-    let habitatUnits = habitatData.units || 0
-    if (habitatUnits === 0) {
-      const dScore = distinctivenesScores[habitatData.distinctiveness]?.Score || 0
-      const cScore = conditionScores[habitatData.condition] || 0
-      const strategicMultiplier = 1 // TODO: Get from strategic significance multiplier
-      if (dScore > 0 && cScore > 0) {
-        habitatUnits = habitatData.areaHa * dScore * cScore * strategicMultiplier
+    // Calculate post-intervention units based on Retention Category
+    const retentionCategory = habitatData.props['Retention Category'] || null
+    const fullHabitatAfter = (habitatData.broadHabitat && habitatData.habitatType)
+      ? habitatData.broadHabitat + ' - ' + habitatData.habitatType
+      : null
+
+    // Get baseline data
+    const baselineHabitatTypeRaw = habitatData.props['Baseline Habitat Type'] || null
+    const baselineBroadHabitatRaw = habitatData.props['Baseline Broad Habitat Type'] || null
+    const fullHabitatBefore = (baselineBroadHabitatRaw && baselineHabitatTypeRaw)
+      ? baselineBroadHabitatRaw + ' - ' + baselineHabitatTypeRaw
+      : null
+    let conditionBefore = habitatData.props['Baseline Condition'] || null
+    if (conditionBefore !== null) {
+      conditionBefore = conditionBefore.replace(/^\d+\.\s*/, '')
+    }
+
+    // Parse time values
+    let numericDelayInStarting = 0
+    let numericCreatedInAdvance = 0
+    if (habitatData.delayInStarting) {
+      if (habitatData.delayInStarting === '30+') {
+        numericDelayInStarting = 30
+      } else {
+        const parsed = Number(habitatData.delayInStarting)
+        numericDelayInStarting = isNaN(parsed) ? 0 : parsed
       }
+    }
+    if (habitatData.createdInAdvance) {
+      if (habitatData.createdInAdvance === '30+') {
+        numericCreatedInAdvance = 30
+      } else {
+        const parsed = Number(habitatData.createdInAdvance)
+        numericCreatedInAdvance = isNaN(parsed) ? 0 : parsed
+      }
+    }
+
+    // Calculate units based on retention category
+    let habitatUnits = 0
+    try {
+      if (retentionCategory === 'Retained') {
+        habitatUnits = getRetentionUnits(fullHabitatAfter, habitatData.areaHa, habitatData.condition, fullHabitatBefore, conditionBefore)
+      } else if (retentionCategory === 'Enhanced') {
+        habitatUnits = getEnhancementUnits(
+          fullHabitatBefore,
+          conditionBefore,
+          fullHabitatAfter,
+          habitatData.areaHa,
+          habitatData.condition,
+          numericDelayInStarting,
+          numericCreatedInAdvance
+        )
+      } else if (retentionCategory === 'Lost') {
+        habitatUnits = getCreationUnits(
+          fullHabitatBefore,
+          habitatData.areaHa,
+          conditionBefore,
+          fullHabitatAfter,
+          habitatData.condition,
+          numericDelayInStarting,
+          numericCreatedInAdvance
+        )
+      }
+    } catch (err) {
+      console.error('[PostIntervention] Error calculating units for parcel ' + habitatData.parcelRef + ':', err.message)
+      habitatUnits = 0
     }
 
     // Ensure habitat type is in full format for dropdown matching
@@ -999,18 +1217,12 @@ function registerOnSitePostInterventionRoutes(router) {
       ? [{ value: '', text: 'Select' }, ...habitatTypesByBroadHabitat[currentBroadHabitat].map(ht => ({ value: ht, text: ht }))]
       : [{ value: '', text: 'Select' }]
 
-    // Prepare metric lookups for client-side calculation
-    const metricLookups = {
-      distinctivenessScores: Object.keys(distinctivenesScores).reduce((acc, key) => {
-        acc[key] = distinctivenesScores[key].Score
-        return acc
-      }, {}),
-      conditionScores: conditionScores,
-      strategicMultipliers: {
-        'Formally identified in local strategy': 1.2,
-        'Location ecologically desirable but not in local strategy': 1.1,
-        'Area/compensation not in local strategy/ no local strategy': 1
-      }
+    // Prepare baseline data for client-side calculation
+    const baselineData = {
+      retentionCategory: habitatData.props['Retention Category'] || null,
+      broadHabitat: habitatData.props['Baseline Broad Habitat Type'] || null,
+      habitatType: habitatData.props['Baseline Habitat Type'] || null,
+      condition: conditionBefore
     }
 
     res.render('on-site-post-intervention/habitat-edit', {
@@ -1018,7 +1230,7 @@ function registerOnSitePostInterventionRoutes(router) {
       id: parcelRef,
       habitatTypesByBroadHabitat: JSON.stringify(habitatTypesByBroadHabitat),
       habitatTypeItems: habitatTypeItems,
-      metricLookups: JSON.stringify(metricLookups),
+      baselineData: JSON.stringify(baselineData),
       proposedStatus: 'Post-intervention'
     })
   })
@@ -1087,6 +1299,91 @@ function registerOnSitePostInterventionRoutes(router) {
     feature.properties['Delay in starting habitat creation/years'] = req.body.delay_in_starting || ''
     feature.properties['Comments'] = req.body.comments || ''
 
+    // Calculate post-intervention units based on Baseline Retention Category
+    const retentionCategory = feature.properties['Retention Category'] || null
+
+    // Get area in hectares
+    let areaHa = 0
+    if (feature.geometry && (feature.geometry.type === 'Polygon' || feature.geometry.type === 'MultiPolygon')) {
+      const areaSqm = calculatePolygonArea(feature.geometry)
+      areaHa = areaSqm / 10000
+    }
+
+    // Get baseline data
+    const habitatBefore = feature.properties['Baseline Habitat Type'] || null
+    const broadHabitatBefore = feature.properties['Baseline Broad Habitat Type'] || null
+    const fullHabitatBefore = (broadHabitatBefore && habitatBefore) ? broadHabitatBefore + ' - ' + habitatBefore : null
+    let conditionBefore = feature.properties['Baseline Condition'] || null
+    if (conditionBefore !== null) {
+      conditionBefore = conditionBefore.replace(/^\d+\.\s*/, '')
+    }
+
+    // Get post-intervention data
+    // habitat_type from form is already in full format "Broad - Type" (e.g., "Grassland - Modified grassland")
+    const fullHabitatAfter = req.body.habitat_type || null
+    let conditionAfter = req.body.condition || ''
+    if (conditionAfter !== '') {
+      conditionAfter = conditionAfter.replace(/^\d+\.\s*/, '')
+    }
+
+    // Parse time values
+    let numericDelayInStarting = 0
+    let numericCreatedInAdvance = 0
+    const delayInStarting = req.body.delay_in_starting || ''
+    const createdInAdvance = req.body.created_in_advance || ''
+
+    if (delayInStarting !== '') {
+      if (delayInStarting === '30+') {
+        numericDelayInStarting = 30
+      } else {
+        const parsedDelay = Number(delayInStarting)
+        numericDelayInStarting = isNaN(parsedDelay) ? 0 : parsedDelay
+      }
+    }
+
+    if (createdInAdvance !== '') {
+      if (createdInAdvance === '30+') {
+        numericCreatedInAdvance = 30
+      } else {
+        const parsedAdvance = Number(createdInAdvance)
+        numericCreatedInAdvance = isNaN(parsedAdvance) ? 0 : parsedAdvance
+      }
+    }
+
+    // Calculate units based on retention category
+    let units = 0
+    try {
+      if (retentionCategory === 'Retained') {
+        units = getRetentionUnits(fullHabitatAfter, areaHa, conditionAfter, fullHabitatBefore, conditionBefore)
+      } else if (retentionCategory === 'Enhanced') {
+        units = getEnhancementUnits(
+          fullHabitatBefore,
+          conditionBefore,
+          fullHabitatAfter,
+          areaHa,
+          conditionAfter,
+          numericDelayInStarting,
+          numericCreatedInAdvance
+        )
+      } else if (retentionCategory === 'Lost') {
+        units = getCreationUnits(
+          fullHabitatBefore,
+          areaHa,
+          conditionBefore,
+          fullHabitatAfter,
+          conditionAfter,
+          numericDelayInStarting,
+          numericCreatedInAdvance
+        )
+      }
+    } catch (err) {
+      console.error('[PostIntervention] Error calculating units for parcel ' + parcelRef + ':', err.message)
+      units = 0
+    }
+
+    // Save calculated units to feature
+    feature.properties['Units'] = units
+
     // Save updated geometries back to session
     req.session.data['geopackageGeometriesPostIntervention'] = geometries
 
@@ -1107,6 +1404,8 @@ function registerOnSitePostInterventionRoutes(router) {
     const geometries = req.session.data['geopackageGeometriesPostIntervention'] || {}
     res.json(geometries)
   })
+
+  // Note: API endpoint for calculating units is defined in main routes.js file
 }
 
 module.exports = { registerOnSitePostInterventionRoutes }

@@ -258,38 +258,129 @@
       }
     })()
   </script>
-  <script type="application/json" id="metric-lookups">{{ metricLookups | safe }}</script>
-  <script type="application/json" id="habitat-area">{{ habitat.area_hectares | safe }}</script>
+  <script type="application/json" id="habitat-area">{{ habitat.area_hectares | default(0) }}</script>
+  <script type="application/json" id="baseline-data">{{ baselineData | default('{}') | safe }}</script>
   <script>
     (function () {
-      var lookupsEl = document.getElementById('metric-lookups')
-      var lookups = lookupsEl ? JSON.parse(lookupsEl.textContent) : {}
-      var areaEl = document.getElementById('habitat-area')
-      var area = areaEl ? parseFloat(areaEl.textContent, 10) : 0
-      var dScores = lookups.distinctivenessScores || {}
-      var cScores = lookups.conditionScores || {}
-      var strategicMultipliers = lookups.strategicMultipliers || {}
-      var distinctivenessSelect = document.getElementById('distinctiveness')
-      var conditionSelect = document.getElementById('condition')
-      var strategicSelect = document.getElementById('strategic_significance')
-      var habitatUnitsDisplay = document.getElementById('habitat_units')
-
-      function round4 (n) { return n === '' || isNaN(n) ? '0.0000' : Number(Number(n).toFixed(4)) }
-      function updateHabitatUnits () {
-        var dVal = distinctivenessSelect.value
-        var cVal = conditionSelect.value
-        var sVal = strategicSelect.value
-        var dScore = dVal ? (dScores[dVal] != null ? dScores[dVal] : 0) : 0
-        var cScore = cVal ? (cScores[cVal] != null ? cScores[cVal] : 1) : 1
-        var sMult = sVal ? (strategicMultipliers[sVal] != null ? strategicMultipliers[sVal] : 1) : 1
-        var units = (area && !isNaN(area)) ? area * dScore * cScore * sMult : 0
-        if (habitatUnitsDisplay) habitatUnitsDisplay.textContent = round4(units)
+      console.log('Units calculation script loaded')
+      
+      // Wait for DOM to be ready
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initUnitsCalculation)
+      } else {
+        initUnitsCalculation()
       }
-      if (distinctivenessSelect && conditionSelect && strategicSelect && habitatUnitsDisplay) {
-        distinctivenessSelect.addEventListener('change', updateHabitatUnits)
-        conditionSelect.addEventListener('change', updateHabitatUnits)
-        strategicSelect.addEventListener('change', updateHabitatUnits)
+
+      function initUnitsCalculation() {
+        console.log('initUnitsCalculation called')
+        
+        var areaEl = document.getElementById('habitat-area')
+        var area = areaEl ? (parseFloat(areaEl.textContent) || 0) : 0
+        
+        var baselineEl = document.getElementById('baseline-data')
+        var baseline = {}
+        if (baselineEl && baselineEl.textContent && baselineEl.textContent.trim()) {
+          try {
+            baseline = JSON.parse(baselineEl.textContent)
+          } catch (e) {
+            console.error('Error parsing baseline-data:', e)
+          }
+        }
+
+        console.log('Baseline data:', baseline)
+        console.log('Area:', area)
+
+        var habitatTypeSelect = document.getElementById('habitat_type')
+        var conditionSelect = document.getElementById('condition')
+        var createdInAdvanceSelect = document.getElementById('created_in_advance')
+        var delayInStartingSelect = document.getElementById('delay_in_starting')
+        var habitatUnitsDisplay = document.getElementById('habitat_units')
+        
+        console.log('DOM elements found:', {
+          habitatTypeSelect: !!habitatTypeSelect,
+          conditionSelect: !!conditionSelect,
+          createdInAdvanceSelect: !!createdInAdvanceSelect,
+          delayInStartingSelect: !!delayInStartingSelect,
+          habitatUnitsDisplay: !!habitatUnitsDisplay
+        })
+
+        function round4(n) { return n === '' || isNaN(n) ? '0.0000' : Number(Number(n).toFixed(4)) }
+
+        function updateHabitatUnits() {
+          var retentionCategory = baseline.retentionCategory
+          var fullHabitatBefore = (baseline.broadHabitat && baseline.habitatType)
+            ? baseline.broadHabitat + ' - ' + baseline.habitatType
+            : null
+          var conditionBefore = baseline.condition
+
+          var fullHabitatAfter = habitatTypeSelect ? habitatTypeSelect.value : null
+          var conditionAfter = conditionSelect ? conditionSelect.value : null
+          if (conditionAfter) conditionAfter = conditionAfter.replace(/^\d+\.\s*/, '')
+
+          var delayVal = delayInStartingSelect ? delayInStartingSelect.value : ''
+          var advanceVal = createdInAdvanceSelect ? createdInAdvanceSelect.value : ''
+          var delayYears = delayVal === '30+' ? 30 : (parseInt(delayVal, 10) || 0)
+          var advanceYears = advanceVal === '30+' ? 30 : (parseInt(advanceVal, 10) || 0)
+
+          console.log('updateHabitatUnits called:', {
+            retentionCategory: retentionCategory,
+            fullHabitatBefore: fullHabitatBefore,
+            conditionBefore: conditionBefore,
+            fullHabitatAfter: fullHabitatAfter,
+            conditionAfter: conditionAfter,
+            delayYears: delayYears,
+            advanceYears: advanceYears,
+            area: area
+          })
+
+          // Call API to calculate units using GET with query parameters
+          var params = new URLSearchParams({
+            retentionCategory: retentionCategory || '',
+            fullHabitatBefore: fullHabitatBefore || '',
+            conditionBefore: conditionBefore || '',
+            fullHabitatAfter: fullHabitatAfter || '',
+            conditionAfter: conditionAfter || '',
+            area: area,
+            delayYears: delayYears,
+            advanceYears: advanceYears
+          })
+          
+          fetch('/api/on-site-post-intervention/calculate-units?' + params.toString())
+          .then(function(response) { return response.json() })
+          .then(function(data) {
+            console.log('API response - Calculated units:', data.units)
+            if (habitatUnitsDisplay) {
+              habitatUnitsDisplay.textContent = round4(data.units)
+            }
+          })
+          .catch(function(err) {
+            console.error('Error calling calculate-units API:', err)
+            if (habitatUnitsDisplay) {
+              habitatUnitsDisplay.textContent = '0.0000'
+            }
+          })
+        }
+
+        // Attach event listeners to all relevant dropdowns
+        if (habitatTypeSelect) {
+          habitatTypeSelect.addEventListener('change', updateHabitatUnits)
+          console.log('Event listener attached to habitat_type')
+        }
+        if (conditionSelect) {
+          conditionSelect.addEventListener('change', updateHabitatUnits)
+          console.log('Event listener attached to condition')
+        }
+        if (createdInAdvanceSelect) {
+          createdInAdvanceSelect.addEventListener('change', updateHabitatUnits)
+          console.log('Event listener attached to created_in_advance')
+        }
+        if (delayInStartingSelect) {
+          delayInStartingSelect.addEventListener('change', updateHabitatUnits)
+          console.log('Event listener attached to delay_in_starting')
+        }
+
         // Calculate initial units on page load
+        console.log('Calling initial updateHabitatUnits')
         updateHabitatUnits()
       }
     })()
