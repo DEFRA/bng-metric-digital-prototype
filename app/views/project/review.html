@@ -1,0 +1,20 @@
+{% extends "layouts/main.html" %}
+
+{% set pageName = "Review and send your information" %}
+
+{% block pageTitle %}{{ pageName }} – {{ serviceName }} – GOV.UK{% endblock %}
+
+{% block content %}
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+
+    <h1 class="govuk-heading-l">{{ pageName }}</h1>
+
+    <p class="govuk-body">
+      This is a placeholder page for reviewing and sending information for project: <strong>{{ projectName or 'Not set' }}</strong>.
+    </p>
+
+  </div>
+</div>
+{% endblock %}
+

@@ -1,6 +1,7 @@
 {% extends "layouts/main.html" %}
 
 {% from "govuk/components/table/macro.njk" import govukTable %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
 
 {% set pageName = "Project details" %}
 
@@ -22,31 +23,74 @@
       <li>you can save your progress at the end of each section if you need to come back later</li>
     </ul>
 
-    {{ govukTable({
-      firstCellIsHeader: false,
-      head: [
-        { text: "", classes: "govuk-!-width-two-thirds" },
-        { text: "", classes: "govuk-!-width-one-third govuk-table__cell--numeric" }
-      ],
-      rows: [
-        [
-          { html: '<a href="/project/name" class="govuk-link">Project name</a>', classes: "govuk-!-width-two-thirds" },
-          { text: "Completed", classes: "govuk-table__cell--numeric" }
+    {% if baselineComplete %}
+      {% if postInterventionComplete %}
+        {% set postStatus = "Completed" %}
+      {% else %}
+        {% set postStatus = "Not yet started" %}
+      {% endif %}
+
+      {{ govukTable({
+        firstCellIsHeader: false,
+        head: [
+          { text: "", classes: "govuk-!-width-two-thirds" },
+          { text: "", classes: "govuk-!-width-one-third govuk-table__cell--numeric" }
         ],
-        [
-          { html: 'Project details', classes: "govuk-!-width-two-thirds" },
-          { text: "Not yet started", classes: "govuk-table__cell--numeric" }
-        ],
-        [
-          { html: '<a href="/on-site-baseline/start" class="govuk-link">Baseline</a>', classes: "govuk-!-width-two-thirds" },
-          { text: "Not yet started", classes: "govuk-table__cell--numeric" }
-        ],
-        [
-          { html: "Post intervention", classes: "govuk-!-width-two-thirds" },
-          { text: "Cannot start yet", classes: "govuk-table__cell--numeric" }
+        rows: [
+          [
+            { html: '<a href="/project/name" class="govuk-link">Project name</a>', classes: "govuk-!-width-two-thirds" },
+            { text: "Completed", classes: "govuk-table__cell--numeric" }
+          ],
+          [
+            { html: 'Project details', classes: "govuk-!-width-two-thirds" },
+            { text: "Not yet started", classes: "govuk-table__cell--numeric" }
+          ],
+          [
+            { html: '<a href="/on-site-baseline/start" class="govuk-link">Baseline</a>', classes: "govuk-!-width-two-thirds" },
+            { text: "Completed", classes: "govuk-table__cell--numeric" }
+          ],
+          [
+            { html: '<a href="/on-site-post-intervention/post-intervention-start" class="govuk-link">Post intervention</a>', classes: "govuk-!-width-two-thirds" },
+            { text: postStatus, classes: "govuk-table__cell--numeric" }
+          ]
         ]
-      ]
-    }) }}
+      }) }}
+    {% else %}
+      {{ govukTable({
+        firstCellIsHeader: false,
+        head: [
+          { text: "", classes: "govuk-!-width-two-thirds" },
+          { text: "", classes: "govuk-!-width-one-third govuk-table__cell--numeric" }
+        ],
+        rows: [
+          [
+            { html: '<a href="/project/name" class="govuk-link">Project name</a>', classes: "govuk-!-width-two-thirds" },
+            { text: "Completed", classes: "govuk-table__cell--numeric" }
+          ],
+          [
+            { html: 'Project details', classes: "govuk-!-width-two-thirds" },
+            { text: "Not yet started", classes: "govuk-table__cell--numeric" }
+          ],
+          [
+            { html: '<a href="/on-site-baseline/start" class="govuk-link">Baseline</a>', classes: "govuk-!-width-two-thirds" },
+            { text: "Not yet started", classes: "govuk-table__cell--numeric" }
+          ],
+          [
+            { html: "Post intervention", classes: "govuk-!-width-two-thirds" },
+            { text: "Cannot start yet", classes: "govuk-table__cell--numeric" }
+          ]
+        ]
+      }) }}
+    {% endif %}
+
+    {% if postInterventionComplete %}
+      <div class="govuk-!-margin-top-6">
+        {{ govukButton({
+          text: "Review and send your information",
+          href: "/project/details/review"
+        }) }}
+      </div>
+    {% endif %}
 
   </div>
 </div>
