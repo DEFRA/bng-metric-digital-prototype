@@ -695,8 +695,8 @@ function registerOnSitePostInterventionRoutes(router) {
           html:
             '<a class="govuk-link" href="/on-site-post-intervention/habitat/' +
             encodeURIComponent(parcel.parcelId) +
-            '/details">' +
-            (parcel.status === 'Complete' ? 'View' : parcel.status === 'Incomplete' ? 'Add details' : 'Edit') +
+            '/edit">' +
+            (parcel.status === 'Complete' ? 'Edit' : parcel.status === 'Incomplete' ? 'Add details' : 'Edit') +
             '</a>'
         }
       ]
@@ -783,6 +783,10 @@ function registerOnSitePostInterventionRoutes(router) {
       return sum + units;
     }, 0);
     const postInterventionUnitsFormatted = postInterventionUnits.toFixed(2);
+
+    // Store post-intervention total units in session so project overview
+    // can reflect that the post-intervention stage has been started/completed
+    req.session.data['postInterventionUnits'] = postInterventionUnits;
 
     const baselineUnitsRaw = req.session.data['baselineUnits'];
     const baselineUnits =
@@ -1255,13 +1259,43 @@ function registerOnSitePostInterventionRoutes(router) {
       condition: conditionBefore
     }
 
+    // Build map data for parcel preview (same as habitat-details)
+    const layers = req.session.data['geopackageLayersPostIntervention'] || []
+    const geometries = req.session.data['geopackageGeometriesPostIntervention'] || {}
+    const boundaryLayerInfo = layers.find(
+      (l) =>
+        l.name.toLowerCase().includes('boundary') ||
+        l.name.toLowerCase().includes('site')
+    )
+    const parcelsLayerInfo = layers.find(
+      (l) =>
+        l.name.toLowerCase().includes('parcel') ||
+        l.name.toLowerCase().includes('habitat')
+    )
+    const siteBoundary = boundaryLayerInfo && geometries[boundaryLayerInfo.name]
+      ? geometries[boundaryLayerInfo.name]
+      : null
+    const allParcels = parcelsLayerInfo && geometries[parcelsLayerInfo.name]
+      ? geometries[parcelsLayerInfo.name]
+      : null
+    const parcelFeatureCollection = {
+      type: 'FeatureCollection',
+      features: [habitatData.feature]
+    }
+    const mapData = {
+      siteBoundary: siteBoundary || null,
+      parcels: allParcels || null,
+      parcel: parcelFeatureCollection
+    }
+
     res.render('on-site-post-intervention/habitat-edit', {
       habitat: habitat,
       id: parcelRef,
       habitatTypesByBroadHabitat: JSON.stringify(habitatTypesByBroadHabitat),
       habitatTypeItems: habitatTypeItems,
       baselineData: JSON.stringify(baselineData),
-      proposedStatus: 'Post-intervention'
+      proposedStatus: 'Post-intervention',
+      mapData: mapData
     })
   })
 
@@ -1271,32 +1305,48 @@ function registerOnSitePostInterventionRoutes(router) {
     const layers = req.session.data['geopackageLayersPostIntervention'] || []
     const geometries = req.session.data['geopackageGeometriesPostIntervention'] || {}
 
-    // Find parcels layer
-    const parcelsLayerInfo = layers.find(
+    // Find parcels layer by name (parcel/habitat), or fallback: find any layer containing this parcel ref
+    let parcelsLayerInfo = layers.find(
       (l) =>
         l.name.toLowerCase().includes('parcel') ||
         l.name.toLowerCase().includes('habitat')
     )
+    let parcelsLayer = parcelsLayerInfo && geometries[parcelsLayerInfo.name]
+      ? geometries[parcelsLayerInfo.name]
+      : null
 
-    if (!parcelsLayerInfo) {
-      return res.status(404).send('Parcels layer not found')
-    }
-
-    const parcelsLayer = geometries[parcelsLayerInfo.name]
-    if (!parcelsLayer || !parcelsLayer.features) {
-      return res.status(404).send('Parcels data not found')
-    }
-
-    // Find the feature by parcel ref
     let feature = null
     let featureIndex = -1
-    for (let i = 0; i < parcelsLayer.features.length; i++) {
-      const f = parcelsLayer.features[i]
-      const ref = f.properties['Parcel Ref'] || 'HP-' + (i + 1).toString().padStart(3, '0')
-      if (ref === parcelRef) {
-        feature = f
-        featureIndex = i
-        break
+
+    if (parcelsLayer && parcelsLayer.features) {
+      for (let i = 0; i < parcelsLayer.features.length; i++) {
+        const f = parcelsLayer.features[i]
+        const ref = f.properties['Parcel Ref'] || 'HP-' + (i + 1).toString().padStart(3, '0')
+        if (ref === parcelRef) {
+          feature = f
+          featureIndex = i
+          break
+        }
+      }
+    }
+
+    // Fallback: search all geometry layers for a feature with this parcel ref (e.g. if layer name has no "parcel"/"habitat")
+    if (!feature && geometries && typeof geometries === 'object') {
+      for (const layerName of Object.keys(geometries)) {
+        const layer = geometries[layerName]
+        if (!layer || !layer.features || !Array.isArray(layer.features)) continue
+        for (let i = 0; i < layer.features.length; i++) {
+          const f = layer.features[i]
+          const ref = (f.properties && f.properties['Parcel Ref']) || 'HP-' + (i + 1).toString().padStart(3, '0')
+          if (ref === parcelRef) {
+            feature = f
+            featureIndex = i
+            parcelsLayerInfo = { name: layerName }
+            parcelsLayer = layer
+            break
+          }
+        }
+        if (feature) break
       }
     }
 
@@ -1423,8 +1473,7 @@ function registerOnSitePostInterventionRoutes(router) {
         console.error('[PostIntervention] Session save error:', err)
         return res.status(500).send('Failed to save session')
       }
-      // Redirect back to details page
-      res.redirect('/on-site-post-intervention/habitat/' + encodeURIComponent(parcelRef) + '/details')
+      res.redirect('/on-site-post-intervention/habitats-summary')
     })
   })
 

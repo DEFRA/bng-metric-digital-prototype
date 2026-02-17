@@ -3,6 +3,12 @@
 //
 
 function registerProjectRoutes(router) {
+  router.get('/project/new', function (req, res) {
+    // Clear all project, baseline and post-intervention session data
+    req.session.data = {}
+    res.redirect('/project/name')
+  })
+
   router.get('/project/name', function (req, res) {
     res.render('project/name', {
       projectName: req.session.data['projectName'] || ''
@@ -16,7 +22,23 @@ function registerProjectRoutes(router) {
   })
 
   router.get('/project/details', function (req, res) {
+    const baselineUnits = req.session.data['baselineUnits']
+    const baselineComplete =
+      baselineUnits !== undefined && baselineUnits !== null
+
+    const postInterventionUnits = req.session.data['postInterventionUnits']
+    const postInterventionComplete =
+      postInterventionUnits !== undefined && postInterventionUnits !== null
+
     res.render('project/details', {
+      projectName: req.session.data['projectName'] || '',
+      baselineComplete: baselineComplete,
+      postInterventionComplete: postInterventionComplete
+    })
+  })
+
+  router.get('/project/details/review', function (req, res) {
+    res.render('project/review', {
       projectName: req.session.data['projectName'] || ''
     })
   })
