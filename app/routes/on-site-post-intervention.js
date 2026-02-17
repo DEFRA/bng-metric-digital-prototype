@@ -1087,12 +1087,42 @@ function registerOnSitePostInterventionRoutes(router) {
       trading_rule: null
     }
 
+    // Build map data for parcel preview (boundary + all parcels + highlighted parcel)
+    const layers = req.session.data['geopackageLayersPostIntervention'] || []
+    const geometries = req.session.data['geopackageGeometriesPostIntervention'] || {}
+    const boundaryLayerInfo = layers.find(
+      (l) =>
+        l.name.toLowerCase().includes('boundary') ||
+        l.name.toLowerCase().includes('site')
+    )
+    const parcelsLayerInfo = layers.find(
+      (l) =>
+        l.name.toLowerCase().includes('parcel') ||
+        l.name.toLowerCase().includes('habitat')
+    )
+    const siteBoundary = boundaryLayerInfo && geometries[boundaryLayerInfo.name]
+      ? geometries[boundaryLayerInfo.name]
+      : null
+    const allParcels = parcelsLayerInfo && geometries[parcelsLayerInfo.name]
+      ? geometries[parcelsLayerInfo.name]
+      : null
+    const parcelFeatureCollection = {
+      type: 'FeatureCollection',
+      features: [habitatData.feature]
+    }
+    const mapData = {
+      siteBoundary: siteBoundary || null,
+      parcels: allParcels || null,
+      parcel: parcelFeatureCollection
+    }
+
     // Render template
     res.render('on-site-post-intervention/habitat-details', {
       habitat: habitat,
       baseline: baseline,
       projectName: req.session.data['projectName'] || 'On-site post-development',
-      proposedStatus: 'Post-intervention'
+      proposedStatus: 'Post-intervention',
+      mapData: mapData
     })
   })
 

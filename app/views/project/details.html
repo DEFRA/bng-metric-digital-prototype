@@ -1,0 +1,53 @@
+{% extends "layouts/main.html" %}
+
+{% from "govuk/components/table/macro.njk" import govukTable %}
+
+{% set pageName = "Project details" %}
+
+{% block pageTitle %}{{ pageName }} – {{ serviceName }} – GOV.UK{% endblock %}
+
+{% block content %}
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+
+    <h1 class="govuk-heading-l">{{ projectName or 'Not set' }}</h1>
+    
+    <p class="govuk-body govuk-!-margin-top-6">
+      When you provide your information:
+    </p>
+
+    <ul class="govuk-list govuk-list--bullet">
+      <li>you'll need to complete each section before you can send the information</li>
+      <li>you can still make changes to a section even after it's marked as complete</li>
+      <li>you can save your progress at the end of each section if you need to come back later</li>
+    </ul>
+
+    {{ govukTable({
+      firstCellIsHeader: false,
+      head: [
+        { text: "", classes: "govuk-!-width-two-thirds" },
+        { text: "", classes: "govuk-!-width-one-third govuk-table__cell--numeric" }
+      ],
+      rows: [
+        [
+          { html: '<a href="/project/name" class="govuk-link">Project name</a>', classes: "govuk-!-width-two-thirds" },
+          { text: "Completed", classes: "govuk-table__cell--numeric" }
+        ],
+        [
+          { html: 'Project details', classes: "govuk-!-width-two-thirds" },
+          { text: "Not yet started", classes: "govuk-table__cell--numeric" }
+        ],
+        [
+          { html: '<a href="/on-site-baseline/start" class="govuk-link">Baseline</a>', classes: "govuk-!-width-two-thirds" },
+          { text: "Not yet started", classes: "govuk-table__cell--numeric" }
+        ],
+        [
+          { html: "Post intervention", classes: "govuk-!-width-two-thirds" },
+          { text: "Cannot start yet", classes: "govuk-table__cell--numeric" }
+        ]
+      ]
+    }) }}
+
+  </div>
+</div>
+{% endblock %}
