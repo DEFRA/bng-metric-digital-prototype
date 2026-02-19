@@ -396,8 +396,8 @@ function registerOnSiteBaselineRoutes(router) {
     let totalAreaHectares = 0
     let habitatParcels = []
     let mapData = {}
-    let lpaName = req.session.data['lpaName'] || 'Not specified'
-    let ncaName = req.session.data['ncaName'] || 'Not specified'
+    let lpaName = req.session.data['lpaName'] || ''
+    let ncaName = req.session.data['ncaName'] || ''
 
     if (isDrawingFlow) {
       // Drawing flow - use drawn geometries from session
@@ -612,6 +612,12 @@ function registerOnSiteBaselineRoutes(router) {
 
     // Build table rows for GovUK table component
     const tableRows = habitatParcels.map(function (parcel, index) {
+      const statusText = parcel.status || ''
+      let statusClass = ''
+      if (statusText === 'Incomplete') {
+        statusClass = 'govuk-tag--blue'
+      }
+
       return [
         {
           html:
@@ -622,11 +628,20 @@ function registerOnSiteBaselineRoutes(router) {
             '</a>'
         },
         { text: parcel.areaHectares },
-        { text: parcel.habitatLabel || 'Not specified' },
-        { text: parcel.distinctiveness || 'Not specified' },
-        { text: parcel.condition || 'Not specified' },
+        { text: parcel.habitatLabel || '' },
+        { text: parcel.distinctiveness || '' },
+        { text: parcel.condition || '' },
         { text: parcel.units ? parcel.units.toFixed(2) : '0.00' },
-        { text: parcel.status },
+        statusClass
+          ? {
+              html:
+                '<strong class="govuk-tag ' +
+                statusClass +
+                '">' +
+                statusText +
+                '</strong>'
+            }
+          : { text: statusText },
         {
           html:
             '<a class="govuk-link" href="' +
@@ -662,9 +677,9 @@ function registerOnSiteBaselineRoutes(router) {
             '</a>'
         },
         { text: lengthM.toFixed(1) },
-        { text: feature.properties["Baseline Hedge Type"] || 'Not specified' },
-        { text: feature.properties["Baseline Distinctiveness"] || 'Not specified' },
-        { text: feature.properties["Baseline Condition"] || 'Not specified' },
+        { text: feature.properties["Baseline Hedge Type"] || '' },
+        { text: feature.properties["Baseline Distinctiveness"] || '' },
+        { text: feature.properties["Baseline Condition"] || '' },
         { text: '0.00' },
         { text: 'Complete' },
         {
@@ -696,9 +711,9 @@ function registerOnSiteBaselineRoutes(router) {
             '</a>'
         },
         { text: lengthM.toFixed(1) },
-        { text: feature.properties["Baseline River Type"] || 'Not specified' },
-        { text: feature.properties["Baseline Distinctiveness"] || 'Not specified' },
-        { text: feature.properties["Baseline Condition"]?.replace(/^\d+\.\s*/, '') || 'Not specified' },
+        { text: feature.properties["Baseline River Type"] || '' },
+        { text: feature.properties["Baseline Distinctiveness"] || '' },
+        { text: feature.properties["Baseline Condition"]?.replace(/^\d+\.\s*/, '') || '' },
         { text: '0.00' },
         { text: 'Complete' },
         {

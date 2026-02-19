@@ -2,6 +2,7 @@
 
 {% from "govuk/components/table/macro.njk" import govukTable %}
 {% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/tag/macro.njk" import govukTag %}
 
 {% set pageName = "Project details" %}
 
@@ -30,6 +31,17 @@
         {% set postStatus = "Not yet started" %}
       {% endif %}
 
+      {# Build the Post intervention status cell once, then use in the table #}
+      {% set postStatusCell %}
+        {% if postStatus == "Not yet started" %}
+          {{ govukTag({ text: postStatus, classes: "govuk-tag--blue" }) }}
+        {% elseif postStatus == "Cannot start yet" %}
+          <span class="govuk-hint govuk-!-margin-0">{{ postStatus }}</span>
+        {% else %}
+          {{ postStatus }}
+        {% endif %}
+      {% endset %}
+
       {{ govukTable({
         firstCellIsHeader: false,
         head: [
@@ -43,7 +55,7 @@
           ],
           [
             { html: 'Project details', classes: "govuk-!-width-two-thirds" },
-            { text: "Not yet started", classes: "govuk-table__cell--numeric" }
+            { html: govukTag({ text: "Not yet started", classes: "govuk-tag--blue" }), classes: "govuk-table__cell--numeric" }
           ],
           [
             { html: '<a href="/on-site-baseline/start" class="govuk-link">Baseline</a>', classes: "govuk-!-width-two-thirds" },
@@ -51,7 +63,7 @@
           ],
           [
             { html: '<a href="/on-site-post-intervention/post-intervention-start" class="govuk-link">Post intervention</a>', classes: "govuk-!-width-two-thirds" },
-            { text: postStatus, classes: "govuk-table__cell--numeric" }
+            { html: postStatusCell | trim, classes: "govuk-table__cell--numeric" }
           ]
         ]
       }) }}
@@ -69,15 +81,15 @@
           ],
           [
             { html: 'Project details', classes: "govuk-!-width-two-thirds" },
-            { text: "Not yet started", classes: "govuk-table__cell--numeric" }
+            { html: govukTag({ text: "Not yet started", classes: "govuk-tag--blue" }), classes: "govuk-table__cell--numeric" }
           ],
           [
             { html: '<a href="/on-site-baseline/start" class="govuk-link">Baseline</a>', classes: "govuk-!-width-two-thirds" },
-            { text: "Not yet started", classes: "govuk-table__cell--numeric" }
+            { html: govukTag({ text: "Not yet started", classes: "govuk-tag--blue" }), classes: "govuk-table__cell--numeric" }
           ],
           [
             { html: "Post intervention", classes: "govuk-!-width-two-thirds" },
-            { text: "Cannot start yet", classes: "govuk-table__cell--numeric" }
+            { html: '<span class="govuk-hint govuk-!-margin-0">Cannot start yet</span>', classes: "govuk-table__cell--numeric" }
           ]
         ]
       }) }}

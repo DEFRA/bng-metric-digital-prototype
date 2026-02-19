@@ -37,7 +37,7 @@
 {% block beforeContent %}
   {{ govukBackLink({
     text: "Back",
-    href: "/on-site-post-intervention/habitat/" + id + "/details"
+    href: "/on-site-post-intervention/habitats-summary"
   }) }}
 {% endblock %}
 
@@ -60,6 +60,171 @@
 
       <form method="post" action="/on-site-post-intervention/habitat/{{ id }}/edit">
 
+        <div class="govuk-summary-card govuk-!-margin-top-6">
+          <div class="govuk-summary-card__content">
+            <!-- {% set interventionSelect %}
+              {{ govukSelect({
+                id: "intervention",
+                name: "intervention",
+                label: { text: "Intervention", classes: "govuk-visually-hidden" },
+                items: interventionItems,
+                value: habitat.retention_category or proposedStatus or ""
+              }) }}
+            {% endset %} -->
+
+            {% set strategicSignificanceSelect %}
+              {{ govukSelect({
+                id: "strategic_significance",
+                name: "strategic_significance",
+                label: { text: "Strategic significance", classes: "govuk-visually-hidden" },
+                items: habitat.strategic_significance_options or [],
+                value: habitat.strategic_significance or ""
+              }) }}
+            {% endset %}
+            {% set broadHabitatSelect %}
+              {{ govukSelect({
+                id: "broad_habitat",
+                name: "broad_habitat",
+                label: { text: "Broad habitat", classes: "govuk-visually-hidden" },
+                items: broadHabitatItems or [],
+                value: habitat.broad_habitat or ""
+              }) }}
+            {% endset %}
+            {% set habitatTypeSelect %}
+              {{ govukSelect({
+                id: "habitat_type",
+                name: "habitat_type",
+                label: { text: "Habitat type", classes: "govuk-visually-hidden" },
+                items: habitatTypeItems or [],
+                value: habitat.habitat_type or ""
+              }) }}
+            {% endset %}
+            {% if habitat.retention_category == "Lost" %}
+              {% set interventionLabel = "Created" %}
+            {% else %}
+              {% set interventionLabel = habitat.retention_category or "-" %}
+            {% endif %}
+            {{ govukSummaryList({
+              rows: [
+                { key: { text: "Intervention" }, value: { text: interventionLabel } },
+                { key: { text: "Reference" }, value: { text: habitat.id } },
+                { key: { text: "Broad habitat" }, value: { html: broadHabitatSelect } },
+                { key: { text: "Habitat type" }, value: { html: habitatTypeSelect } },
+                { key: { text: "Distinctiveness" }, value: { html: "<span id='distinctiveness-text'>" ~ (habitat.distinctiveness or "-") ~ "</span>" } },
+                { key: { text: "Strategic significance" }, value: { html: strategicSignificanceSelect } }
+                
+              ]
+            }) }}
+          </div>
+          <!-- { key: { text: "Strategic significance" }, value: { text: habitat.strategic_significance or "-" } } -->
+          <!-- { key: { text: "Strategic significance" }, value: { html: strategicSignificanceSelect } } -->
+        </div>
+
+        <input type="hidden" id="distinctiveness" name="distinctiveness" value="{{ habitat.distinctiveness or '' }}">
+        <input type="hidden" id="current-condition" value="{{ habitat.condition or '' }}">
+        <input type="hidden" id="standard_time_to_target_condition" name="standard_time_to_target_condition" value="{{ habitat.standard_time_to_target_condition or '' }}">
+        {% if habitat.advance_or_delay %}
+        <input type="hidden" id="final_time_to_target_condition" name="final_time_to_target_condition" value="{{ habitat.final_time_to_target_condition or '' }}">
+        {% else %}
+        <input type="hidden" id="final_time_to_target_condition" name="final_time_to_target_condition" value="">
+        {% endif %}
+        <input type="hidden" id="applied_difficulty_multiplier" name="applied_difficulty_multiplier" value="{{ habitat.applied_difficulty_multiplier or '' }}">
+        <input type="hidden" id="retention_category" value="{{ habitat.retention_category or '' }}">
+
+        <h2 class="govuk-heading-m govuk-!-margin-top-6">Time to target / difficulty</h2>
+        <div class="govuk-summary-card govuk-!-margin-top-4">
+          <div class="govuk-summary-card__content">
+            {% set targetConditionSelect %}
+              {{ govukSelect({
+                id: "target_condition",
+                name: "target_condition",
+                label: { text: "Target condition", classes: "govuk-visually-hidden" },
+                items: [
+                  { value: "", text: "Select" }
+                ],
+                value: habitat.target_condition or ""
+              }) }}
+            {% endset %}
+            {% set yearsAdvanceInput %}
+              {{ govukInput({
+                id: "years_advance",
+                name: "years_advance",
+                label: { text: "Years" },
+                value: habitat.years_advance or "",
+                classes: "govuk-input--width-4"
+              }) }}
+            {% endset %}
+            {% set yearsDelayInput %}
+              {{ govukInput({
+                id: "years_delay",
+                name: "years_delay",
+                label: { text: "Years" },
+                value: habitat.years_delay or "",
+                classes: "govuk-input--width-4"
+              }) }}
+            {% endset %}
+            {% set advanceOrDelayRadios %}
+              {{ govukRadios({
+                name: "advance_or_delay",
+                value: habitat.advance_or_delay or "",
+                items: [
+                  { value: "advance", text: "Habitat created in advance", conditional: { html: yearsAdvanceInput } },
+                  { value: "delay", text: "Delay in starting habitat creation", conditional: { html: yearsDelayInput } },
+                  { value: "neither", text: "Neither" }
+                ]
+              }) }}
+            {% endset %}
+            {% set finalTimeDisplay = (habitat.final_time_to_target_condition or "-") if habitat.advance_or_delay else "" %}
+            {{ govukSummaryList({
+              rows: [
+                { key: { text: "Target condition" }, value: { html: targetConditionSelect } },
+                { key: { text: "Standard time to target condition" }, value: { html: "<span id='standard-time-to-target'>" ~ (habitat.standard_time_to_target_condition or "-") ~ "</span>" } },
+                { key: { text: "Standard difficulty" }, value: { html: "<span id='standard-difficulty'>" ~ (habitat.standard_difficulty or "-") ~ "</span>" } },
+                { key: { text: "Advance or delay" }, value: { html: advanceOrDelayRadios } },
+                { key: { text: "Final time to target condition" }, value: { html: "<span id='final-time-to-target'>" ~ finalTimeDisplay ~ "</span>" } },
+                { key: { text: "Applied difficulty multiplier" }, value: { html: "<span id='applied-difficulty-multiplier'>"-"</span>" } }
+              ]
+            }) }}
+          </div>
+        </div>
+
+        <!-- { key: { text: "Applied difficulty multiplier" }, value: { html: "<span id='applied-difficulty-multiplier'>" ~ (habitat.applied_difficulty_multiplier or "-") ~ "</span>" } } -->
+
+        <div class="govuk-summary-card govuk-!-margin-top-6">
+          <div class="govuk-summary-card__content">
+            {{ govukSummaryList({
+              rows: [
+                { key: { text: "Habitat units delivered" }, value: { html: "<span id='habitat-units-delivered'></span>" } }
+              ]
+            }) }}
+          </div>
+        </div>
+
+        <!-- { key: { text: "Habitat units delivered" }, value: { html: "<span id='habitat-units-delivered'>" ~ (habitatUnitsDisplay or "0.0000") ~ "</span>" } } -->
+
+        <h2 class="govuk-heading-m govuk-!-margin-top-8">Supporting evidence</h2>
+        {{ govukTextarea({
+          name: "supporting_evidence",
+          id: "supporting-evidence",
+          value: habitat.supporting_evidence or habitat.comments or "",
+          label: { text: "Supporting evidence", classes: "govuk-visually-hidden" },
+          rows: 5
+        }) }}
+
+        <div class="govuk-button-group govuk-!-margin-top-6">
+          {{ govukButton({
+            text: "Save"
+          }) }}
+          <a href="/on-site-post-intervention/habitats-summary" class="govuk-link govuk-link--no-visited-state">Cancel</a>
+        </div>
+
+
+        <!-- <hr>
+
+
+        <div class="govuk-form-group">
+
+              
         {{ govukSelect({
           label: { text: "Broad habitat", classes: "govuk-label--m" },
           id: "broad_habitat",
@@ -215,7 +380,7 @@
             href: "/on-site-post-intervention/habitats-summary",
             classes: "govuk-button--secondary"
           }) }}
-        </div>
+        </div> -->
 
       </form>
 
@@ -223,6 +388,11 @@
   </div>
 
   <script type="application/json" id="habitat-types-by-broad">{{ habitatTypesByBroadHabitat | safe }}</script>
+  <script type="application/json" id="distinctiveness-categories">{{ distinctivenessCategories | safe }}</script>
+  <script type="application/json" id="condition-scores">{{ conditionScores | safe }}</script>
+  <script type="application/json" id="creation-time-to-target">{{ creationTimeToTarget | safe }}</script>
+  <script type="application/json" id="habitat-difficulty">{{ habitatDifficulty | safe }}</script>
+  <script type="application/json" id="habitat-difficulty-multiplier">{{ habitatDifficultyMultiplier | safe }}</script>
   <script>
     (function () {
       // Wait for DOM to be ready
@@ -235,9 +405,208 @@
       function init() {
         var dataEl = document.getElementById('habitat-types-by-broad')
         var mapping = dataEl ? JSON.parse(dataEl.textContent) : {}
+        var distinctivenessEl = document.getElementById('distinctiveness-categories')
+        var distinctivenessCategories = distinctivenessEl ? JSON.parse(distinctivenessEl.textContent) : {}
+        var conditionScoresEl = document.getElementById('condition-scores')
+        var conditionScores = conditionScoresEl ? JSON.parse(conditionScoresEl.textContent) : {}
+        var creationTimeEl = document.getElementById('creation-time-to-target')
+        var creationTimeToTarget = creationTimeEl ? JSON.parse(creationTimeEl.textContent) : {}
+        var habitatDifficultyEl = document.getElementById('habitat-difficulty')
+        var habitatDifficulty = habitatDifficultyEl ? JSON.parse(habitatDifficultyEl.textContent) : {}
+        var habitatDifficultyMultiplierEl = document.getElementById('habitat-difficulty-multiplier')
+        var habitatDifficultyMultiplier = habitatDifficultyMultiplierEl ? JSON.parse(habitatDifficultyMultiplierEl.textContent) : {}
         var broadSelect = document.getElementById('broad_habitat')
         var typeSelect = document.getElementById('habitat_type')
+        var distinctivenessSelect = document.getElementById('distinctiveness')
+        var targetConditionSelect = document.getElementById('target_condition')
+        var standardTimeSpan = document.getElementById('standard-time-to-target')
+        var standardTimeInput = document.getElementById('standard_time_to_target_condition')
+        var standardDifficultySpan = document.getElementById('standard-difficulty')
+        var retentionCategoryInput = document.getElementById('retention_category')
+        var finalTimeSpan = document.getElementById('final-time-to-target')
+        var finalTimeInput = document.getElementById('final_time_to_target_condition')
+        var appliedDifficultySpan = document.getElementById('applied-difficulty-multiplier')
+        var appliedDifficultyInput = document.getElementById('applied_difficulty_multiplier')
         if (!broadSelect || !typeSelect) return
+        
+        // Update distinctiveness value and displayed text from distinctivenessCategories when habitat type changes
+        function updateDistinctivenessFromHabitatType() {
+          if (!distinctivenessSelect) return
+          var fullHabitatType = typeSelect.value || ''
+          var distinctiveness = fullHabitatType ? (distinctivenessCategories[fullHabitatType] || '') : ''
+          if (distinctiveness) {
+            distinctivenessSelect.value = distinctiveness
+            var distinctivenessText = document.getElementById('distinctiveness-text')
+            if (distinctivenessText) {
+              distinctivenessText.textContent = distinctiveness
+            }
+          }
+        }
+
+        var initialConditionInput = document.getElementById('current-condition')
+        var initialConditionValue = initialConditionInput ? (initialConditionInput.value || '') : ''
+        var hasInitialisedTargetCondition = false
+
+        // Update Target condition options from conditionScores when habitat type changes
+        function updateTargetConditionOptions() {
+          if (!targetConditionSelect) return
+          var fullHabitatType = typeSelect.value || ''
+          var scoresForHabitat = fullHabitatType ? (conditionScores[fullHabitatType] || null) : null
+
+          // Preserve previously selected value if possible
+          var previousValue = targetConditionSelect.value || ''
+          if (!previousValue && !hasInitialisedTargetCondition && initialConditionValue) {
+            previousValue = initialConditionValue
+          }
+
+          // Clear existing options
+          targetConditionSelect.length = 0
+
+          // Always add default "Select" option
+          var opt = document.createElement('option')
+          opt.value = ''
+          opt.textContent = 'Select'
+          targetConditionSelect.appendChild(opt)
+
+          if (scoresForHabitat) {
+            // Desired order of conditions
+            var conditionOrder = [
+              'Good',
+              'Fairly Good',
+              'Moderate',
+              'Fairly Poor',
+              'Poor',
+              'Condition Assessment N/A',
+              'N/A - Other'
+            ]
+
+            conditionOrder.forEach(function (label) {
+              if (Object.prototype.hasOwnProperty.call(scoresForHabitat, label)) {
+                var score = scoresForHabitat[label]
+                if (score !== 'Not Possible') {
+                  var o = document.createElement('option')
+                  o.value = label
+                  o.textContent = label
+                  if (label === previousValue) {
+                    o.selected = true
+                  }
+                  targetConditionSelect.appendChild(o)
+                }
+              }
+            })
+          }
+
+          hasInitialisedTargetCondition = true
+
+          // After updating the options and selection, update the standard time text
+          updateStandardTimeToTarget()
+        }
+
+        // Update "Standard time to target condition" text from creationTimeToTarget
+        function updateStandardTimeToTarget() {
+          if (!standardTimeSpan || !standardTimeInput) return
+          var fullHabitatType = typeSelect.value || ''
+          var targetCondition = targetConditionSelect ? (targetConditionSelect.value || '') : ''
+
+          var timeValue = null
+          if (fullHabitatType && targetCondition && creationTimeToTarget[fullHabitatType]) {
+            timeValue = creationTimeToTarget[fullHabitatType][targetCondition]
+          }
+
+          if (timeValue === undefined || timeValue === null) {
+            standardTimeSpan.textContent = '-'
+            standardTimeInput.value = ''
+          } else {
+            standardTimeSpan.textContent = timeValue
+            standardTimeInput.value = timeValue
+          }
+        }
+
+        // Update "Final time to target condition" based on standard time and advance/delay (blank if no radio selected)
+        function updateFinalTimeToTarget() {
+          if (!finalTimeSpan || !finalTimeInput) return
+
+          var advanceDelay = document.querySelector('input[name="advance_or_delay"]:checked')
+          if (!advanceDelay) {
+            finalTimeSpan.textContent = ''
+            finalTimeInput.value = ''
+            return
+          }
+
+          var base = parseFloat(standardTimeInput && standardTimeInput.value ? standardTimeInput.value : '')
+          if (isNaN(base)) {
+            finalTimeSpan.textContent = ''
+            finalTimeInput.value = ''
+            return
+          }
+
+          var mode = advanceDelay.value
+          var years = 0
+          if (mode === 'advance') {
+            var yearsAdvanceEl = document.getElementById('years_advance')
+            years = yearsAdvanceEl && yearsAdvanceEl.value ? parseFloat(yearsAdvanceEl.value) : 0
+            if (isNaN(years)) years = 0
+            base = base - years
+          } else if (mode === 'delay') {
+            var yearsDelayEl = document.getElementById('years_delay')
+            years = yearsDelayEl && yearsDelayEl.value ? parseFloat(yearsDelayEl.value) : 0
+            if (isNaN(years)) years = 0
+            base = base + years
+          }
+
+          if (base < 0) base = 0
+
+          finalTimeSpan.textContent = base
+          finalTimeInput.value = base
+        }
+
+        // Update "Standard difficulty" text from habitatDifficulty based on habitat type and intervention
+        function updateStandardDifficulty() {
+          if (!standardDifficultySpan) return
+          var fullHabitatType = (typeSelect.value || '').trim()
+          var retentionCategory = retentionCategoryInput ? (retentionCategoryInput.value || '').trim() : ''
+
+          if (!fullHabitatType || !retentionCategory || !habitatDifficulty[fullHabitatType]) {
+            standardDifficultySpan.textContent = '-'
+            return
+          }
+
+          var key
+          if (retentionCategory === 'Enhanced') {
+            key = 'Enhancement'
+          } else if (retentionCategory === 'Lost') {
+            key = 'Creation'
+          } else {
+            standardDifficultySpan.textContent = '-'
+            return
+          }
+
+          var value = habitatDifficulty[fullHabitatType][key]
+          if (!value) {
+            standardDifficultySpan.textContent = '-'
+          } else {
+            standardDifficultySpan.textContent = value
+          }
+
+          // Whenever standard difficulty changes, update the applied multiplier
+          updateAppliedDifficultyMultiplier()
+        }
+
+        // Update "Applied difficulty multiplier" from habitatDifficultyMultiplier based on current standard difficulty
+        function updateAppliedDifficultyMultiplier() {
+          if (!appliedDifficultySpan || !appliedDifficultyInput) return
+          var difficulty = (standardDifficultySpan && standardDifficultySpan.textContent ? standardDifficultySpan.textContent : '').trim()
+
+          if (!difficulty || !habitatDifficultyMultiplier[difficulty]) {
+            appliedDifficultySpan.textContent = '-'
+            appliedDifficultyInput.value = ''
+            return
+          }
+
+          var multiplier = habitatDifficultyMultiplier[difficulty]
+          appliedDifficultySpan.textContent = multiplier
+          appliedDifficultyInput.value = multiplier
+        }
         
         // Store the initial value from the server-rendered select
         // Get it from the selected option if available, otherwise from the value attribute
@@ -273,9 +642,40 @@
           if (!foundMatch && currentValue && currentValue.trim() !== '') {
             console.log('Habitat type value not found in options:', currentValue, 'for broad habitat:', broadValue, 'Available types:', types)
           }
+          updateDistinctivenessFromHabitatType()
+          updateTargetConditionOptions()
+          updateStandardDifficulty()
+          updateFinalTimeToTarget()
         }
         broadSelect.addEventListener('change', function () {
           setHabitatTypeOptions(this.value)
+        })
+        typeSelect.addEventListener('change', function () {
+          updateDistinctivenessFromHabitatType()
+          updateTargetConditionOptions()
+          updateStandardDifficulty()
+          updateFinalTimeToTarget()
+        })
+        if (targetConditionSelect) {
+          targetConditionSelect.addEventListener('change', function () {
+            updateStandardTimeToTarget()
+            updateFinalTimeToTarget()
+          })
+        }
+        // Update final time when advance/delay choice or years values change
+        var yearsAdvanceEl = document.getElementById('years_advance')
+        var yearsDelayEl = document.getElementById('years_delay')
+        var advanceDelayRadios = document.querySelectorAll('input[name="advance_or_delay"]')
+        if (yearsAdvanceEl) {
+          yearsAdvanceEl.addEventListener('input', updateFinalTimeToTarget)
+          yearsAdvanceEl.addEventListener('change', updateFinalTimeToTarget)
+        }
+        if (yearsDelayEl) {
+          yearsDelayEl.addEventListener('input', updateFinalTimeToTarget)
+          yearsDelayEl.addEventListener('change', updateFinalTimeToTarget)
+        }
+        advanceDelayRadios.forEach(function (radio) {
+          radio.addEventListener('change', updateFinalTimeToTarget)
         })
         // Initialize habitat type options on page load, preserving the initial value
         if (broadSelect.value) {
@@ -289,6 +689,13 @@
               setHabitatTypeOptions(extractedBroad, initialHabitatType)
             }
           }
+        } else {
+          // No broad or initial type set; still attempt to sync dependent fields
+          updateDistinctivenessFromHabitatType()
+          updateTargetConditionOptions()
+          updateStandardDifficulty()
+          updateFinalTimeToTarget()
+          updateAppliedDifficultyMultiplier()
         }
       }
     })()
@@ -326,16 +733,17 @@
         console.log('Area:', area)
 
         var habitatTypeSelect = document.getElementById('habitat_type')
-        var conditionSelect = document.getElementById('condition')
-        var createdInAdvanceSelect = document.getElementById('created_in_advance')
-        var delayInStartingSelect = document.getElementById('delay_in_starting')
-        var habitatUnitsDisplay = document.getElementById('habitat_units')
+        var targetConditionSelectForUnits = document.getElementById('target_condition')
+        var yearsAdvanceInput = document.getElementById('years_advance')
+        var yearsDelayInput = document.getElementById('years_delay')
+        var advanceDelayRadiosForUnits = document.querySelectorAll('input[name=\"advance_or_delay\"]')
+        var habitatUnitsDisplay = document.getElementById('habitat-units-delivered') || document.getElementById('habitat_units')
         
         console.log('DOM elements found:', {
           habitatTypeSelect: !!habitatTypeSelect,
-          conditionSelect: !!conditionSelect,
-          createdInAdvanceSelect: !!createdInAdvanceSelect,
-          delayInStartingSelect: !!delayInStartingSelect,
+          targetConditionSelect: !!targetConditionSelectForUnits,
+          yearsAdvanceInput: !!yearsAdvanceInput,
+          yearsDelayInput: !!yearsDelayInput,
           habitatUnitsDisplay: !!habitatUnitsDisplay
         })
 
@@ -343,19 +751,24 @@
 
         function updateHabitatUnits() {
           var retentionCategory = baseline.retentionCategory
-          var fullHabitatBefore = (baseline.broadHabitat && baseline.habitatType)
-            ? baseline.broadHabitat + ' - ' + baseline.habitatType
-            : null
-          var conditionBefore = baseline.condition
 
+          // No baseline used here per spec: habitatBefore and conditionBefore are null on server
           var fullHabitatAfter = habitatTypeSelect ? habitatTypeSelect.value : null
-          var conditionAfter = conditionSelect ? conditionSelect.value : null
-          if (conditionAfter) conditionAfter = conditionAfter.replace(/^\d+\.\s*/, '')
+          var conditionAfter = targetConditionSelectForUnits ? targetConditionSelectForUnits.value : null
 
-          var delayVal = delayInStartingSelect ? delayInStartingSelect.value : ''
-          var advanceVal = createdInAdvanceSelect ? createdInAdvanceSelect.value : ''
-          var delayYears = delayVal === '30+' ? 30 : (parseInt(delayVal, 10) || 0)
-          var advanceYears = advanceVal === '30+' ? 30 : (parseInt(advanceVal, 10) || 0)
+          // Derive advance/delay years from current radio selection and years inputs
+          var selectedAdvanceDelay = document.querySelector('input[name=\"advance_or_delay\"]:checked')
+          var mode = selectedAdvanceDelay ? selectedAdvanceDelay.value : 'neither'
+
+          var delayYears = 0
+          var advanceYears = 0
+          if (mode === 'advance') {
+            var advVal = yearsAdvanceInput && yearsAdvanceInput.value ? yearsAdvanceInput.value : ''
+            advanceYears = advVal === '30+' ? 30 : (parseInt(advVal, 10) || 0)
+          } else if (mode === 'delay') {
+            var delVal = yearsDelayInput && yearsDelayInput.value ? yearsDelayInput.value : ''
+            delayYears = delVal === '30+' ? 30 : (parseInt(delVal, 10) || 0)
+          }
 
           console.log('updateHabitatUnits called:', {
             retentionCategory: retentionCategory,
@@ -371,8 +784,8 @@
           // Call API to calculate units using GET with query parameters
           var params = new URLSearchParams({
             retentionCategory: retentionCategory || '',
-            fullHabitatBefore: fullHabitatBefore || '',
-            conditionBefore: conditionBefore || '',
+            fullHabitatBefore: '',
+            conditionBefore: '',
             fullHabitatAfter: fullHabitatAfter || '',
             conditionAfter: conditionAfter || '',
             area: area,
@@ -396,22 +809,27 @@
           })
         }
 
-        // Attach event listeners to all relevant dropdowns
+        // Attach event listeners to all relevant controls for units
         if (habitatTypeSelect) {
           habitatTypeSelect.addEventListener('change', updateHabitatUnits)
           console.log('Event listener attached to habitat_type')
         }
-        if (conditionSelect) {
-          conditionSelect.addEventListener('change', updateHabitatUnits)
-          console.log('Event listener attached to condition')
+        if (targetConditionSelectForUnits) {
+          targetConditionSelectForUnits.addEventListener('change', updateHabitatUnits)
+          console.log('Event listener attached to target_condition (for units)')
         }
-        if (createdInAdvanceSelect) {
-          createdInAdvanceSelect.addEventListener('change', updateHabitatUnits)
-          console.log('Event listener attached to created_in_advance')
+        if (yearsAdvanceInput) {
+          yearsAdvanceInput.addEventListener('input', updateHabitatUnits)
+          yearsAdvanceInput.addEventListener('change', updateHabitatUnits)
         }
-        if (delayInStartingSelect) {
-          delayInStartingSelect.addEventListener('change', updateHabitatUnits)
-          console.log('Event listener attached to delay_in_starting')
+        if (yearsDelayInput) {
+          yearsDelayInput.addEventListener('input', updateHabitatUnits)
+          yearsDelayInput.addEventListener('change', updateHabitatUnits)
+        }
+        if (advanceDelayRadiosForUnits && advanceDelayRadiosForUnits.length) {
+          advanceDelayRadiosForUnits.forEach(function (radio) {
+            radio.addEventListener('change', updateHabitatUnits)
+          })
         }
 
         // Calculate initial units on page load
