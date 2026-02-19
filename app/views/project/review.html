@@ -1,20 +1,21 @@
 {% extends "layouts/main.html" %}
+{% from "govuk/components/panel/macro.njk" import govukPanel %}
 
-{% set pageName = "Review and send your information" %}
+{% set pageName="Confirmation" %}
 
-{% block pageTitle %}{{ pageName }} – {{ serviceName }} – GOV.UK{% endblock %}
 
 {% block content %}
+
 <div class="govuk-grid-row">
   <div class="govuk-grid-column-two-thirds">
+    {{ govukPanel({
+      titleText: "Your information is ready for " + (projectName or 'this project'),
+      classes: "govuk-panel--confirmation"
+    }) }}
 
-    <h1 class="govuk-heading-l">{{ pageName }}</h1>
-
-    <p class="govuk-body">
-      This is a placeholder page for reviewing and sending information for project: <strong>{{ projectName or 'Not set' }}</strong>.
-    </p>
-
+    <p class="govuk-body"><a href="#" class="govuk-link">Download a PDF of your BNG metric</a></p>
   </div>
 </div>
+
 {% endblock %}
 

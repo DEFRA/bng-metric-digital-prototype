@@ -19,6 +19,9 @@ const metricCalcs = require('../lib/metric-calcs')
 const distinctivenessCategories = metricCalcs.distinctivenessCategories || {}
 const distinctivenesScores = metricCalcs.distinctivenesScores || {}
 const conditionScores = metricCalcs.conditionScores || {}
+const creationTimeToTarget = metricCalcs.creationTimeToTarget || {}
+const habitatDifficultyMultiplier = metricCalcs.habitatDifficultyMultiplier || {}
+const habitatDifficulty = metricCalcs.habitatDifficulty || {}
 const getRetentionUnits = metricCalcs.getRetentionUnits || {}
 const getCreationUnits = metricCalcs.getCreationUnits || {}
 const getEnhancementUnits = metricCalcs.getEnhancementUnits || {}
@@ -31,6 +34,13 @@ const maxFileSizeMB = 100
 const boundaryLayerName = 'Red Line Boundary'
 const maxBoundaryFeatures = 10
 const maxPolygonSize = 1000000000 // 1000 sq km
+
+const STRATEGIC_SIGNIFICANCE_OPTIONS = [
+  { value: '', text: 'Select' },
+  { value: 'Area/compensation not in local strategy/ no local strategy', text: 'Low Strategic Significance' },
+  { value: 'Location ecologically desirable but not in local strategy', text: 'Medium strategic significance' },
+  { value: 'Formally identified in local strategy', text: 'High strategic significance' }
+]
 
 /*
 const distinctivenessScores = {
@@ -379,8 +389,8 @@ function registerOnSitePostInterventionRoutes(router) {
     let totalAreaHectares = 0
     let habitatParcels = []
     let mapData = {}
-    // let lpaName = req.session.data['lpaName'] || 'Not specified'
-    // let ncaName = req.session.data['ncaName'] || 'Not specified'
+    // let lpaName = req.session.data['lpaName'] || ''
+    // let ncaName = req.session.data['ncaName'] || ''
 
     if (isDrawingFlow) {
       // Drawing flow - use drawn geometries from session
@@ -507,8 +517,8 @@ function registerOnSitePostInterventionRoutes(router) {
           let distinctiveness = distinctivenessCategories[fullHabitat] || null
           let condition = feature.properties['Proposed Condition'] || null
 
-          let createdInAdvance = feature.properties['Habitat created in advance/years'] || null
-          let delayInStarting = feature.properties['Delay in starting habitat creation/years'] || null
+          let createdInAdvance = feature.properties['created_in_advance'] ?? feature.properties['Habitat created in advance/years'] ?? null
+          let delayInStarting = feature.properties['delay_in_starting'] ?? feature.properties['Delay in starting habitat creation/years'] ?? null
           let spatialRiskCategory = feature.properties['Spatial risk category'] || null
 
           // Remove the number and period from the condition
@@ -673,6 +683,12 @@ function registerOnSitePostInterventionRoutes(router) {
 
     // Build table rows for GovUK table component
     const tableRows = habitatParcels.map(function (parcel, index) {
+      const statusText = parcel.status || ''
+      let statusClass = ''
+      if (statusText === 'Incomplete') {
+        statusClass = 'govuk-tag--blue'
+      }
+
       return [
         {
           html:
@@ -685,12 +701,21 @@ function registerOnSitePostInterventionRoutes(router) {
             '</a>'
         },
         { text: parcel.areaHectares },
-        { text: parcel.habitatLabel || 'Not specified' },
-        { text: parcel.distinctiveness || 'Not specified' },
-        { text: parcel.condition || 'Not specified' },
-        { text: parcel.retentionCategory === 'Lost' ? 'Created' : (parcel.retentionCategory || 'Not specified') },
-        { text: parcel.units ? parcel.units.toFixed(2) : '0.00' },
-        { text: parcel.status },
+        { text: parcel.habitatLabel || '' },
+        { text: parcel.distinctiveness || '' },
+        { text: parcel.condition || '' },
+        { text: parcel.retentionCategory === 'Lost' ? 'Created' : (parcel.retentionCategory || '') },
+        { text: statusText === 'Incomplete' ? '' : (parcel.units ? parcel.units.toFixed(2) : '0.00') },
+        statusClass
+          ? {
+              html:
+                '<strong class="govuk-tag ' +
+                statusClass +
+                '">' +
+                statusText +
+                '</strong>'
+            }
+          : { text: statusText },
         {
           html:
             '<a class="govuk-link" href="/on-site-post-intervention/habitat/' +
@@ -722,9 +747,9 @@ function registerOnSitePostInterventionRoutes(router) {
             '</a>'
         },
         { text: lengthM.toFixed(1) },
-        { text: feature.properties["Baseline Hedge Type"] || 'Not specified' },
-        { text: feature.properties["Baseline Distinctiveness"] || 'Not specified' },
-        { text: feature.properties["Baseline Condition"] || 'Not specified' },
+        { text: feature.properties["Baseline Hedge Type"] || '' },
+        { text: feature.properties["Baseline Distinctiveness"] || '' },
+        { text: feature.properties["Baseline Condition"] || '' },
         { text: 'Complete' },
         {
           html:
@@ -757,11 +782,11 @@ function registerOnSitePostInterventionRoutes(router) {
             '</a>'
         },
         { text: lengthM.toFixed(1) },
-        { text: feature.properties["Baseline River Type"] || 'Not specified' },
-        { text: feature.properties["Baseline Distinctiveness"] || 'Not specified' },
-        { text: feature.properties["Baseline Condition"].replace(/^\d+\.\s*/, '') || 'Not specified' },
-        { text: feature.properties["Baseline Encroachment into Watercourse"] || 'Not specified' },
-        { text: feature.properties["Baseline Encroachment into riparian zone"].replace(/^\d+\.\s*/, '') || 'Not specified' },
+        { text: feature.properties["Baseline River Type"] || '' },
+        { text: feature.properties["Baseline Distinctiveness"] || '' },
+        { text: feature.properties["Baseline Condition"].replace(/^\d+\.\s*/, '') || '' },
+        { text: feature.properties["Baseline Encroachment into Watercourse"] || '' },
+        { text: feature.properties["Baseline Encroachment into riparian zone"].replace(/^\d+\.\s*/, '') || '' },
         { text: 'Complete' },
         {
           html:
@@ -777,8 +802,9 @@ function registerOnSitePostInterventionRoutes(router) {
 
 
     // Build table rows for GovUK table component
-    // Sum habitat parcel units for post-intervention total
+    // Sum habitat parcel units for post-intervention total (only count units for Complete rows; Incomplete = 0)
     const postInterventionUnits = habitatParcels.reduce(function (sum, parcel) {
+      if ((parcel.status || '') === 'Incomplete') return sum;
       const units = typeof parcel.units === 'number' ? parcel.units : 0;
       return sum + units;
     }, 0);
@@ -1039,27 +1065,27 @@ function registerOnSitePostInterventionRoutes(router) {
     // Build habitat object for template
     const habitat = {
       id: habitatData.parcelRef,
-      broad_habitat: habitatData.broadHabitat || 'Not specified',
-      habitat_type: habitatData.habitatType || 'Not specified',
+      broad_habitat: habitatData.broadHabitat || '',
+      habitat_type: habitatData.habitatType || '',
       area_hectares: habitatData.areaHa,
-      distinctiveness: habitatData.distinctiveness || 'Not specified',
-      condition: habitatData.condition || 'Not specified',
+      distinctiveness: habitatData.distinctiveness || '',
+      condition: habitatData.condition || '',
       habitat_units: habitatUnits,
       units: habitatUnits,
-      strategic_significance: habitatData.strategicSignificance || 'Not specified',
-      created_in_advance: habitatData.createdInAdvance || 'Not specified',
-      delay_in_starting: habitatData.delayInStarting || 'Not specified',
-      spatial_risk_category: habitatData.spatialRiskCategory || 'Not specified',
+      strategic_significance: habitatData.strategicSignificance || '',
+      created_in_advance: habitatData.createdInAdvance || '',
+      delay_in_starting: habitatData.delayInStarting || '',
+      spatial_risk_category: habitatData.spatialRiskCategory || '',
       comments: habitatData.props['Comments'] || null
     }
 
     // Baseline properties
-    const baselineHabitatType = habitatData.props['Baseline Habitat Type'] || 'Not specified'
-    const baselineDistinctiveness = habitatData.props['Baseline Distinctiveness'] || 'Not specified'
-    let baselineCondition = habitatData.props['Baseline Condition'] || 'Not specified'
+    const baselineHabitatType = habitatData.props['Baseline Habitat Type'] || ''
+    const baselineDistinctiveness = habitatData.props['Baseline Distinctiveness'] || ''
+    let baselineCondition = habitatData.props['Baseline Condition'] || ''
     
     // Remove the number and period from the baseline condition
-    if (baselineCondition !== 'Not specified') {
+    if (baselineCondition !== '') {
       baselineCondition = baselineCondition.replace(/^\d+\.\s*/, '')
     }
 
@@ -1069,7 +1095,7 @@ function registerOnSitePostInterventionRoutes(router) {
       baselineBroadHabitat = baselineHabitatType.split(' - ')[0]
     }
     if (!baselineBroadHabitat) {
-      baselineBroadHabitat = 'Not specified'
+      baselineBroadHabitat = ''
     }
 
     let baselineFullHabitat = baselineBroadHabitat + ' - ' + baselineHabitatType;
@@ -1084,8 +1110,8 @@ function registerOnSitePostInterventionRoutes(router) {
       habitat_type: baselineHabitatType,
       distinctiveness: baselineDistinctiveness,
       condition: baselineCondition,
-      strategic_significance: habitatData.props['Baseline Strategic Significance'] || habitatData.props['Baseline Strategic significance'] || 'Not specified',
-      retention_category: habitatData.props['Retention Category'] || 'Not specified',
+      strategic_significance: habitatData.props['Baseline Strategic Significance'] || habitatData.props['Baseline Strategic significance'] || '',
+      retention_category: habitatData.props['Retention Category'] || '',
       area_lost: areaLost,
       units_lost: unitsLost.toFixed(2),
       trading_rule: null
@@ -1164,7 +1190,7 @@ function registerOnSitePostInterventionRoutes(router) {
         numericDelayInStarting = 30
       } else {
         const parsed = Number(habitatData.delayInStarting)
-        numericDelayInStarting = isNaN(parsed) ? 0 : parsed
+        numericDelayInStarting = isNaN(parsed) ? null : parsed
       }
     }
     if (habitatData.createdInAdvance) {
@@ -1172,7 +1198,7 @@ function registerOnSitePostInterventionRoutes(router) {
         numericCreatedInAdvance = 30
       } else {
         const parsed = Number(habitatData.createdInAdvance)
-        numericCreatedInAdvance = isNaN(parsed) ? 0 : parsed
+        numericCreatedInAdvance = isNaN(parsed) ? null : parsed
       }
     }
 
@@ -1226,7 +1252,34 @@ function registerOnSitePostInterventionRoutes(router) {
       }
     }
 
-    // Build habitat object for template
+    // Build habitat object for template (retention_category from feature props for Intervention display)
+    const retentionCategoryFromProps = (habitatData.props && habitatData.props['Retention Category']) || ''
+    const rawCreatedInAdvance = habitatData.createdInAdvance
+    const rawDelayInStarting = habitatData.delayInStarting
+    const isEmpty = function (v) {
+      return v === undefined || v === null || String(v).trim() === ''
+    }
+    const createdInAdvanceNum = !isEmpty(rawCreatedInAdvance) ? Number(String(rawCreatedInAdvance).trim()) : 0
+    const delayInStartingNum = !isEmpty(rawDelayInStarting) ? Number(String(rawDelayInStarting).trim()) : 0
+    const createdInAdvance = createdInAdvanceNum > 0 ? String(createdInAdvanceNum) : ''
+    const delayInStarting = delayInStartingNum > 0 ? String(delayInStartingNum) : ''
+    let advanceOrDelay = ''
+    let yearsAdvance = ''
+    let yearsDelay = ''
+    const bothEmpty = isEmpty(rawCreatedInAdvance) && isEmpty(rawDelayInStarting)
+    if (bothEmpty) {
+      // No radio selected when both are empty
+      advanceOrDelay = ''
+    } else if (createdInAdvanceNum > 0) {
+      advanceOrDelay = 'advance'
+      yearsAdvance = createdInAdvance
+    } else if (delayInStartingNum > 0) {
+      advanceOrDelay = 'delay'
+      yearsDelay = delayInStarting
+    } else {
+      // One or both are 0 (not empty): preselect "Neither"
+      advanceOrDelay = 'neither'
+    }
     const habitat = {
       ref: habitatData.parcelRef,
       id: habitatData.parcelRef,
@@ -1235,11 +1288,16 @@ function registerOnSitePostInterventionRoutes(router) {
       area_hectares: habitatData.areaHa,
       distinctiveness: habitatData.distinctiveness || '',
       condition: habitatData.condition || '',
+      retention_category: retentionCategoryFromProps || habitatData.retentionCategory || '',
       habitat_units: habitatUnits,
       strategic_significance: habitatData.strategicSignificance || '',
-      created_in_advance: habitatData.createdInAdvance || '',
-      delay_in_starting: habitatData.delayInStarting || '',
-      comments: habitatData.props['Comments'] || ''
+      created_in_advance: createdInAdvance,
+      delay_in_starting: delayInStarting,
+      advance_or_delay: advanceOrDelay,
+      years_advance: yearsAdvance,
+      years_delay: yearsDelay,
+      comments: habitatData.props['Comments'] || '',
+      strategic_significance_options: STRATEGIC_SIGNIFICANCE_OPTIONS
     }
 
     // Organize habitat types by broad habitat
@@ -1250,6 +1308,12 @@ function registerOnSitePostInterventionRoutes(router) {
     const habitatTypeItems = currentBroadHabitat && habitatTypesByBroadHabitat[currentBroadHabitat]
       ? [{ value: '', text: 'Select' }, ...habitatTypesByBroadHabitat[currentBroadHabitat].map(ht => ({ value: ht, text: ht }))]
       : [{ value: '', text: 'Select' }]
+
+    // Build broad habitat options (sorted) for dropdown
+    const broadHabitatItems = [
+      { value: '', text: 'Select' },
+      ...Object.keys(habitatTypesByBroadHabitat).sort().map(b => ({ value: b, text: b }))
+    ]
 
     // Prepare baseline data for client-side calculation
     const baselineData = {
@@ -1291,8 +1355,15 @@ function registerOnSitePostInterventionRoutes(router) {
     res.render('on-site-post-intervention/habitat-edit', {
       habitat: habitat,
       id: parcelRef,
+      retention_category: habitatData.retentionCategory || '',
       habitatTypesByBroadHabitat: JSON.stringify(habitatTypesByBroadHabitat),
       habitatTypeItems: habitatTypeItems,
+      broadHabitatItems: broadHabitatItems,
+      distinctivenessCategories: JSON.stringify(distinctivenessCategories),
+      conditionScores: JSON.stringify(conditionScores),
+      creationTimeToTarget: JSON.stringify(creationTimeToTarget),
+      habitatDifficulty: JSON.stringify(habitatDifficulty),
+      habitatDifficultyMultiplier: JSON.stringify(habitatDifficultyMultiplier),
       baselineData: JSON.stringify(baselineData),
       proposedStatus: 'Post-intervention',
       mapData: mapData
@@ -1368,15 +1439,32 @@ function registerOnSitePostInterventionRoutes(router) {
     }
     feature.properties['Proposed Habitat Type'] = habitatTypeToSave
     feature.properties['Proposed Distinctiveness'] = req.body.distinctiveness || ''
-    feature.properties['Proposed Condition'] = req.body.condition || ''
+    feature.properties['Proposed Condition'] = req.body.target_condition || ''
     
     // Save strategic significance to both possible property names to ensure it's found
     const strategicSignificance = req.body.strategic_significance || ''
     feature.properties['Proposed Strategic Significance'] = strategicSignificance
     feature.properties['Strategic significance'] = strategicSignificance
-    
-    feature.properties['Habitat created in advance/years'] = req.body.created_in_advance || ''
-    feature.properties['Delay in starting habitat creation/years'] = req.body.delay_in_starting || ''
+
+    // Derive advance/delay years from radio and years inputs: Neither → both 0; Advance → advance=years_advance, delay=0; Delay → advance=0, delay=years_delay
+    const advanceOrDelay = (req.body.advance_or_delay || '').trim()
+    const yearsAdvanceRaw = req.body.years_advance !== undefined && req.body.years_advance !== null ? String(req.body.years_advance).trim() : ''
+    const yearsDelayRaw = req.body.years_delay !== undefined && req.body.years_delay !== null ? String(req.body.years_delay).trim() : ''
+    let createdInAdvanceToSave = ''
+    let delayInStartingToSave = ''
+    if (advanceOrDelay === 'advance') {
+      createdInAdvanceToSave = yearsAdvanceRaw !== '' ? yearsAdvanceRaw : '0'
+      delayInStartingToSave = '0'
+    } else if (advanceOrDelay === 'delay') {
+      createdInAdvanceToSave = '0'
+      delayInStartingToSave = yearsDelayRaw !== '' ? yearsDelayRaw : '0'
+    } else {
+      createdInAdvanceToSave = '0'
+      delayInStartingToSave = '0'
+    }
+
+    feature.properties['Habitat created in advance/years'] = createdInAdvanceToSave
+    feature.properties['Delay in starting habitat creation/years'] = delayInStartingToSave
     feature.properties['Comments'] = req.body.comments || ''
 
     // Calculate post-intervention units based on Baseline Retention Category
@@ -1401,31 +1489,27 @@ function registerOnSitePostInterventionRoutes(router) {
     // Get post-intervention data
     // habitat_type from form is already in full format "Broad - Type" (e.g., "Grassland - Modified grassland")
     const fullHabitatAfter = req.body.habitat_type || null
-    let conditionAfter = req.body.condition || ''
+    let conditionAfter = req.body.target_condition || ''
     if (conditionAfter !== '') {
       conditionAfter = conditionAfter.replace(/^\d+\.\s*/, '')
     }
 
-    // Parse time values
+    // Parse time values (use derived advance/delay values from form)
     let numericDelayInStarting = 0
     let numericCreatedInAdvance = 0
-    const delayInStarting = req.body.delay_in_starting || ''
-    const createdInAdvance = req.body.created_in_advance || ''
-
-    if (delayInStarting !== '') {
-      if (delayInStarting === '30+') {
+    if (delayInStartingToSave !== '') {
+      if (delayInStartingToSave === '30+') {
         numericDelayInStarting = 30
       } else {
-        const parsedDelay = Number(delayInStarting)
+        const parsedDelay = Number(delayInStartingToSave)
         numericDelayInStarting = isNaN(parsedDelay) ? 0 : parsedDelay
       }
     }
-
-    if (createdInAdvance !== '') {
-      if (createdInAdvance === '30+') {
+    if (createdInAdvanceToSave !== '') {
+      if (createdInAdvanceToSave === '30+') {
         numericCreatedInAdvance = 30
       } else {
-        const parsedAdvance = Number(createdInAdvance)
+        const parsedAdvance = Number(createdInAdvanceToSave)
         numericCreatedInAdvance = isNaN(parsedAdvance) ? 0 : parsedAdvance
       }
     }
