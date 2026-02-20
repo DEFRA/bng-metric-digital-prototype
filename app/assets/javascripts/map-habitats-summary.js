@@ -414,7 +414,6 @@
           // Determine feature type and index
           var featureType = null
           var featureIndex = -1
-          var parcelRef = null
 
           if (layer === parcelsLayer) {
             featureType = 'parcel'
@@ -422,9 +421,6 @@
               .getSource()
               .getFeatures()
               .indexOf(feature)
-            // Get parcel ref from feature properties
-            var props = feature.getProperties()
-            parcelRef = props['Parcel Ref'] || null
           } else if (layer === hedgerowsLayer) {
             featureType = 'hedgerow'
             featureIndex = hedgerowsLayer
@@ -440,25 +436,14 @@
           }
 
           if (featureType && featureIndex >= 0) {
-            // Find the corresponding table link
-            var link = null
-            if (featureType === 'parcel' && parcelRef) {
-              // Match by parcel ref for parcels
-              link = document.querySelector(
-                '.habitat-ref-link[data-feature-type="parcel"][data-parcel-ref="' +
-                  parcelRef +
-                  '"]'
-              )
-            } else {
-              // Match by index for hedgerows and watercourses
-              link = document.querySelector(
-                '.habitat-ref-link[data-feature-type="' +
-                  featureType +
-                  '"][data-feature-index="' +
-                  featureIndex +
-                  '"]'
-              )
-            }
+            // Find the corresponding table link (by index; table order matches layer feature order)
+            var link = document.querySelector(
+              '.habitat-ref-link[data-feature-type="' +
+                featureType +
+                '"][data-feature-index="' +
+                featureIndex +
+                '"]'
+            )
 
             if (link) {
               featureFound = true
