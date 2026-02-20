@@ -244,13 +244,11 @@ function registerOnSitePostInterventionRoutes(router) {
           l.name.toLowerCase().includes('habitat')
       ) || (layers.length > 1 ? layers[1] : layers[0])
 
-    // Calculate areas in hectares
+    // Calculate areas in hectares (Habitat parcels total area = Site boundary total area)
     const boundaryAreaHa = siteBoundary
       ? (siteBoundary.totalAreaSqm / 10000).toFixed(4)
       : 0
-    const parcelsAreaHa = habitatParcels
-      ? (habitatParcels.totalAreaSqm / 10000).toFixed(4)
-      : 0
+    const parcelsAreaHa = boundaryAreaHa
 
     // Find hedgerow layer
     let hedgerowLayer = layers.find(
