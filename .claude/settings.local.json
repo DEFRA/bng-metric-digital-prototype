@@ -13,7 +13,11 @@
       "Bash(git show:*)",
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "WebFetch(domain:docs.os.uk)"
+      "WebFetch(domain:docs.os.uk)",
+      "WebFetch(domain:icon.icepanel.io)",
+      "WebFetch(domain:icons.terrastruct.com)",
+      "WebFetch(domain:cdn.simpleicons.org)",
+      "WebFetch(domain:cdn.jsdelivr.net)"
     ]
   },
   "outputStyle": "Explanatory"

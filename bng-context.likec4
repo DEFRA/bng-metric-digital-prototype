@@ -1,52 +1,12 @@
 // BNG Context Diagrams - User Interaction Flows
 // Shows how each actor type interacts with the BNG system
-
-specification {
-  element actor {
-    style {
-      shape person
-      color amber
-    }
-  }
-  element system {
-    style {
-      shape rectangle
-      color slate
-    }
-  }
-  element service {
-    style {
-      shape rectangle
-      color green
-    }
-  }
-  element database {
-    style {
-      shape cylinder
-      color blue
-    }
-  }
-  element storage {
-    style {
-      shape rectangle
-      color sky
-    }
-  }
-  element platform {
-    style {
-      shape rectangle
-      color indigo
-    }
-  }
-  element boundary {
-    style {
-      color muted
-    }
-  }
-}
+//
+// NOTE: Specifications and shared elements (defraCustomerId, publicApp, backendApi, etc.)
+// are defined in bng-architecture.likec4. LikeC4 merges all .likec4 files into a single
+// model, so we only declare NEW elements and relationships here.
 
 model {
-  // Actors
+  // Actors (unique to context diagrams)
   actor bngCompleter "BNG Completer" {
     description "Developer or landowner completing a BNG metric submission as part of the planning process"
   }
@@ -55,76 +15,156 @@ model {
     description "Local Planning Authority officer assessing BNG submissions against planning conditions"
   }
 
-  // Identity Providers
-  system defraCustomerId "Defra Customer ID" {
-    description "Handles external users login and authentication"
+  // External Systems
+  system planningPortal "Planning Portal" {
+    description "Reference submitted on the LPA system"
     style {
-      shape person
-      color indigo
+      shape rectangle
+      color amber
     }
   }
 
-  system defraCustomerIdLpa "Defra Customer ID (LPA)" {
-    description "Trusted Third-Party flow for LPA authentication"
+  // ── System Overview actors and elements ──
+
+  actor landDeveloper "Land Developer / Ecologist" {
+    description "Developer or ecologist submitting BNG metric data as part of the planning process"
+  }
+
+  actor naturalEngland "Natural England" {
+    description "Government body responsible for biodiversity and natural environment oversight"
     style {
-      shape person
-      color indigo
+      color green
     }
   }
 
-  // BNG System Boundary
-  boundary bngSystem "BNG Digital Service" {
-    description "The BNG digital service hosted on CDP"
-
-    service publicApp "BNG Completion Front-end" {
-      description "Public-facing application for BNG completion: define red-line boundaries, upload habitat data, map habitat parcels, and calculate biodiversity metrics"
+  extend awsEuWest2 {
+    service bngService "BNG Service" {
+      description "BNG digital service for biodiversity metric completion and assessment"
       technology "Node.js / AWS"
       icon https://icons.terrastruct.com/dev%2Fnodejs.svg
       style {
         color green
       }
-    }
-
-    service lpaApp "LPA BNG Assessment Front-end" {
-      description "LPA-facing application for reviewing and assessing BNG submissions against planning conditions"
-      technology "Node.js / AWS"
-      icon https://icons.terrastruct.com/dev%2Fnodejs.svg
-      style {
-        color green
-      }
-    }
-
-    service backendApi "BNG Service Core API" {
-      description "Backend API handling BNG metric processing, file management, and data persistence"
-      technology "Node.js / AWS"
-      icon https://icons.terrastruct.com/dev%2Fnodejs.svg
-      style {
-        color green
-      }
-    }
-
-    database mongoDb "Application Database" {
-      description "Stores user accounts, RBAC, BNG case data, and application state"
-      technology "MongoDB"
-      icon https://icons.terrastruct.com/dev%2Fmongodb.svg
-    }
-
-    database postgresDb "GIS Database" {
-      description "Stores reference habitat data and user-created GIS layers"
-      technology "PostgreSQL / PostGIS"
-      icon https://icons.terrastruct.com/dev%2Fpostgresql.svg
-    }
-
-    storage fileStorageS3 "File Storage" {
-      description "Stores uploaded documents, GeoPackages, and shapefiles"
-      technology "AWS S3"
-      icon https://icons.terrastruct.com/aws%2FStorage%2FAmazon-Simple-Storage-Service-S3.svg
     }
   }
 
-  // External Services
-  service govukNotify "GOV.UK Notify" {
-    description "Sends email notifications to LPAs about new BNG submissions"
+  // ── System Overview relationships ──
+
+  landDeveloper -> awsEuWest2.bngService "Submits BNG metric data"
+  lpaOfficer -> awsEuWest2.bngService "Reviews BNG submissions"
+  awsEuWest2.bngService -> awsEuWest2.privateBoundaryCDP.mongoDb "Application data"
+  awsEuWest2.bngService -> awsEuWest2.privateBoundaryCDP.postgresDb "GIS data"
+  awsEuWest2.bngService -> awsEuWest2.privateBoundaryCDP.fileStorageS3 "File uploads"
+  awsEuWest2.bngService -> azureUkSouth.azureDataPlatform.dynamicsPlatform "Syncs BNG project data"
+  naturalEngland -> azureUkSouth.azureDataPlatform.dynamicsPlatform "BNG reporting and oversight"
+
+  // ── Nightly Data Sync elements ──
+
+  extend awsEuWest2.privateBoundaryCDP {
+    service cronDataSync "Nightly Data Sync" {
+      description "Node.js cron job running nightly to extract BNG project data from MongoDB and push to S3 for GIO platform ingestion"
+      technology "Node.js"
+      icon https://icons.terrastruct.com/dev%2Fnodejs.svg
+      style {
+        color green
+      }
+    }
+  }
+
+  // ── Data Linkage Model elements ──
+
+  service bngJsonDocument "BNG JSON Document" {
+    description "Core MongoDB document representing a BNG project. Contains references to GIS layers in PostGIS and uploaded files in S3, acting as the single linking record across all data stores."
+    technology "JSON / BSON"
+    icon https://icons.terrastruct.com/dev%2Fmongodb.svg
+    style {
+      color green
+    }
+  }
+
+  // Data Linkage relationships
+  awsEuWest2.privateBoundaryCDP.mongoDb -> bngJsonDocument "Stores & retrieves"
+  bngJsonDocument -> awsEuWest2.privateBoundaryCDP.postgresDb "References GIS layers (red-line boundary, habitat parcels)"
+  bngJsonDocument -> awsEuWest2.privateBoundaryCDP.fileStorageS3 "References uploaded files (GeoPackages, shapefiles, PDFs)"
+
+  // Nightly sync relationships
+  awsEuWest2.privateBoundaryCDP.cronDataSync -> awsEuWest2.privateBoundaryCDP.mongoDb "Reads BNG project data"
+  awsEuWest2.privateBoundaryCDP.cronDataSync -> awsEuWest2.privateBoundaryCDP.bngProjectDataS3 "Pushes nightly extract"
+
+  // ── BNG Completer User Journey (grouped into phases) ──
+
+  boundary phaseAuth "1. Authentication & Project Setup" {
+    service stepCreateProject "Create BNG Project" {
+      description "Completer creates a new BNG project in the front-end"
+      style {
+        color green
+      }
+    }
+  }
+
+  boundary phaseBaseline "2. Baseline Data" {
+    service stepBaselineGis "Baseline GIS" {
+      description "Define red-line boundary and upload baseline spatial data"
+      style {
+        color green
+      }
+    }
+
+    service stepBaselineHabitats "Baseline Habitats" {
+      description "Map and classify baseline habitat parcels within the red-line boundary"
+      style {
+        color green
+      }
+    }
+  }
+
+  boundary phasePostIntervention "3. Post-intervention Data" {
+    service stepPostInterventionGis "Post-intervention GIS" {
+      description "Upload or define post-intervention spatial data"
+      style {
+        color green
+      }
+    }
+
+    service stepPostInterventionHabitats "Post-intervention Habitats" {
+      description "Map and classify post-intervention habitat parcels"
+      style {
+        color green
+      }
+    }
+  }
+
+  boundary phaseReview "4. Review & Submit" {
+    service stepReviewReport "Review BNG Report" {
+      description "Review the calculated biodiversity metric and habitat summary"
+      style {
+        color green
+      }
+    }
+
+    service stepOutputPdf "Output PDF with Service URL for LPA" {
+      description "Generate a PDF report containing the BNG metric results and a service reference URL"
+      style {
+        color green
+      }
+    }
+  }
+
+  // ── BNG Completer Flow (linear user journey) ──
+
+  bngCompleter -> defraCustomerId "Signs in with Defra account"
+  defraCustomerId -> phaseAuth.stepCreateProject "Authenticates"
+  phaseAuth.stepCreateProject -> phaseBaseline.stepBaselineGis
+  phaseBaseline.stepBaselineGis -> phaseBaseline.stepBaselineHabitats
+  phaseBaseline.stepBaselineHabitats -> phasePostIntervention.stepPostInterventionGis
+  phasePostIntervention.stepPostInterventionGis -> phasePostIntervention.stepPostInterventionHabitats
+  phasePostIntervention.stepPostInterventionHabitats -> phaseReview.stepReviewReport
+  phaseReview.stepReviewReport -> phaseReview.stepOutputPdf
+  phaseReview.stepOutputPdf -> planningPortal "Upload BNG PDF to Planning Portal"
+
+  // GOV.UK Notify for LPA notifications
+  service govukNotifyRequest "GOV.UK Notify" {
+    description "Sends an email to BNG plan stakeholders notifying them that further information has been requested"
     technology "GOV.UK Notify"
     icon https://icons.terrastruct.com/aws%2FCustomer%20Engagement%2FAmazon-Simple-Email-Service-SES.svg
     style {
@@ -132,83 +172,335 @@ model {
     }
   }
 
-  platform dynamicsPlatform "GIO Data Platform" {
-    description "Central data platform for BNG reporting and data management"
-    technology "Microsoft Dynamics"
-    icon https://az-icons.com/export/icons/118053ce776aecf10590bb75db4a9b3b.svg
+  service govukNotifyDecision "GOV.UK Notify" {
+    description "Sends an email to BNG plan stakeholders notifying them of the approval decision"
+    technology "GOV.UK Notify"
+    icon https://icons.terrastruct.com/aws%2FCustomer%20Engagement%2FAmazon-Simple-Email-Service-SES.svg
+    style {
+      color amber
+    }
   }
 
-  // ── BNG Completer Flow ──
+  // ── LPA Officer User Journey (grouped into phases) ──
 
-  // Completer authenticates via Defra Customer ID
-  bngCompleter -> defraCustomerId "Signs in with Defra account"
+  boundary lpaPhaseAccess "1. Access BNG Submission" {
+    service stepClickLink "Officer Clicks on Link" {
+      description "LPA officer follows the BNG Service URL from the Planning Portal submission"
+      style {
+        color green
+      }
+    }
+  }
 
-  // Defra Customer ID grants access to the completion front-end
-  defraCustomerId -> bngSystem.publicApp "Authenticates"
+  boundary lpaPhaseReview "2. Assessment" {
+    service stepReviewBng "Reviews Validated BNG Report" {
+      description "Officer reviews the validated BNG metric report and habitat data"
+      style {
+        color green
+      }
+    }
 
-  // Completer interacts with the front-end to build their BNG submission
-  bngCompleter -> bngSystem.publicApp "Defines red-line boundary, uploads habitat data, maps parcels"
+    service stepRequestInfo "Requests Further Info" {
+      description "Officer may request additional information from the applicant (optional step)"
+      style {
+        color green
+      }
+    }
+  }
 
-  // Front-end calls the backend API
-  bngSystem.publicApp -> bngSystem.backendApi "Submits metric data and file uploads"
+  boundary lpaPhaseDecision "3. Decision" {
+    service stepApproval "Approves BNG Plan / No Approval" {
+      description "Officer makes the final decision to approve or reject the BNG plan"
+      style {
+        color green
+      }
+    }
+  }
 
-  // Backend persists data
-  bngSystem.backendApi -> bngSystem.mongoDb "Stores case and metric data"
-  bngSystem.backendApi -> bngSystem.postgresDb "Stores GIS layers and spatial queries"
-  bngSystem.backendApi -> bngSystem.fileStorageS3 "Stores uploaded habitat files"
+  // ── LPA Officer Flow (linear user journey) ──
 
-  // Submission triggers notification to LPA
-  bngSystem.backendApi -> govukNotify "Notifies LPA of new submission"
+  lpaOfficer -> planningPortal "Extracts BNG report with URL to Service"
+  planningPortal -> lpaPhaseAccess.stepClickLink
+  lpaPhaseAccess.stepClickLink -> defraCustomerIdLpa "Trusted third-party auth"
+  defraCustomerIdLpa -> lpaPhaseReview.stepReviewBng
+  lpaPhaseReview.stepReviewBng -> lpaPhaseReview.stepRequestInfo "(optional)"
+  lpaPhaseReview.stepRequestInfo -> lpaPhaseDecision.stepApproval
+  lpaPhaseReview.stepRequestInfo -> govukNotifyRequest "Notifies stakeholders"
+  lpaPhaseDecision.stepApproval -> govukNotifyDecision "Notifies stakeholders"
 
-  // Data syncs to central platform
-  bngSystem.backendApi -> dynamicsPlatform "Syncs BNG project data"
+  // ── CDP Code Release Pipeline ──
 
-  // ── LPA Officer Flow ──
+  actor bngDeveloper "BNG Developer" {
+    description "Developer working on the BNG digital service codebase"
+  }
 
-  // LPA authenticates via Defra Customer ID (LPA)
-  lpaOfficer -> defraCustomerIdLpa "Signs in via trusted third-party"
+  service gitHubRepo "GitHub Repository" {
+    description "Source code repository for BNG service applications"
+    technology "GitHub"
+    icon https://icons.terrastruct.com/dev%2Fgithub.svg
+    style {
+      color slate
+    }
+  }
 
-  // Defra Customer ID (LPA) grants access to the assessment front-end
-  defraCustomerIdLpa -> bngSystem.lpaApp "Authenticates"
+  service gitHubActions "GitHub Actions" {
+    description "CI pipeline triggered on every PR and merge to main. Runs automated test suites, linting, and build steps"
+    technology "GitHub Actions"
+    icon https://icons.terrastruct.com/dev%2Fgithub.svg
+    style {
+      color slate
+    }
+  }
 
-  // LPA officer interacts with the assessment front-end
-  lpaOfficer -> bngSystem.lpaApp "Reviews submissions, assesses habitat parcels, checks metrics"
+  boundary codeQualityScans "Security & Quality Scans" {
+    service dependabot "Dependabot" {
+      description "Automated dependency vulnerability scanning on every PR"
+      style {
+        color red
+      }
+    }
 
-  // Assessment front-end calls the backend API
-  bngSystem.lpaApp -> bngSystem.backendApi "Retrieves submission data and records assessments"
+    service snyk "Snyk" {
+      description "Security scanning for known vulnerabilities in dependencies and container images"
+      style {
+        color red
+      }
+    }
 
-  // LPA receives notification emails
-  govukNotify -> lpaOfficer "Receives email notification of new BNG submission"
+    service sonarCloud "SonarCloud" {
+      description "Static code analysis for code quality, maintainability, and security hotspots"
+      style {
+        color red
+      }
+    }
+  }
+
+  service ecrRepo "Amazon ECR" {
+    description "Docker container image registry. Each merge to main pushes a versioned image"
+    technology "AWS ECR"
+    icon https://icon.icepanel.io/AWS/svg/Containers/Elastic-Container-Registry.svg
+    style {
+      color sky
+    }
+  }
+
+  service gitTag "Git Tag / SemVer" {
+    description "Each merge to main triggers an automatic Git tag with semantic versioning. SemVer strategy can be targeted via PR labels"
+    technology "Git"
+    icon https://icons.terrastruct.com/dev%2Fgit.svg
+    style {
+      color slate
+    }
+  }
+
+  boundary deploymentEnvs "CDP Deployment Environments" {
+    service envDev "Dev" {
+      description "Development environment — auto-deployed on merge to main"
+      style {
+        color green
+      }
+    }
+
+    service envTest "Test" {
+      description "Test environment for QA and integration testing"
+      style {
+        color green
+      }
+    }
+
+    service envPerf "Perf" {
+      description "Performance testing environment"
+      style {
+        color green
+      }
+    }
+
+    service envProd "Prod" {
+      description "Production environment — manual deployment via CDP Portal for strict change control"
+      style {
+        color red
+      }
+    }
+  }
+
+  service cdpFargate "AWS Fargate" {
+    description "CDP Platform pushes the latest versioned container image from ECR to Fargate for each environment"
+    technology "AWS Fargate"
+    icon https://icon.icepanel.io/AWS/svg/Containers/Fargate.svg
+    style {
+      color sky
+    }
+  }
+
+  // Code Release relationships
+  bngDeveloper -> gitHubRepo "Opens Pull Request"
+  gitHubRepo -> gitHubActions "PR triggers CI"
+  gitHubActions -> codeQualityScans.dependabot "Dependency scan"
+  gitHubActions -> codeQualityScans.snyk "Security scan"
+  gitHubActions -> codeQualityScans.sonarCloud "Code quality scan"
+  gitHubRepo -> gitTag "Merge to main triggers tag"
+  gitHubRepo -> ecrRepo "Merge to main pushes Docker image"
+  ecrRepo -> cdpFargate "CDP deploys image"
+  cdpFargate -> deploymentEnvs.envDev "Auto-deploy"
+  cdpFargate -> deploymentEnvs.envTest "Auto-deploy"
+  cdpFargate -> deploymentEnvs.envPerf "Auto-deploy"
+  cdpFargate -> deploymentEnvs.envProd "Manual deploy"
+
+  // ── CDP Infrastructure Changes ──
+
+  service slackChannel "CDP Slack Channel" {
+    description "Product team initiates conversation with CDP platform team to request new AWS resources"
+    technology "Slack"
+    icon https://icons.terrastruct.com/dev%2Fslack.svg
+    style {
+      color amber
+    }
+  }
+
+  service jiraTicket "Jira Ticket" {
+    description "Automatically created from the Slack conversation and linked back. All parties collaborate via ticket and/or Slack"
+    technology "Jira"
+    icon https://cdn.simpleicons.org/jira
+    style {
+      color blue
+    }
+  }
+
+  service terraformRepo "Terraform IaC" {
+    description "All CDP infrastructure is managed via Terraform in a private GitHub repository maintained by the CDP platform team"
+    technology "Terraform / GitHub"
+    icon https://icons.terrastruct.com/dev%2Fgithub.svg
+    style {
+      color indigo
+    }
+  }
+
+  service cdpPortal "CDP Portal" {
+    description "Web portal for managing deployments. Product team can track container versions, view deployment status across environments, and initiate manual deployments (e.g. to prod)"
+    technology "CDP Portal"
+    icon https://icon.icepanel.io/AWS/svg/Compute/Fargate.svg
+    style {
+      color green
+    }
+  }
+
+  // Infrastructure Change relationships
+  bngDeveloper -> slackChannel "Requests new AWS resource"
+  slackChannel -> jiraTicket "Auto-creates linked ticket"
+  jiraTicket -> terraformRepo "CDP team applies IaC changes"
+  bngDeveloper -> cdpPortal "Manages deployments"
+  cdpPortal -> deploymentEnvs.envDev "Track & deploy"
+  cdpPortal -> deploymentEnvs.envTest "Track & deploy"
+  cdpPortal -> deploymentEnvs.envPerf "Track & deploy"
+  cdpPortal -> deploymentEnvs.envProd "Manual release"
 }
 
 views {
   // View 1: BNG Completer Context
   view completerContext {
-    title "BNG Completer - User Context"
-    description "Shows how a BNG completer (developer/landowner) interacts with the BNG digital service to submit biodiversity metric data"
+    title "BNG Completer - User Journey"
+    description "Linear user journey showing the step-by-step flow a BNG completer follows from sign-in to submission on the Planning Portal"
+
+    autoLayout TopBottom
 
     include bngCompleter
     include defraCustomerId
-    include bngSystem.publicApp
-    include bngSystem.backendApi
-    include bngSystem.mongoDb
-    include bngSystem.postgresDb
-    include bngSystem.fileStorageS3
-    include govukNotify
-    include dynamicsPlatform
+    include phaseAuth.*
+    include phaseBaseline.*
+    include phasePostIntervention.*
+    include phaseReview.*
+    include planningPortal
   }
 
-  // View 2: LPA Officer Context
+  // View 2: System Overview
+  view systemOverview {
+    title "BNG System Overview"
+    description "High-level system context showing actors, BNG Service, data stores, and the GIO Data Platform"
+
+    autoLayout LeftRight
+
+    include landDeveloper
+    include lpaOfficer
+    include awsEuWest2.bngService
+    include awsEuWest2.privateBoundaryCDP.mongoDb
+    include awsEuWest2.privateBoundaryCDP.postgresDb
+    include awsEuWest2.privateBoundaryCDP.fileStorageS3
+    include azureUkSouth.azureDataPlatform.dynamicsPlatform
+    include naturalEngland
+  }
+
+  // View 3: Nightly Data Sync Flow
+  view dataSyncFlow {
+    title "Nightly Data Sync to GIO Platform"
+    description "Node.js cron job extracts BNG project data from MongoDB nightly and pushes to S3, which is then ingested by the GIO Data Platform in Azure"
+
+    autoLayout LeftRight
+
+    include awsEuWest2.privateBoundaryCDP.cronDataSync
+    include awsEuWest2.privateBoundaryCDP.mongoDb
+    include awsEuWest2.privateBoundaryCDP.bngProjectDataS3
+    include azureUkSouth.azureDataPlatform.dynamicsPlatform
+  }
+
+  // View 4: Data Linkage Model
+  view dataLinkage {
+    title "MongoDB Data Linkage Model"
+    description "Shows how MongoDB is the primary data store, with BNG JSON documents linking to PostGIS for spatial data and S3 for file uploads"
+
+    autoLayout TopBottom
+
+    include awsEuWest2.privateBoundaryCDP.mongoDb
+    include bngJsonDocument
+    include awsEuWest2.privateBoundaryCDP.postgresDb
+    include awsEuWest2.privateBoundaryCDP.fileStorageS3
+  }
+
+  // View 5: LPA Officer User Journey
   view lpaContext {
-    title "LPA Officer - User Context"
-    description "Shows how an LPA officer interacts with the BNG digital service to assess and review BNG submissions"
+    title "LPA Officer - User Journey"
+    description "Linear user journey showing the step-by-step flow an LPA officer follows from receiving a BNG submission to approval decision"
+
+    autoLayout TopBottom
 
     include lpaOfficer
+    include planningPortal
+    include lpaPhaseAccess.*
     include defraCustomerIdLpa
-    include bngSystem.lpaApp
-    include bngSystem.backendApi
-    include bngSystem.mongoDb
-    include bngSystem.postgresDb
-    include govukNotify
+    include lpaPhaseReview.*
+    include lpaPhaseDecision.*
+    include govukNotifyRequest
+    include govukNotifyDecision
+  }
+
+  // View 6: CDP Code Release Pipeline
+  view codeReleasePipeline {
+    title "CDP Code Release Pipeline"
+    description "CI/CD flow from PR to deployment: GitHub Actions runs tests and security scans, merges to main trigger Docker image builds to ECR, and CDP deploys to Fargate across environments"
+
+    autoLayout TopBottom
+
+    include bngDeveloper
+    include gitHubRepo
+    include gitHubActions
+    include codeQualityScans.*
+    include gitTag
+    include ecrRepo
+    include cdpFargate
+    include deploymentEnvs.*
+  }
+
+  // View 7: CDP Infrastructure Changes
+  view infraChanges {
+    title "CDP Infrastructure Changes"
+    description "How the BNG product team requests AWS infrastructure changes via CDP, and manages deployments across environments through the CDP Portal"
+
+    autoLayout TopBottom
+
+    include bngDeveloper
+    include slackChannel
+    include jiraTicket
+    include terraformRepo
+    include cdpPortal
+    include deploymentEnvs.*
   }
 }
