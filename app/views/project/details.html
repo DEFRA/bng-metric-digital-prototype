@@ -1,8 +1,7 @@
 {% extends "layouts/main.html" %}
 
-{% from "govuk/components/table/macro.njk" import govukTable %}
 {% from "govuk/components/button/macro.njk" import govukButton %}
-{% from "govuk/components/tag/macro.njk" import govukTag %}
+{% from "govuk/components/task-list/macro.njk" import govukTaskList %}
 
 {% set pageName = "Project details" %}
 
@@ -13,7 +12,7 @@
   <div class="govuk-grid-column-two-thirds">
 
     <h1 class="govuk-heading-l">{{ projectName or 'Not set' }}</h1>
-    
+
     <p class="govuk-body govuk-!-margin-top-6">
       When you provide your information:
     </p>
@@ -31,68 +30,108 @@
         {% set postStatus = "Not yet started" %}
       {% endif %}
 
-      {# Build the Post intervention status cell once, then use in the table #}
-      {% set postStatusCell %}
-        {% if postStatus == "Not yet started" %}
-          {{ govukTag({ text: postStatus, classes: "govuk-tag--blue" }) }}
-        {% elseif postStatus == "Cannot start yet" %}
-          <span class="govuk-hint govuk-!-margin-0">{{ postStatus }}</span>
-        {% else %}
-          {{ postStatus }}
-        {% endif %}
-      {% endset %}
+      {# Build the Post intervention status cell once, then use in the Task List #}
+      {% if postStatus == "Completed" %}
+        {% set postInterventionStatus = {
+          text: postStatus
+        } %}
+      {% else %}
+        {% set postInterventionStatus = {
+          tag: {
+            text: postStatus,
+            classes: "govuk-tag--blue"
+          }
+        } %}
+      {% endif %}
 
-      {{ govukTable({
-        firstCellIsHeader: false,
-        head: [
-          { text: "", classes: "govuk-!-width-two-thirds" },
-          { text: "", classes: "govuk-!-width-one-third govuk-table__cell--numeric" }
-        ],
-        rows: [
-          [
-            { html: '<a href="/project/name" class="govuk-link">Project name</a>', classes: "govuk-!-width-two-thirds" },
-            { text: "Completed", classes: "govuk-table__cell--numeric" }
-          ],
-          [
-            { html: 'Project details', classes: "govuk-!-width-two-thirds" },
-            { html: govukTag({ text: "Not yet started", classes: "govuk-tag--blue" }), classes: "govuk-table__cell--numeric" }
-          ],
-          [
-            { html: '<a href="/on-site-baseline/start" class="govuk-link">Baseline</a>', classes: "govuk-!-width-two-thirds" },
-            { text: "Completed", classes: "govuk-table__cell--numeric" }
-          ],
-          [
-            { html: '<a href="/on-site-post-intervention/post-intervention-start" class="govuk-link">Post intervention</a>', classes: "govuk-!-width-two-thirds" },
-            { html: postStatusCell | trim, classes: "govuk-table__cell--numeric" }
-          ]
+      {{ govukTaskList({
+        idPrefix: "project-details",
+        items: [
+          {
+            title: {
+              text: "Project name"
+            },
+            href: "/project/name",
+            status: {
+              text: "Completed"
+            }
+          },
+          {
+            title: {
+              text: "Project details"
+            },
+            status: {
+              tag: {
+                text: "Not yet started",
+                classes: "govuk-tag--blue"
+              }
+            }
+          },
+          {
+            title: {
+              text: "Baseline"
+            },
+            href: "/on-site-baseline/start",
+            status: {
+              text: "Completed"
+            }
+          },
+          {
+            title: {
+              text: "Post intervention"
+            },
+            href: "/on-site-post-intervention/post-intervention-start",
+            status: postInterventionStatus
+          }
         ]
       }) }}
     {% else %}
-      {{ govukTable({
-        firstCellIsHeader: false,
-        head: [
-          { text: "", classes: "govuk-!-width-two-thirds" },
-          { text: "", classes: "govuk-!-width-one-third govuk-table__cell--numeric" }
-        ],
-        rows: [
-          [
-            { html: '<a href="/project/name" class="govuk-link">Project name</a>', classes: "govuk-!-width-two-thirds" },
-            { text: "Completed", classes: "govuk-table__cell--numeric" }
-          ],
-          [
-            { html: 'Project details', classes: "govuk-!-width-two-thirds" },
-            { html: govukTag({ text: "Not yet started", classes: "govuk-tag--blue" }), classes: "govuk-table__cell--numeric" }
-          ],
-          [
-            { html: '<a href="/on-site-baseline/start" class="govuk-link">Baseline</a>', classes: "govuk-!-width-two-thirds" },
-            { html: govukTag({ text: "Not yet started", classes: "govuk-tag--blue" }), classes: "govuk-table__cell--numeric" }
-          ],
-          [
-            { html: "Post intervention", classes: "govuk-!-width-two-thirds" },
-            { html: '<span class="govuk-hint govuk-!-margin-0">Cannot start yet</span>', classes: "govuk-table__cell--numeric" }
-          ]
+      {{ govukTaskList({
+        idPrefix: "project-details",
+        items: [
+          {
+            title: {
+              text: "Project name"
+            },
+            href: "/project/name",
+            status: {
+              text: "Completed"
+            }
+          },
+          {
+            title: {
+              text: "Project details"
+            },
+            status: {
+              tag: {
+                text: "Not yet started",
+                classes: "govuk-tag--blue"
+              }
+            }
+          },
+          {
+            title: {
+              text: "Baseline"
+            },
+            href: "/on-site-baseline/start",
+            status: {
+              tag: {
+                text: "Not yet started",
+                classes: "govuk-tag--blue"
+              }
+            }
+          },
+          {
+            title: {
+              text: "Post intervention"
+            },
+            status: {
+              html: '<span class="govuk-hint govuk-!-margin-0">Cannot start yet</span>'
+            }
+          }
         ]
       }) }}
+
     {% endif %}
 
     {% if postInterventionComplete %}
