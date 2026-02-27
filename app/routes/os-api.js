@@ -4,32 +4,12 @@
  */
 
 const { proxyFetch } = require('../lib/proxy-fetch')
-const { LRUCache } = require('lru-cache')
-
-// In-memory cache for vector tiles
-// Limits: 500 entries OR 20MB (whichever hits first), 24-hour TTL
-const tileCache = new LRUCache({
-  max: 500,
-  maxSize: 20_000_000, // 20MB hard cap
-  sizeCalculation: (value) => value.length,
-  ttl: 1000 * 60 * 60 * 24 // 24 hours
-})
 
 /**
  * Register OS API proxy routes
  * @param {Router} router - Express router instance
  */
 function registerOsApiRoutes(router) {
-  // Debug endpoint to check tile cache stats (remove in production)
-  router.get('/api/os/tiles/cache-stats', function (req, res) {
-    res.json({
-      size: tileCache.size,
-      calculatedSize: tileCache.calculatedSize,
-      maxSize: 20_000_000,
-      maxEntries: 500
-    })
-  })
-
   // Tiles Style Endpoint - proxies OS NGD Vector Tile Styles API
   // Supports both EPSG:27700 (British National Grid) and EPSG:3857 (Web Mercator)
   router.get('/api/os/tiles/style/:crs?', async function (req, res) {
@@ -90,7 +70,7 @@ function registerOsApiRoutes(router) {
     }
   })
 
-  // Tiles Endpoint - proxies OS NGD Vector Tile requests with in-memory caching
+  // Tiles Endpoint - proxies OS NGD Vector Tile requests
   // OGC API Tiles standard uses {z}/{y}/{x} order (TileMatrix/TileRow/TileCol)
   // Supports optional CRS parameter: /api/os/tiles/:collection/:crs/:z/:y/:x
   // Default CRS is 27700 (British National Grid) for better alignment with WFS features
@@ -105,17 +85,6 @@ function registerOsApiRoutes(router) {
       }
 
       const { collection, crs, z, y, x } = req.params
-      const cacheKey = `${collection}/${crs}/${z}/${y}/${x}`
-
-      // Check cache first
-      const cached = tileCache.get(cacheKey)
-      if (cached) {
-        res.set('Content-Type', 'application/vnd.mapbox-vector-tile')
-        res.set('Access-Control-Allow-Origin', '*')
-        res.set('Cache-Control', 'public, max-age=86400')
-        res.set('X-Cache', 'HIT')
-        return res.send(cached)
-      }
 
       const osUrl = `https://api.os.uk/maps/vector/ngd/ota/v1/collections/${collection}/tiles/${crs}/${z}/${y}/${x}?key=${apiKey}`
 
@@ -124,9 +93,12 @@ function registerOsApiRoutes(router) {
 
         if (!response.ok) {
           console.error(
-            `OS NGD Tiles API error: ${response.status} ${response.statusText} for tile ${z}/${y}/${x}`
+            `OS NGD Tiles API error: ${response.status} for tile ${crs}/${z}/${y}/${x}`
           )
-          return res.status(response.status).send('Tile not found')
+          // Return 204 No Content instead of forwarding the error status.
+          // This prevents OpenLayers flooding the console with errors when
+          // the OS API has a partial outage for specific tile regions.
+          return res.status(204).end()
         }
 
         // Get the tile data as a buffer
@@ -134,20 +106,17 @@ function registerOsApiRoutes(router) {
         const arrayBuffer = await response.arrayBuffer()
         const buffer = Buffer.from(arrayBuffer)
 
-        // Store in cache
-        tileCache.set(cacheKey, buffer)
-
         // Set appropriate headers for MVT
         // DO NOT set Content-Encoding - the data is already decompressed by Node.js fetch
         res.set('Content-Type', 'application/vnd.mapbox-vector-tile')
         res.set('Access-Control-Allow-Origin', '*')
         res.set('Cache-Control', 'public, max-age=86400')
-        res.set('X-Cache', 'MISS')
 
         res.send(buffer)
       } catch (error) {
-        console.error('Error fetching OS NGD tile:', error)
-        res.status(500).send('Failed to fetch tile')
+        console.error('Error fetching OS NGD tile:', error.message)
+        // Return 204 so the map still renders available tiles
+        res.status(204).end()
       }
     }
   )
