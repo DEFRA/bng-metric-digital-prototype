@@ -393,6 +393,51 @@ model {
   cdpPortal -> deploymentEnvs.envTest "Track & deploy"
   cdpPortal -> deploymentEnvs.envPerf "Track & deploy"
   cdpPortal -> deploymentEnvs.envProd "Manual release"
+
+  // ── Logging, Monitoring & Alerting elements ──
+
+  extend awsEuWest2 {
+    boundary monitoringStack "Logging, Monitoring & Alerting" {
+      service cloudWatch "Amazon CloudWatch" {
+        description "Collects application logs, metrics, and traces from BNG services running on Fargate"
+        technology "AWS CloudWatch"
+        icon https://icon.icepanel.io/AWS/svg/Management-Governance/CloudWatch.svg
+        style {
+          color sky
+        }
+      }
+
+      service openSearch "CDP OpenSearch" {
+        description "Indexes and stores log data streamed from CloudWatch for full-text search, analysis, and dashboarding"
+        technology "OpenSearch"
+        icon https://cdn.simpleicons.org/opensearch
+        style {
+          color sky
+        }
+      }
+
+      visualisation grafana "Grafana" {
+        description "Observability dashboards querying OpenSearch for log visualisation, metric monitoring, and alert rule evaluation"
+        technology "Grafana"
+        icon https://cdn.simpleicons.org/grafana
+      }
+    }
+  }
+
+  service slackAlerts "Slack Alerts" {
+    description "Slack channel receiving automated alert notifications from Grafana when monitoring thresholds are breached"
+    technology "Slack"
+    icon https://icons.terrastruct.com/dev%2Fslack.svg
+    style {
+      color amber
+    }
+  }
+
+  // Logging, Monitoring & Alerting relationships
+  awsEuWest2.bngService -> awsEuWest2.monitoringStack.cloudWatch "Application logs & metrics"
+  awsEuWest2.monitoringStack.cloudWatch -> awsEuWest2.monitoringStack.openSearch "Streams logs via subscription filter"
+  awsEuWest2.monitoringStack.openSearch -> awsEuWest2.monitoringStack.grafana "Queries log data"
+  awsEuWest2.monitoringStack.grafana -> slackAlerts "Alert notifications"
 }
 
 views {
@@ -502,5 +547,17 @@ views {
     include terraformRepo
     include cdpPortal
     include deploymentEnvs.*
+  }
+
+  // View 8: Logging, Monitoring & Alerting
+  view loggingMonitoring {
+    title "Logging, Monitoring & Alerting"
+    description "Observability pipeline: BNG Service emits logs and metrics to CloudWatch, which streams to OpenSearch for indexing. Grafana dashboards query OpenSearch and fire alert notifications to Slack"
+
+    autoLayout LeftRight
+
+    include awsEuWest2.bngService
+    include awsEuWest2.monitoringStack.*
+    include slackAlerts
   }
 }
