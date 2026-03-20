@@ -588,7 +588,7 @@ function registerOnSitePostInterventionRoutes(router) {
           }
           else if (retentionCategory === "Lost") {
             // 
-            units = getCreationUnits(areaHa, fullHabitat, condition, delayYears, advanceYears)
+            units = getCreationUnits(areaHa, fullHabitat, condition, numericDelayInStarting, numericCreatedInAdvance)
           }
           else {
             units = 0
