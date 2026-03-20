@@ -6,27 +6,99 @@ const { enhancementTimeToTarget } = require('./metric-values-habitat-enhancement
 const { timeToTarget } = require('./metric-values-habitat-time'); 
 
 /**
+ * Validate the size parameter
+ * @param {number} size - The size of the habitat
+ * @throws {Error} If size is not a number or is less than or equal to 0
+ */
+function validateSize(size){
+  if (size <= 0) {
+    throw new Error(`Size must be greater than 0`)
+  }
+}
+
+/**
+ * Validate the habitat parameter
+ * @param {string} habitat - The habitat name (e.g., "Grassland - Bracken")
+ * @throws {Error} If habitat is not a string or is not a valid habitat
+ */
+function validateHabitat(habitat){
+  if (!habitat){
+    throw new Error(`habitat not specified`)
+  }
+  else if (typeof habitat !== 'string' || !Object.prototype.hasOwnProperty.call(distinctivenessCategories, habitat)) {
+    throw new Error(`Habitat '${habitat}' is not a valid habitat`)
+  }
+}
+
+/**
+ * Validate the condition parameter
+ * @param {string} habitat - The habitat name (e.g., "Grassland - Bracken")
+ * @param {string} condition - The condition name (e.g., "Moderate")
+ * @throws {Error} If condition is not a string or is not a valid condition for the habitat
+ */
+function validateCondition(habitat, condition){
+  if (!condition){
+    throw new Error(`condition not specified`)
+  }
+  else if (condition === null || condition === undefined || typeof condition !== 'string' || !Object.prototype.hasOwnProperty.call(conditionScores[habitat], condition)) {
+    throw new Error(`Condition '${condition}' is not a valid condition for habitat: ${habitat}`)
+  }
+}
+
+/**
+ * 
+ * @param {string} changeType - The type of habitat change (e.g., "Creation" or "Enhancement")
+ * @throws {Error} If changeType is not a string or is not a valid change type
+ */
+function validateHabitatChange(changeType){
+
+  if (!changeType){
+    throw new Error(`changeType not specified`)
+  }
+  else if (typeof changeType !== 'string' || changeType !== 'Creation' && changeType !== 'Enhancement') {
+    throw new Error(`Habitat change type '${changeType}' is not a valid change type`)
+  }
+
+}
+
+/**
+ * 
+ * @param {any} years - The years to validate (e.g., 0, 10, 30, "30+")
+ * @returns {number} The validated years, or 30 if years is "30+"
+ * @throws {Error} If years is not a number or is not a valid number for years. Should be 0 to 30 or '30+'.
+ */
+function validateYears(years){
+  if (typeof years !== 'number' && years !== '30+') {
+    throw new Error(`${years} is not a valid number for years. Should be 0 to 30 or '30+'.`)
+  }
+
+  if (years === "30+") {
+    years = 30
+  } 
+
+  return years
+}
+
+
+/**
  * Get the distinctiveness score for a given habitat
  * @param {string} habitat - The habitat name (e.g., "Grassland - Bracken")
  * @returns {number} The distinctiveness score, or 0 if habitat not found
  */
 function getDistinctivenessMultiplier(habitat) {
-  if (!habitat || typeof habitat !== 'string') {
-    return 0
-  }
+  validateHabitat(habitat)
 
   // Look up the distinctiveness level (e.g., "Low", "Medium", etc.) from distinctivenessCategories
   const distinctivenessLevel = distinctivenessCategories[habitat]
-  
   if (!distinctivenessLevel) {
-    return 0
+    throw new Error(`Distinctiveness level not found for habitat: ${habitat}`)
   }
-
+  
   // Look up the Score from distinctivenesScores using the distinctiveness level
   const distinctivenessData = distinctivenesScores[distinctivenessLevel]
   
   if (!distinctivenessData || typeof distinctivenessData.Score !== 'number') {
-    return 0
+    throw new Error(`Distinctiveness data not found for habitat: ${habitat}`)
   }
 
   return distinctivenessData.Score
@@ -39,28 +111,25 @@ function getDistinctivenessMultiplier(habitat) {
  * @returns {number} The condition multiplier, or 0 if habitat/condition not found or "Not Possible"
  */
 function getConditionMultiplier(habitat, condition) {
-  if (!habitat || typeof habitat !== 'string' || !condition || typeof condition !== 'string') {
-    return 0
-  }
+  validateHabitat(habitat)
+  validateCondition(habitat, condition)
 
   // Look up the habitat in conditionScore
   const conditionScore = conditionScores[habitat][condition]
-  
-  if (!conditionScore) {
-    return 0
-  }
-
+    
   // If the value is "Not Possible" or not a number, return 0
-  if (conditionScore === "Not Possible" || conditionScore === null || conditionScore === undefined) {
-    return 0
+  if (conditionScore === "Not Possible"){
+    throw new Error(`Condition '${condition}' is not a valid condition for habitat: ${habitat}`)
   }
 
   // Return the numeric conditionScore value
   if (typeof conditionScore === 'number') {
     return conditionScore
   }
+  else {
+    throw new Error(`Condition score is not a number for habitat: ${habitat}, condition: ${condition}`)
+  }
 
-  return 0
 }
 
 /**
@@ -76,35 +145,25 @@ function getConditionMultiplier(habitat, condition) {
  */
 
 function getTimeToTargetValue(habitat, creationOrEnhancement, startCondition, endCondition, delayYears, advanceYears) {
-  if (!habitat || typeof habitat !== 'string' || !creationOrEnhancement || typeof creationOrEnhancement !== 'string' || !endCondition || typeof endCondition !== 'string' || !delayYears || typeof delayYears !== 'number' || !advanceYears || typeof advanceYears !== 'number') {
-    return 0
-  }
   
-  // Only accept "Creation" or "Enhancement"
-  if (creationOrEnhancement !== 'Creation' && creationOrEnhancement !== 'Enhancement') {
-    return 0
-  }
-
-  // For Enhancement, startCondition is required
-  if (creationOrEnhancement === 'Enhancement' && (!startCondition || typeof startCondition !== 'string')) {
-    return 0
-  }
+  validateHabitat(habitat)
+  validateHabitatChange(creationOrEnhancement)
+  validateCondition(habitat, endCondition)
+  advanceYears = validateYears(advanceYears)
+  delayYears = validateYears(delayYears)
 
   let timeToTargetValue;
   if (creationOrEnhancement === 'Creation') {
     timeToTargetValue = creationTimeToTarget[habitat]?.[endCondition];
   } else {
     timeToTargetValue = enhancementTimeToTarget[habitat]?.[startCondition]?.[endCondition];
-  }
-  
-  // Return 0 if not found or "Not Possible"
-  if (timeToTargetValue === undefined || timeToTargetValue === null || timeToTargetValue === "Not Possible") {
-    throw new Error(`Time to target not found for habitat: ${habitat}, creationOrEnhancement: ${creationOrEnhancement}, startCondition: ${startCondition}, endCondition: ${endCondition}`)
-  }
-
-  // If timeToTarget is not a number or "30+", return 0
-  if (typeof timeToTargetValue !== 'number' && timeToTargetValue === "30+") {
-    return 0
+    // Return 0 if not found or "Not Possible"
+    if (timeToTargetValue === undefined || timeToTargetValue === null ) {
+      throw new Error(`Time to target not found for habitat: ${habitat}, creationOrEnhancement: ${creationOrEnhancement}, startCondition: ${startCondition}, endCondition: ${endCondition}`)
+    }
+    else if (timeToTargetValue === "Not Possible") {
+      timeToTargetValue = 1
+    }
   }
 
   // Considering "30+" as 30 years (not sure if this is correct)
@@ -118,8 +177,7 @@ function getTimeToTargetValue(habitat, creationOrEnhancement, startCondition, en
   if (timeToTargetValue < 0) {
     timeToTargetValue = 0
   }
-  
-  if (timeToTargetValue > 30) {
+  else if (timeToTargetValue > 30) {
     timeToTargetValue = ">30"
   }
 
@@ -138,35 +196,29 @@ function getTimeToTargetValue(habitat, creationOrEnhancement, startCondition, en
  * @returns {number} The time multiplier, or 0 if habitat/type not found
  */
 function getTimeMultiplier(habitat, creationOrEnhancement, startCondition, endCondition, delayYears, advanceYears) {
-  if (!habitat || typeof habitat !== 'string' || !creationOrEnhancement || typeof creationOrEnhancement !== 'string') {
-    return 0
-  }
-  
-  // Only accept "Creation" or "Enhancement"
-  if (creationOrEnhancement !== 'Creation' && creationOrEnhancement !== 'Enhancement') {
-    return 0
-  }
 
-  // endCondition is required for both Creation and Enhancement
-  if (!endCondition || typeof endCondition !== 'string') {
-    return 0
-  }
+  validateHabitat(habitat)
+  validateHabitatChange(creationOrEnhancement)
+  validateCondition(habitat, endCondition)
+  advanceYears = validateYears(advanceYears)
+  delayYears = validateYears(delayYears)
 
   // For Enhancement, startCondition is required
   if (creationOrEnhancement === 'Enhancement' && (!startCondition || typeof startCondition !== 'string')) {
-    return 0
+    throw new Error(`Start condition not specified for enhancement of habitat: ${habitat}`)
   }
 
-  let timeToTargetValue = getTimeToTargetValue(habitat, creationOrEnhancement, startCondition, endCondition, delayYears, advanceYears)
-  if (timeToTargetValue === 0) {
-    return 0
-  }
+  const timeToTargetValue = getTimeToTargetValue(habitat, creationOrEnhancement, startCondition, endCondition, delayYears, advanceYears)
 
-  let timeMultiplier =  timeToTarget[timeToTargetValue]
-  if (timeMultiplier === undefined || timeMultiplier === null || timeMultiplier === "Not Possible") {
-    throw new Error(`Time multiplier not found for habitat: ${habitat}, creationOrEnhancement: ${creationOrEnhancement}, startCondition: ${startCondition}, endCondition: ${endCondition}, delayYears: ${delayYears}, advanceYears: ${advanceYears}`)
+  const timeMultiplier =  timeToTarget[timeToTargetValue]
+  
+  if (timeMultiplier === undefined || timeMultiplier === null ) {
+    throw new Error(`Time multiplier not found for habitat: ${habitat}, creationOrEnhancement: ${creationOrEnhancement}, startCondition: ${startCondition}, endCondition: ${endCondition}`)
   }
-
+  else if (timeMultiplier === "Not Possible") {
+    throw new Error(`Time multiplier for habitat '${habitat}' is not possible`)
+  }
+  
   return timeMultiplier
 }
 
@@ -181,34 +233,28 @@ function getTimeMultiplier(habitat, creationOrEnhancement, startCondition, endCo
  * @returns {number} The difficulty multiplier, or 0 if habitat/type not found
  */
 function getDifficultyMultiplier(habitat, creationOrEnhancement, startCondition, endCondition, advanceYears, delayYears) {
-  if (!habitat || typeof habitat !== 'string' || !creationOrEnhancement || typeof creationOrEnhancement !== 'string' || !advanceYears || typeof advanceYears !== 'number' || !delayYears || typeof delayYears !== 'number') {    
-    return 0
-  }
+  
 
-  // Only accept "Creation" or "Enhancement"
-  if (creationOrEnhancement !== 'Creation' && creationOrEnhancement !== 'Enhancement') {
-    return 0
-  }
-
-  // endCondition is required for both Creation and Enhancement
-  if (!endCondition || typeof endCondition !== 'string') {
-    return 0
-  }
+  validateHabitat(habitat)
+  validateHabitatChange(creationOrEnhancement)
+  validateCondition(habitat, endCondition)
+  advanceYears = validateYears(advanceYears)
+  delayYears = validateYears(delayYears)
 
   // For Enhancement, startCondition is required
   if (creationOrEnhancement === 'Enhancement' && (!startCondition || typeof startCondition !== 'string')) {
-    return 0
+    throw new Error(`Start condition not specified for enhancement of habitat: ${habitat}`)
   }
 
   let difficultyDesc
 
-  let timeToTargetValue = getTimeToTargetValue(habitat, creationOrEnhancement, startCondition, endCondition, delayYears, advanceYears)
+  const timeToTargetValue = getTimeToTargetValue(habitat, creationOrEnhancement, startCondition, endCondition, delayYears, advanceYears)
   if (advanceYears >= timeToTargetValue) {
     difficultyDesc = "Low"
   }
   else {
     if (creationOrEnhancement === 'Creation') {
-      let poorTargetYears = getTimeToTargetValue(habitat, creationOrEnhancement, startCondition, "Poor", delayYears, advanceYears)
+      const poorTargetYears = getTimeToTargetValue(habitat, creationOrEnhancement, startCondition, "Poor", delayYears, advanceYears)
       if (advanceYears >= poorTargetYears) {
         creationOrEnhancement = "Enhancement"
       }
@@ -231,17 +277,19 @@ function getDifficultyMultiplier(habitat, creationOrEnhancement, startCondition,
   return difficultyMultiplier
 }
 
+/**
+ * Get the baseline units for a given habitat and condition
+ * @param {string} habitat - The habitat name (e.g., "Grassland - Modified grassland")
+ * @param {number} size - The size of the habitat
+ * @param {string} condition - The condition name (e.g., "Moderate")
+ * @returns {number} The baseline units
+ * @throws {Error} If habitat/condition not found or not a valid habitat/condition
+ */
 function getBaselineUnits(habitat, size, condition) {
-  if (
-    !habitat ||
-    typeof habitat !== 'string' ||
-    typeof size !== 'number' ||
-    size <= 0 ||
-    !condition ||
-    typeof condition !== 'string'
-  ) {
-    return 0;
-  }
+
+  validateHabitat(habitat)
+  validateCondition(habitat, condition)
+  validateSize(size)
 
   const distinctivenessScore = getDistinctivenessMultiplier(habitat);
   const conditionScore = getConditionMultiplier(habitat, condition);
@@ -250,65 +298,23 @@ function getBaselineUnits(habitat, size, condition) {
   return size * distinctivenessScore * conditionScore * strategicSignificanceScore;
 }
 
-function getRetentionUnits(habitat, areaHa, condition, habitatBefore, conditionBefore) {
-  if (
-    !habitat ||
-    typeof habitat !== 'string' ||
-    typeof areaHa !== 'number' ||
-    !condition ||
-    typeof condition !== 'string' ||
-    !habitatBefore ||
-    typeof habitatBefore !== 'string' ||
-    !conditionBefore ||
-    typeof conditionBefore !== 'string'
-  ) {
-    return 0;
-  }
-
-  const distinctivenessScore = getDistinctivenessMultiplier(habitat);
-  const conditionScore = getConditionMultiplier(habitat, condition);
-  const strategicSignificanceScore = 1;
-
-  const beforeDistinctivenessScore = getDistinctivenessMultiplier(habitatBefore);
-  const beforeConditionScore = getConditionMultiplier(habitatBefore, conditionBefore);
-
-  const afterUnits =
-    areaHa * distinctivenessScore * conditionScore * strategicSignificanceScore;
-  const beforeUnits =
-    areaHa * beforeDistinctivenessScore * beforeConditionScore * strategicSignificanceScore;
-
-  //const retentionUnits = afterUnits - beforeUnits;
-  //return retentionUnits;
-  return afterUnits;
-}
-
-function getCreationUnits(
-  habitatBefore,
-  areaHa,
-  conditionBefore,
-  habitatAfter,
-  conditionAfter,
-  delayYears,
-  advanceYears
-) {
-  if (
-    !habitatBefore ||
-    typeof habitatBefore !== 'string' ||
-    !habitatAfter ||
-    typeof habitatAfter !== 'string' ||
-    !conditionBefore ||
-    typeof conditionBefore !== 'string' ||
-    !conditionAfter ||
-    typeof conditionAfter !== 'string' ||
-    typeof delayYears !== 'number' ||
-    typeof advanceYears !== 'number'
-  ) {
-    return 0;
-  }
-
-  const beforeDistinctivenessScore = getDistinctivenessMultiplier(habitatBefore);
-  const beforeConditionScore = getConditionMultiplier(habitatBefore, conditionBefore);
-  const beforeStrategicSignificanceScore = 1;
+/**
+ * Get the creation units for a given habitat and condition
+ * @param {number} areaHa - The area of the habitat in hectares
+ * @param {string} habitatAfter - The habitat name after the change (e.g., "Grassland - Modified grassland")
+ * @param {string} conditionAfter - The condition name after the change (e.g., "Moderate")
+ * @param {number} delayYears - The number of years to delay the project
+ * @param {number} advanceYears - The number of years to advance the project
+ * @returns {number} The creation units
+ * @throws {Error} If habitat/condition not found or not a valid habitat/condition
+ */
+function getCreationUnits(areaHa, habitatAfter, conditionAfter, delayYears, advanceYears) {
+  
+  validateSize(areaHa)
+  validateHabitat(habitatAfter)
+  validateCondition(habitatAfter, conditionAfter)
+  delayYears = validateYears(delayYears)
+  advanceYears = validateYears(advanceYears)
 
   const afterDistinctivenessScore = getDistinctivenessMultiplier(habitatAfter);
   const afterConditionScore = getConditionMultiplier(habitatAfter, conditionAfter);
@@ -326,15 +332,10 @@ function getCreationUnits(
     'Creation',
     null,
     conditionAfter,
-    delayYears,
-    advanceYears
+    advanceYears,
+    delayYears
   );
 
-  const beforeUnits =
-    areaHa *
-    beforeDistinctivenessScore *
-    beforeConditionScore *
-    beforeStrategicSignificanceScore;
   const afterUnits =
     areaHa *
     afterDistinctivenessScore *
@@ -343,36 +344,48 @@ function getCreationUnits(
     timeScore *
     difficultyScore;
 
-  //const creationUnits = afterUnits - beforeUnits;
-  //return creationUnits;
   return afterUnits
 }
 
+/**
+ * Get the enhancement units for a given habitat and condition
+ * @param {string} habitatBefore - The habitat name before the change (e.g., "Grassland - Modified grassland")
+ * @param {string} conditionBefore - The condition name before the change (e.g., "Moderate")
+ * @param {string} habitatAfter - The habitat name after the change (e.g., "Grassland - Modified grassland")
+ * @param {number} areaHa - The area of the habitat in hectares
+ * @param {string} conditionAfter - The condition name after the change (e.g., "Moderate")
+ * @param {number} delayYears - The number of years to delay the project
+ * @param {number} advanceYears - The number of years to advance the project
+ * @returns {number} The enhancement units
+ * @throws {Error} If habitat/condition not found or not a valid habitat/condition
+ */
 function getEnhancementUnits(habitatBefore, conditionBefore, habitatAfter, areaHa, conditionAfter, delayYears, advanceYears) {
   
-  // if (!habitatBefore || typeof habitatBefore !== 'string' || !conditionBefore || typeof conditionBefore !== 'string' || !habitatAfter || typeof habitatAfter !== 'string' || !areaHa || typeof areaHa !== 'number' || !conditionAfter || typeof conditionAfter !== 'string' || !delayYears || typeof delayYears !== 'number' || !advanceYears || typeof advanceYears !== 'number') {
-  //   return 0
-  // }
+  validateHabitat(habitatBefore)
+  validateCondition(habitatBefore, conditionBefore)
+  validateHabitat(habitatAfter)
+  validateCondition(habitatAfter, conditionAfter)
+  validateSize(areaHa)
+  delayYears = validateYears(delayYears)
+  advanceYears = validateYears(advanceYears)
   
   let beforeDistinctivenessScore = getDistinctivenessMultiplier(habitatBefore)
   let beforeConditionScore = getConditionMultiplier(habitatBefore, conditionBefore)
-  let beforeStrategicSignificanceScore = 1
-
+  
   let afterDistinctivenessScore = getDistinctivenessMultiplier(habitatAfter)
   let afterConditionScore = getConditionMultiplier(habitatAfter, conditionAfter)
   let afterStrategicSignificanceScore = 1
   let timeScore = getTimeMultiplier(habitatAfter, "Enhancement", conditionBefore, conditionAfter, delayYears, advanceYears)
   let difficultyScore = getDifficultyMultiplier(habitatAfter, "Enhancement", conditionBefore, conditionAfter, delayYears, advanceYears)
 
-  let beforeUnits = areaHa * beforeDistinctivenessScore * beforeConditionScore * beforeStrategicSignificanceScore
-  let afterUnits = (((areaHa * afterDistinctivenessScore * afterConditionScore)
-    - (areaHa * beforeDistinctivenessScore * beforeConditionScore)
+  // let beforeUnits = areaHa * beforeDistinctivenessScore * beforeConditionScore * beforeStrategicSignificanceScore
+  let afterUnits = 
+    ((((areaHa * afterDistinctivenessScore * afterConditionScore)
+    - (areaHa * beforeDistinctivenessScore * beforeConditionScore))
     * (timeScore * difficultyScore))
     + (areaHa * beforeDistinctivenessScore * beforeConditionScore))
     * afterStrategicSignificanceScore
   
-  //let enhancementUnits = afterUnits - beforeUnits
-  //return enhancementUnits
   return afterUnits;
 } 
 
@@ -382,7 +395,6 @@ module.exports = {
   getTimeMultiplier,
   getDifficultyMultiplier,
   getBaselineUnits,
-  getRetentionUnits,
   getCreationUnits,
   getEnhancementUnits,
   // expose raw tables for routes that need them

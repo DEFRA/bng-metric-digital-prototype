@@ -52,7 +52,8 @@ registerTestRoutes(router)
 
 // Import metric calculation functions for API endpoint
 const metricCalcs = require('./lib/metric-calcs')
-const getRetentionUnits = metricCalcs.getRetentionUnits
+//const getRetentionUnits = metricCalcs.getRetentionUnits
+const getBaselineUnits = metricCalcs.getBaselineUnits
 const getCreationUnits = metricCalcs.getCreationUnits
 const getEnhancementUnits = metricCalcs.getEnhancementUnits
 
@@ -70,11 +71,13 @@ router.get('/api/on-site-post-intervention/calculate-units', function (req, res)
   let units = 0
   try {
     if (retentionCategory === 'Retained') {
-      units = getRetentionUnits(fullHabitatAfter, area, conditionAfter, fullHabitatBefore, conditionBefore)
+      //units = getRetentionUnits(fullHabitatAfter, area, conditionAfter, fullHabitatBefore, conditionBefore)
+      units = getBaselineUnits(fullHabitatBefore, area, conditionBefore)
     } else if (retentionCategory === 'Enhanced') {
       units = getEnhancementUnits(fullHabitatBefore, conditionBefore, fullHabitatAfter, area, conditionAfter, delayYears, advanceYears)
     } else if (retentionCategory === 'Lost') {
-      units = getCreationUnits(fullHabitatBefore, area, conditionBefore, fullHabitatAfter, conditionAfter, delayYears, advanceYears)
+      //units = getCreationUnits(fullHabitatBefore, area, conditionBefore, fullHabitatAfter, conditionAfter, delayYears, advanceYears)
+      units = getCreationUnits(area, fullHabitatAfter, conditionAfter, delayYears, advanceYears)
     }
   } catch (err) {
     console.error('[Routes] Error calculating units via API:', err.message)

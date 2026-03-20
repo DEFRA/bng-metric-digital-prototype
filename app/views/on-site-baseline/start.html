@@ -28,7 +28,7 @@
     <h1 class="govuk-heading-l">{{ pageName }}</h1>
 
     <p class="govuk-body">
-      You need to tell us about the site boundary and the habitat parcels within it.
+      You need to tell us about the site boundary and the habitat information within it.
     </p>
 
     <form method="post" action="/on-site-baseline/start" novalidate>
@@ -45,7 +45,7 @@
         items: [
           {
             value: "single-file",
-            text: "I have one file with boundary and habitat parcels",
+            text: "I have one file with boundary and habitat information",
             hint: {
               text: "A single GIS file or project containing both your site boundary and habitat parcel layers."
             }
@@ -54,7 +54,7 @@
             value: "no-files",
             text: "I don't have GIS files",
             hint: {
-              text: "You can draw the boundary and habitat parcels on a map."
+              text: "You can draw the boundary and habitat information on a map."
             }
           }
         ],

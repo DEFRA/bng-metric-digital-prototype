@@ -22,7 +22,7 @@ const conditionScores = metricCalcs.conditionScores || {}
 const creationTimeToTarget = metricCalcs.creationTimeToTarget || {}
 const habitatDifficultyMultiplier = metricCalcs.habitatDifficultyMultiplier || {}
 const habitatDifficulty = metricCalcs.habitatDifficulty || {}
-const getRetentionUnits = metricCalcs.getRetentionUnits || {}
+//const getRetentionUnits = metricCalcs.getRetentionUnits || {}
 const getCreationUnits = metricCalcs.getCreationUnits || {}
 const getEnhancementUnits = metricCalcs.getEnhancementUnits || {}
 const getBaselineUnits = metricCalcs.getBaselineUnits || {}
@@ -570,7 +570,8 @@ function registerOnSitePostInterventionRoutes(router) {
           }
 
           if (retentionCategory === "Retained") {
-            units = getRetentionUnits(fullHabitat, areaHa, condition, fullHabitatBefore, conditionBefore)
+            //units = getRetentionUnits(fullHabitat, areaHa, condition, fullHabitatBefore, conditionBefore)
+            units = getBaselineUnits(fullHabitatBefore, areaHa, conditionBefore)
           }
           else if (retentionCategory === "Enhanced") {
             
@@ -586,15 +587,8 @@ function registerOnSitePostInterventionRoutes(router) {
             )
           }
           else if (retentionCategory === "Lost") {
-            units = getCreationUnits(
-              fullHabitatBefore,
-              areaHa,
-              conditionBefore,
-              fullHabitat,
-              condition,
-              numericDelayInStarting,
-              numericCreatedInAdvance
-            )
+            // 
+            units = getCreationUnits(areaHa, fullHabitat, condition, delayYears, advanceYears)
           }
           else {
             units = 0
@@ -1033,7 +1027,8 @@ function registerOnSitePostInterventionRoutes(router) {
     let habitatUnits = 0
     try {
       if (retentionCategory === 'Retained') {
-        habitatUnits = getRetentionUnits(fullHabitatAfter, habitatData.areaHa, habitatData.condition, fullHabitatBefore, conditionBefore)
+        //habitatUnits = getRetentionUnits(fullHabitatAfter, habitatData.areaHa, habitatData.condition, fullHabitatBefore, conditionBefore)
+        habitatUnits = getBaselineUnits(fullHabitatBefore, habitatData.areaHa, conditionBefore)
       } else if (retentionCategory === 'Enhanced') {
         habitatUnits = getEnhancementUnits(
           fullHabitatBefore,
@@ -1045,15 +1040,16 @@ function registerOnSitePostInterventionRoutes(router) {
           numericCreatedInAdvance
         )
       } else if (retentionCategory === 'Lost') {
-        habitatUnits = getCreationUnits(
-          fullHabitatBefore,
-          habitatData.areaHa,
-          conditionBefore,
-          fullHabitatAfter,
-          habitatData.condition,
-          numericDelayInStarting,
-          numericCreatedInAdvance
-        )
+        // habitatUnits = getCreationUnits(
+        //   fullHabitatBefore,
+        //   habitatData.areaHa,
+        //   conditionBefore,
+        //   fullHabitatAfter,
+        //   habitatData.condition,
+        //   numericDelayInStarting,
+        //   numericCreatedInAdvance
+        // )
+        habitatUnits = getCreationUnits(habitatData.areaHa, fullHabitatAfter, habitatData.condition, numericDelayInStarting, numericCreatedInAdvance)
       }
     } catch (err) {
       console.error('[PostIntervention] Error calculating units for parcel ' + habitatData.parcelRef + ':', err.message)
@@ -1204,7 +1200,8 @@ function registerOnSitePostInterventionRoutes(router) {
     let habitatUnits = 0
     try {
       if (retentionCategory === 'Retained') {
-        habitatUnits = getRetentionUnits(fullHabitatAfter, habitatData.areaHa, habitatData.condition, fullHabitatBefore, conditionBefore)
+        //habitatUnits = getRetentionUnits(fullHabitatAfter, habitatData.areaHa, habitatData.condition, fullHabitatBefore, conditionBefore)
+        habitatUnits = getBaselineUnits(fullHabitatBefore, habitatData.areaHa, conditionBefore)
       } else if (retentionCategory === 'Enhanced') {
         habitatUnits = getEnhancementUnits(
           fullHabitatBefore,
@@ -1216,15 +1213,16 @@ function registerOnSitePostInterventionRoutes(router) {
           numericCreatedInAdvance
         )
       } else if (retentionCategory === 'Lost') {
-        habitatUnits = getCreationUnits(
-          fullHabitatBefore,
-          habitatData.areaHa,
-          conditionBefore,
-          fullHabitatAfter,
-          habitatData.condition,
-          numericDelayInStarting,
-          numericCreatedInAdvance
-        )
+        // habitatUnits = getCreationUnits(
+        //   fullHabitatBefore,
+        //   habitatData.areaHa,
+        //   conditionBefore,
+        //   fullHabitatAfter,
+        //   habitatData.condition,
+        //   numericDelayInStarting,
+        //   numericCreatedInAdvance
+        // )
+        habitatUnits = getCreationUnits(habitatData.areaHa, fullHabitatAfter, habitatData.condition, numericDelayInStarting, numericCreatedInAdvance)
       }
     } catch (err) {
       console.error('[PostIntervention] Error calculating units for parcel ' + habitatData.parcelRef + ':', err.message)
@@ -1516,7 +1514,8 @@ function registerOnSitePostInterventionRoutes(router) {
     let units = 0
     try {
       if (retentionCategory === 'Retained') {
-        units = getRetentionUnits(fullHabitatAfter, areaHa, conditionAfter, fullHabitatBefore, conditionBefore)
+        //units = getRetentionUnits(fullHabitatAfter, areaHa, conditionAfter, fullHabitatBefore, conditionBefore)
+        units = getBaselineUnits(fullHabitatBefore, areaHa, conditionBefore)
       } else if (retentionCategory === 'Enhanced') {
         units = getEnhancementUnits(
           fullHabitatBefore,
@@ -1528,15 +1527,17 @@ function registerOnSitePostInterventionRoutes(router) {
           numericCreatedInAdvance
         )
       } else if (retentionCategory === 'Lost') {
-        units = getCreationUnits(
-          fullHabitatBefore,
-          areaHa,
-          conditionBefore,
-          fullHabitatAfter,
-          conditionAfter,
-          numericDelayInStarting,
-          numericCreatedInAdvance
-        )
+        // units = getCreationUnits(
+        //   fullHabitatBefore,
+        //   areaHa,
+        //   conditionBefore,
+        //   fullHabitatAfter,
+        //   conditionAfter,
+        //   numericDelayInStarting,
+        //   numericCreatedInAdvance
+        // )
+        units = getCreationUnits(areaHa, fullHabitatAfter, conditionAfter, numericDelayInStarting, numericCreatedInAdvance)
+        
       }
     } catch (err) {
       console.error('[PostIntervention] Error calculating units for parcel ' + parcelRef + ':', err.message)
