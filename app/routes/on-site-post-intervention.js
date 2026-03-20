@@ -22,7 +22,6 @@ const conditionScores = metricCalcs.conditionScores || {}
 const creationTimeToTarget = metricCalcs.creationTimeToTarget || {}
 const habitatDifficultyMultiplier = metricCalcs.habitatDifficultyMultiplier || {}
 const habitatDifficulty = metricCalcs.habitatDifficulty || {}
-//const getRetentionUnits = metricCalcs.getRetentionUnits || {}
 const getCreationUnits = metricCalcs.getCreationUnits || {}
 const getEnhancementUnits = metricCalcs.getEnhancementUnits || {}
 const getBaselineUnits = metricCalcs.getBaselineUnits || {}
@@ -1040,15 +1039,6 @@ function registerOnSitePostInterventionRoutes(router) {
           numericCreatedInAdvance
         )
       } else if (retentionCategory === 'Lost') {
-        // habitatUnits = getCreationUnits(
-        //   fullHabitatBefore,
-        //   habitatData.areaHa,
-        //   conditionBefore,
-        //   fullHabitatAfter,
-        //   habitatData.condition,
-        //   numericDelayInStarting,
-        //   numericCreatedInAdvance
-        // )
         habitatUnits = getCreationUnits(habitatData.areaHa, fullHabitatAfter, habitatData.condition, numericDelayInStarting, numericCreatedInAdvance)
       }
     } catch (err) {
