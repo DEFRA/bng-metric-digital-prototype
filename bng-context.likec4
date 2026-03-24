@@ -52,44 +52,43 @@ model {
 
   landDeveloper -> awsEuWest2.bngService "Submits BNG metric data"
   lpaOfficer -> awsEuWest2.bngService "Reviews BNG submissions"
-  awsEuWest2.bngService -> awsEuWest2.privateBoundaryCDP.mongoDb "Application data"
-  awsEuWest2.bngService -> awsEuWest2.privateBoundaryCDP.postgresDb "GIS data"
+  awsEuWest2.bngService -> awsEuWest2.privateBoundaryCDP.postgresDb "Application data (JSONB) & GIS data"
   awsEuWest2.bngService -> awsEuWest2.privateBoundaryCDP.fileStorageS3 "File uploads"
-  awsEuWest2.bngService -> azureUkSouth.azureDataPlatform.dynamicsPlatform "Syncs BNG project data"
+  awsEuWest2.bngService -> azureUkSouth.azureDataPlatform.dynamicsPlatform "Audit events via Firehose → S3"
   naturalEngland -> azureUkSouth.azureDataPlatform.dynamicsPlatform "BNG reporting and oversight"
 
-  // ── Nightly Data Sync elements ──
+  // ── Audit Event Stream elements ──
 
   extend awsEuWest2.privateBoundaryCDP {
-    service cronDataSync "Nightly Data Sync" {
-      description "Node.js cron job running nightly to extract BNG project data from MongoDB and push to S3 for GIO platform ingestion"
-      technology "Node.js"
-      icon https://icons.terrastruct.com/dev%2Fnodejs.svg
+    service firehoseStream "AWS Kinesis Data Firehose" {
+      description "Receives audit events from the BNG Core API and delivers them to a dedicated S3 bucket for GIO platform ingestion"
+      technology "AWS Kinesis Data Firehose"
+      icon https://icon.icepanel.io/AWS/svg/Analytics/Kinesis.svg
       style {
-        color green
+        color amber
       }
     }
   }
 
   // ── Data Linkage Model elements ──
 
-  service bngJsonDocument "BNG JSON Document" {
-    description "Core MongoDB document representing a BNG project. Contains references to GIS layers in PostGIS and uploaded files in S3, acting as the single linking record across all data stores."
-    technology "JSON / BSON"
-    icon https://icons.terrastruct.com/dev%2Fmongodb.svg
+  service bngJsonDocument "BNG JSONB Document" {
+    description "Core JSONB document stored in PostgreSQL representing a BNG project. Contains references to GIS layers in PostGIS and uploaded files in S3, acting as the single linking record across all data stores."
+    technology "JSONB / PostgreSQL"
+    icon https://icons.terrastruct.com/dev%2Fpostgresql.svg
     style {
       color green
     }
   }
 
   // Data Linkage relationships
-  awsEuWest2.privateBoundaryCDP.mongoDb -> bngJsonDocument "Stores & retrieves"
+  awsEuWest2.privateBoundaryCDP.postgresDb -> bngJsonDocument "Stores & retrieves"
   bngJsonDocument -> awsEuWest2.privateBoundaryCDP.postgresDb "References GIS layers (red-line boundary, habitat parcels)"
   bngJsonDocument -> awsEuWest2.privateBoundaryCDP.fileStorageS3 "References uploaded files (GeoPackages, shapefiles, PDFs)"
 
-  // Nightly sync relationships
-  awsEuWest2.privateBoundaryCDP.cronDataSync -> awsEuWest2.privateBoundaryCDP.mongoDb "Reads BNG project data"
-  awsEuWest2.privateBoundaryCDP.cronDataSync -> awsEuWest2.privateBoundaryCDP.bngProjectDataS3 "Pushes nightly extract"
+  // Audit event stream relationships
+  awsEuWest2.privateBoundaryCDP.backendApi -> awsEuWest2.privateBoundaryCDP.firehoseStream "Pushes audit events"
+  awsEuWest2.privateBoundaryCDP.firehoseStream -> awsEuWest2.privateBoundaryCDP.bngProjectDataS3 "Delivers events to S3"
 
   // ── BNG Completer User Journey (grouped into phases) ──
 
@@ -467,34 +466,33 @@ views {
     include landDeveloper
     include lpaOfficer
     include awsEuWest2.bngService
-    include awsEuWest2.privateBoundaryCDP.mongoDb
     include awsEuWest2.privateBoundaryCDP.postgresDb
     include awsEuWest2.privateBoundaryCDP.fileStorageS3
     include azureUkSouth.azureDataPlatform.dynamicsPlatform
     include naturalEngland
   }
 
-  // View 3: Nightly Data Sync Flow
+  // View 3: Audit Event Stream to GIO Platform
   view dataSyncFlow {
-    title "Nightly Data Sync to GIO Platform"
-    description "Node.js cron job extracts BNG project data from MongoDB nightly and pushes to S3, which is then ingested by the GIO Data Platform in Azure"
+    title "Audit Event Stream to GIO Platform"
+    description "BNG Core API pushes audit events to AWS Kinesis Data Firehose, which delivers them to a dedicated S3 bucket (not accessible to the BNG service). The GIO Data Platform in Azure reads from this S3 bucket to ingest data into its data lake."
 
     autoLayout LeftRight
 
-    include awsEuWest2.privateBoundaryCDP.cronDataSync
-    include awsEuWest2.privateBoundaryCDP.mongoDb
+    include awsEuWest2.privateBoundaryCDP.backendApi
+    include awsEuWest2.privateBoundaryCDP.firehoseStream
     include awsEuWest2.privateBoundaryCDP.bngProjectDataS3
     include azureUkSouth.azureDataPlatform.dynamicsPlatform
   }
 
-  // View 4: Data Linkage Model
+  // View 4: PostgreSQL Data Linkage Model
   view dataLinkage {
-    title "MongoDB Data Linkage Model"
-    description "Shows how MongoDB is the primary data store, with BNG JSON documents linking to PostGIS for spatial data and S3 for file uploads"
+    title "PostgreSQL Data Linkage Model"
+    description "Shows how PostgreSQL is the primary data store, with BNG JSONB documents linking to PostGIS for spatial data and S3 for file uploads"
 
     autoLayout TopBottom
 
-    include awsEuWest2.privateBoundaryCDP.mongoDb
+    include awsEuWest2.privateBoundaryCDP.postgresDb
     include bngJsonDocument
     include awsEuWest2.privateBoundaryCDP.postgresDb
     include awsEuWest2.privateBoundaryCDP.fileStorageS3
