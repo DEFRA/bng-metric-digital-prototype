@@ -175,8 +175,8 @@ model {
         }
       }
 
-      storage bngProjectDataS3 "BNG Project Data - S3" {
-        description "Stores BNG project updates/data for synchronisation with the GIO data platform"
+      storage bngProjectDataS3 "BNG Audit Events - S3" {
+        description "Dedicated S3 bucket receiving audit events from Firehose. Not accessible to the BNG service directly. Read by the GIO Data Platform for data lake ingestion."
         technology "AWS S3"
         icon https://icons.terrastruct.com/aws%2FStorage%2FAmazon-Simple-Storage-Service-S3.svg
         style {
@@ -185,14 +185,8 @@ model {
         }
       }
 
-      database mongoDb "CDP Mongo Database" {
-        description "Mongo preferred for application data: users and RBAC, BNG information, also secondary store of GIS for convenience"
-        technology "MongoDB"
-        icon https://icons.terrastruct.com/dev%2Fmongodb.svg
-      }
-
       database postgresDb "CDP Postgres / PostGIS Database" {
-        description "PostGIS used to store reference data e.g. Living England habitats. Also stores user uploaded/created GIS layers associated with application"
+        description "Primary data store. JSONB used to store BNG project data in relational table(s). PostGIS stores reference data (e.g. Living England habitats) and user uploaded/created GIS layers. JSON documents hold references to GIS data stored in PostGIS."
         technology "PostgreSQL / PostGIS"
         icon https://icons.terrastruct.com/dev%2Fpostgresql.svg
       }
@@ -216,10 +210,10 @@ model {
     boundary azureDataPlatform "Azure Data Platform" {
       description "Azure cloud services for reporting and data platform"
 
-      platform dynamicsPlatform "Dynamics Platform / GIO Data Platform" {
-        description "Core data platform for BNG data management"
-        technology "Microsoft Dynamics"
-        icon https://az-icons.com/export/icons/118053ce776aecf10590bb75db4a9b3b.svg
+      platform dynamicsPlatform "GIO Data Platform" {
+        description "Power BI-based data platform for BNG reporting, analysis, and data management"
+        technology "Microsoft Power BI"
+        icon https://az-icons.com/export/icons/e4e7a2a46c0b319dc5989d4b4977cad1.svg
       }
     }
   }
@@ -238,6 +232,15 @@ model {
     description "Send alerts to BNG stakeholders about changes"
     technology "GOV.UK Notify"
     icon https://icons.terrastruct.com/aws%2FCustomer%20Engagement%2FAmazon-Simple-Email-Service-SES.svg
+    style {
+      color amber
+    }
+  }
+
+  service externalApiCalls "External API Calls" {
+    description "Calls to external services such as Ordnance Survey, ArcGIS or GovUK Notify"
+    technology "REST / HTTPS"
+    icon https://icons.terrastruct.com/aws%2F_General%2FInternet-alt2_light-bg.svg
     style {
       color amber
     }
@@ -265,15 +268,13 @@ model {
   // Within Private CDP
   awsEuWest2.privateBoundaryCDP.backendApi -> awsEuWest2.privateBoundaryCDP.virusScanService "Sends files for scanning"
   awsEuWest2.privateBoundaryCDP.virusScanService -> awsEuWest2.privateBoundaryCDP.fileStorageS3 "Stores scanned files"
-  awsEuWest2.privateBoundaryCDP.backendApi -> awsEuWest2.privateBoundaryCDP.bngProjectDataS3 "Stores BNG project data"
-  awsEuWest2.privateBoundaryCDP.backendApi -> awsEuWest2.privateBoundaryCDP.mongoDb "Application data CRUD"
-  awsEuWest2.privateBoundaryCDP.backendApi -> awsEuWest2.privateBoundaryCDP.postgresDb "GIS data operations"
+  awsEuWest2.privateBoundaryCDP.backendApi -> awsEuWest2.privateBoundaryCDP.postgresDb "Application data (JSONB) & GIS operations"
   
-  // Backend to GOV.UK Notify
-  awsEuWest2.privateBoundaryCDP.backendApi -> archGovukNotify "Sends stakeholder alerts"
+  // Backend to External API Calls
+  awsEuWest2.privateBoundaryCDP.backendApi -> externalApiCalls "External API calls"
 
-  // AWS to Azure cross-cloud sync
-  awsEuWest2.privateBoundaryCDP.bngProjectDataS3 -> azureUkSouth.azureDataPlatform.dynamicsPlatform "Sync"
+  // AWS to Azure cross-cloud data ingestion
+  awsEuWest2.privateBoundaryCDP.bngProjectDataS3 -> azureUkSouth.azureDataPlatform.dynamicsPlatform "GIO reads audit events for data lake ingestion"
 
   // Security routing - Ingress
   defraCustomerId -> awsEuWest2.publicEgress.awsShield "Inbound traffic"
@@ -306,9 +307,8 @@ views {
     include awsEuWest2.privateBoundaryCDP.backendApi
     include awsEuWest2.privateBoundaryCDP.virusScanService
     include awsEuWest2.privateBoundaryCDP.fileStorageS3
-    include awsEuWest2.privateBoundaryCDP.mongoDb
     include awsEuWest2.privateBoundaryCDP.postgresDb
-    include archGovukNotify
+    include externalApiCalls
 
     // This will automatically include all relationships between the included elements
   }

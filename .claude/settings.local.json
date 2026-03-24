@@ -18,7 +18,8 @@
       "WebFetch(domain:icons.terrastruct.com)",
       "WebFetch(domain:cdn.simpleicons.org)",
       "WebFetch(domain:cdn.jsdelivr.net)",
-      "Bash(lsof:*)"
+      "Bash(lsof:*)",
+      "Bash(tee /tmp/context-diff.txt)"
     ]
   },
   "outputStyle": "Explanatory"
