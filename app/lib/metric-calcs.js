@@ -295,7 +295,9 @@ function getBaselineUnits(habitat, size, condition) {
   const conditionScore = getConditionMultiplier(habitat, condition);
   const strategicSignificanceScore = 1;
 
-  return size * distinctivenessScore * conditionScore * strategicSignificanceScore;
+  const units =  size * distinctivenessScore * conditionScore * strategicSignificanceScore;
+
+  return units;
 }
 
 /**

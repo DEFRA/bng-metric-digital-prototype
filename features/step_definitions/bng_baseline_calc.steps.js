@@ -17,7 +17,7 @@ When('calculating Baseline BNG units', function () {
   bngResult = getBaselineUnits(parcel.habitat, parcel.areaHa, parcel.condition);
 });
 
-Then('the returned value should be 5.44', function () {
+Then('the BNG units should be 5.44', function () {
   assert.strictEqual(round2(bngResult), 5.44);
 });
 
@@ -25,7 +25,7 @@ Given('a Mixed scrub parcel of 0.057 Ha and Poor condition', function () {
   parcel = { areaHa: 0.057, habitat: 'Heathland and shrub - Mixed scrub', condition: 'Poor' };
 });
 
-Then('the returned value should be 0.23', function () {
+Then('the BNG units should be 0.23', function () {
   assert.strictEqual(round2(bngResult), 0.23);
 });
 
@@ -33,7 +33,7 @@ Given('a Developed land; sealed surface parcel of 0.072 Ha and N\\/A - Other con
   parcel = { areaHa: 0.072, habitat: 'Urban - Developed land; sealed surface', condition: 'N/A - Other' };
 });
 
-Then('the returned value should be 0.00', function () {
+Then('the BNG units should be 0.00', function () {
   assert.strictEqual(round2(bngResult), 0.00);
 });
 
@@ -41,7 +41,7 @@ Given('a Cereal crops parcel of 4.52 Ha and Condition Assessment N\\/A condition
   parcel = { areaHa: 4.52, habitat: 'Cropland - Cereal crops', condition: 'Condition Assessment N/A' };
 });
 
-Then('the returned value should be 9.04', function () {
+Then('the BNG units should be 9.04', function () {
   assert.strictEqual(round2(bngResult), 9.04);
 });
 
@@ -49,7 +49,7 @@ Given('a Native pine woodlands parcel of 12.154 Ha and Moderate condition', func
   parcel = { areaHa: 12.154, habitat: 'Woodland and forest - Native pine woodlands', condition: 'Moderate' };
 });
 
-Then('the returned value should be 145.85', function () {
+Then('the BNG units should be 145.85', function () {
   assert.strictEqual(round2(bngResult), 145.85);
 });
 
@@ -57,7 +57,7 @@ Given('a Coastal lagoons parcel of 3.843 Ha and Poor condition', function () {
   parcel = { areaHa: 3.843, habitat: 'Coastal lagoons - Coastal lagoons', condition: 'Poor' };
 });
 
-Then('the returned value should be 23.06', function () {
+Then('the BNG units should be 23.06', function () {
   assert.strictEqual(round2(bngResult), 23.06);
 });
 

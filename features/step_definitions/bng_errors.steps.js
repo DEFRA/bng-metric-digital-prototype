@@ -28,7 +28,9 @@ Then('I should receive an error', function () {
   }
 });
 
-Given('a Reedbeds parcel parcel of 0.0 Ha and Moderate condition, for creation', function () {
+Given('a Reedbeds parcel of 0.0 Ha and Moderate condition, for creation', function () {
   parcel = { areaHa: 0.0, habitat: 'Wetland - Reedbeds', condition: 'Moderate', delayYears:0, advanceYears:0 };
 });
+
+
 

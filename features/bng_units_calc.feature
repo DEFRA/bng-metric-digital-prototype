@@ -44,9 +44,9 @@ Feature: Calculate BNG Units
   Scenario: Calculate created units
     Given a Developed land; sealed surface parcel of 5.6 Ha and N/A - Other condition for creation
     When calculating Creation BNG units
-    Then the BNG units should be 0.00
+    Then the BNG units returned should be 0.00
 
-  # Spreadsheet gives slightly different value (9.09) to the spreadsheet because the Time To Target value is 0.410377 instead of the correct 0.41
+  # Calculates slightly different value (9.09) to the spreadsheet because the Time To Target value is 0.410377 instead of the correct 0.41
   Scenario: Calculate created units
     Given a Lowland mixed deciduous woodland parcel of 5.6 Ha and Moderate condition with 5 years created in advance, for creation
     When calculating Creation BNG units
