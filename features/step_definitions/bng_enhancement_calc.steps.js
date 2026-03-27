@@ -17,7 +17,7 @@ When('calculating Enhancement BNG units', function () {
   bngResult = getEnhancementUnits(parcel.habitat, "Moderate", parcel.habitat, parcel.areaHa, parcel.condition, parcel.delayYears, parcel.advanceYears)
 });
 
-Then('the returned value should be 159.95', function () {
+Then('the BNG units should be 159.95', function () {
   console.log(bngResult);
   assert.strictEqual(round2(bngResult), 159.95);
 });

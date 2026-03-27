@@ -18,7 +18,7 @@ When('calculating Creation BNG units', function () {
   bngResult = getCreationUnits(parcel.areaHa, parcel.habitat, parcel.condition, parcel.delayYears, parcel.advanceYears)
 });
 
-Then('the returned value should be 7.72', function () {
+Then('the BNG units should be 7.72', function () {
   assert.strictEqual(round2(bngResult), 7.72);
 });
 
@@ -26,7 +26,7 @@ Given('a Developed land; sealed surface parcel of 5.6 Ha and N\\/A - Other condi
   parcel = { areaHa: 5.6, habitat: 'Urban - Developed land; sealed surface', condition: 'N/A - Other', delayYears:0, advanceYears:0 };
 });
 
-Then('the creation value should be 0.00', function () {
+Then('the BNG units returned should be 0.00', function () {
   assert.strictEqual(round2(bngResult), 0.00);
 });
 
@@ -34,7 +34,7 @@ Given('a Lowland mixed deciduous woodland parcel of 5.6 Ha and Moderate conditio
   parcel = { areaHa: 5.6, habitat: 'Woodland and forest - Lowland mixed deciduous woodland', condition: 'Moderate', delayYears:0, advanceYears:5 };
 });
 
-Then('the returned value should be 9.10', function () {
+Then('the BNG units should be 9.10', function () {
   assert.strictEqual(round2(bngResult), 9.10);
 });
 
@@ -42,7 +42,7 @@ Given('a Vegetated garden parcel of 4 Ha and Condition Assessment N\\/A conditio
   parcel = { areaHa: 4, habitat: 'Urban - Vegetated garden', condition: 'Condition Assessment N/A', delayYears:2, advanceYears:0 };
 });
 
-Then('the returned value should be 7.19', function () {
+Then('the BNG units should be 7.19', function () {
   assert.strictEqual(round2(bngResult), 7.19);
 });
 
@@ -50,7 +50,7 @@ Given('an Inland rock outcrop and scree habitats parcel of 5.26 Ha and Moderate 
   parcel = { areaHa: 5.26, habitat: 'Sparsely vegetated land - Inland rock outcrop and scree habitats', condition: 'Moderate', delayYears:12, advanceYears:0 };
 });
 
-Then('the returned value should be 6.66', function () {
+Then('the BNG units should be 6.66', function () {
   assert.strictEqual(round2(bngResult), 6.66);
 });
 
@@ -58,6 +58,6 @@ Given('a Reedbeds parcel of 1.62 Ha and Moderate condition with 8 years in advan
   parcel = { areaHa: 1.62, habitat: 'Wetland - Reedbeds', condition: 'Moderate', delayYears:0, advanceYears:8 };
 });
 
-Then('the returned value should be 19.44', function () {
+Then('the BNG units should be 19.44', function () {
   assert.strictEqual(round2(bngResult), 19.44);
 });
