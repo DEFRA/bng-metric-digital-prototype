@@ -1,0 +1,131 @@
+{% extends "layouts/main.html" %}
+
+{% from "govuk/components/back-link/macro.njk" import govukBackLink %}
+
+{% set pageName = "New map" %}
+
+{% block pageTitle %}{{ pageName }} – {{ serviceName }} – GOV.UK{% endblock %}
+
+{% block head %}
+  {{ super() }}
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/OrdnanceSurvey/os-api-branding@latest/os-api-branding.css" />
+  <link rel="stylesheet" href="/public/stylesheets/new-map.css" />
+  <style>
+    .new-map-container {
+      margin-top: 20px;
+    }
+
+    #my-map {
+      border: 2px solid #b1b4b6;
+      min-height: 500px;
+    }
+
+    .map-legend {
+      margin-top: 15px;
+      padding: 15px;
+      background: #f3f2f1;
+      border-left: 4px solid #1d70b8;
+    }
+
+    .map-legend-item {
+      display: flex;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .map-legend-item:last-child {
+      margin-bottom: 0;
+    }
+
+    .legend-swatch {
+      width: 24px;
+      height: 24px;
+      margin-right: 10px;
+      border: 1px solid #0b0c0c;
+    }
+
+    .legend-swatch--boundary {
+      background: transparent;
+      border: 2px dashed #d4351c;
+    }
+
+    .legend-swatch--parcels {
+      background: rgba(29, 112, 184, 0.3);
+      border: 2px solid #1d70b8;
+    }
+
+    .legend-swatch--hedgerows {
+      background: transparent;
+      border: none;
+      height: 4px;
+      margin-top: 10px;
+      background-color: #00703c;
+    }
+
+    .legend-swatch--watercourses {
+      background: transparent;
+      border: none;
+      height: 4px;
+      margin-top: 10px;
+      background-color: #1d70b8;
+    }
+  </style>
+{% endblock %}
+
+{% block content %}
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-full">
+      {{ govukBackLink({
+        text: "Back",
+        href: "/on-site-baseline/confirm-layers"
+      }) }}
+
+      <h1 class="govuk-heading-l">{{ pageName }}</h1>
+
+      <p class="govuk-body">This page uses the new Interactive Map and displays the uploaded layers.</p>
+
+      <div class="new-map-container">
+        <div id="my-map">
+          <div class="map-loading-overlay" aria-hidden="true">
+            Loading
+          </div>
+        </div>
+        <div class="map-legend">
+          <div class="map-legend-item">
+            <div class="legend-swatch legend-swatch--boundary"></div>
+            <span class="govuk-body govuk-!-margin-bottom-0">Site boundary</span>
+          </div>
+          <div class="map-legend-item">
+            <div class="legend-swatch legend-swatch--parcels"></div>
+            <span class="govuk-body govuk-!-margin-bottom-0">Habitat parcels ({{ layers.habitatParcels.polygonCount }})</span>
+          </div>
+          {% if layers.hedgerows.featureCount > 0 %}
+            <div class="map-legend-item">
+              <div class="legend-swatch legend-swatch--hedgerows"></div>
+              <span class="govuk-body govuk-!-margin-bottom-0">Hedgerows ({{ layers.hedgerows.featureCount }})</span>
+            </div>
+          {% endif %}
+          {% if layers.watercourses.featureCount > 0 %}
+            <div class="map-legend-item">
+              <div class="legend-swatch legend-swatch--watercourses"></div>
+              <span class="govuk-body govuk-!-margin-bottom-0">Watercourses ({{ layers.watercourses.featureCount }})</span>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script id="geometries-data" type="application/json">{{ geometries | dump | safe }}</script>
+  <script id="boundary-layer-name" type="text/plain">{{ boundaryLayerName }}</script>
+  <script id="parcels-layer-name" type="text/plain">{{ parcelsLayerName }}</script>
+  <script id="hedgerows-layer-name" type="text/plain">{{ layers.hedgerows.layerName }}</script>
+  <script id="watercourses-layer-name" type="text/plain">{{ layers.watercourses.layerName }}</script>
+{% endblock %}
+
+{% block pageScripts %}
+  <script src="https://cdn.jsdelivr.net/npm/proj4@2.9.0/dist/proj4.js"></script>
+  <script defer src="/public/javascripts/interactive-map/index.js"></script>
+  <script defer src="/public/javascripts/maplibre-provider/index.js"></script>
+  <script src="/public/javascripts/map-new-map-interactive.js"></script>
+{% endblock %}

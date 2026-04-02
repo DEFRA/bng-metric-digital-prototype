@@ -1,7 +1,7 @@
 //
 // For guidance on how to add CSS and SCSS see:
 // https://prototype-kit.service.gov.uk/docs/adding-css-javascript-and-images
-// 
+//
 
 // Add extra styles here
 
@@ -17,9 +17,9 @@
   // OS branding positioning fix
   .os-api-branding {
     pointer-events: none;
-    
+
     a {
-      pointer-events: auto;  // Keep logo link clickable
+      pointer-events: auto; // Keep logo link clickable
     }
   }
 }
@@ -66,7 +66,7 @@
   right: 12px;
   z-index: 1000; // Higher than OS branding to ensure menu overlays copyright notice
   pointer-events: none;
-  font-family: "GDS Transport", "Helvetica Neue", Arial, sans-serif;
+  font-family: 'GDS Transport', 'Helvetica Neue', Arial, sans-serif;
 }
 
 // Hamburger button
@@ -83,7 +83,10 @@
   cursor: pointer;
   color: #ffffff;
   box-shadow: 0 3px 12px rgba(0, 0, 0, 0.25);
-  transition: background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    background 0.2s ease,
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
 
   &:hover {
     background: #003078;
@@ -118,12 +121,18 @@
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
   min-width: 260px;
   max-width: 320px;
-  max-height: min(480px, calc(100vh - 220px)); // Cap height, accounting for header/footer
+  max-height: min(
+    480px,
+    calc(100vh - 220px)
+  ); // Cap height, accounting for header/footer
   opacity: 0;
   visibility: hidden;
   transform: translateY(-10px) scale(0.95);
   transform-origin: top right;
-  transition: opacity 0.25s ease, visibility 0.25s ease, transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  transition:
+    opacity 0.25s ease,
+    visibility 0.25s ease,
+    transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   flex-direction: column;
   z-index: 1001; // Higher than OS branding (typically 100-200)
@@ -144,7 +153,10 @@
   }
 
   @media (max-height: 600px) {
-    max-height: min(320px, calc(100vh - 160px)); // Even smaller for short screens
+    max-height: min(
+      320px,
+      calc(100vh - 160px)
+    ); // Even smaller for short screens
   }
 }
 
@@ -180,7 +192,9 @@
   border-radius: 4px;
   cursor: pointer;
   color: #505a5f;
-  transition: background 0.15s ease, color 0.15s ease;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
 
   &:hover {
     background: #d4351c;
@@ -209,7 +223,10 @@
   color: #6e5303;
   font-size: 13px;
   font-weight: 500;
-  transition: max-height 0.25s ease, padding 0.25s ease, opacity 0.25s ease;
+  transition:
+    max-height 0.25s ease,
+    padding 0.25s ease,
+    opacity 0.25s ease;
   max-height: 60px;
   overflow: hidden;
 
@@ -301,7 +318,11 @@
   color: #1d70b8;
   padding: 0;
   flex-shrink: 0;
-  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.15s ease;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease,
+    transform 0.15s ease;
 
   &:hover:not(:disabled) {
     background: #1d70b8;
@@ -378,7 +399,9 @@
   color: #0b0c0c;
   font-size: 13px;
   text-align: left;
-  transition: background 0.15s ease, border-color 0.15s ease;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
 
   &:hover:not(:disabled) {
     background: #f3f2f1;
@@ -407,7 +430,9 @@
   border-radius: 4px;
   color: #505a5f;
   flex-shrink: 0;
-  transition: background 0.15s ease, color 0.15s ease;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
 
   svg {
     width: 18px;
@@ -463,12 +488,15 @@
   font-size: 14px;
   font-weight: 600;
   text-align: left;
-  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
 
   &:hover:not(:disabled) {
     background: #1d70b8;
     color: #ffffff;
-    
+
     .defra-map-controls__action-icon {
       color: #ffffff;
     }
@@ -540,7 +568,7 @@
   display: flex;
   gap: 10px;
   pointer-events: auto;
-  font-family: "GDS Transport", "Helvetica Neue", Arial, sans-serif;
+  font-family: 'GDS Transport', 'Helvetica Neue', Arial, sans-serif;
 }
 
 .defra-map-floating-actions__btn {
@@ -556,7 +584,12 @@
   cursor: pointer;
   color: #1d70b8;
   box-shadow: 0 3px 12px rgba(0, 0, 0, 0.2);
-  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease,
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
 
   &:hover:not(:disabled) {
     transform: translateY(-2px);
@@ -623,7 +656,9 @@
   justify-content: center;
   opacity: 0;
   visibility: hidden;
-  transition: opacity 0.25s ease, visibility 0.25s ease;
+  transition:
+    opacity 0.25s ease,
+    visibility 0.25s ease;
 
   &--open {
     opacity: 1;
@@ -686,7 +721,9 @@
   border-radius: 4px;
   cursor: pointer;
   color: #505a5f;
-  transition: background 0.15s ease, color 0.15s ease;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
 
   &:hover {
     background: #d4351c;
@@ -708,28 +745,28 @@
   padding: 20px;
   overflow-y: auto;
   flex: 1;
-  
+
   // Make focusable for keyboard scrolling
   &:focus {
     outline: 3px solid $govuk-focus-colour;
     outline-offset: -3px;
   }
-  
+
   // GOV.UK styles inside modal
   .govuk-body,
   .govuk-body-s {
     margin-bottom: 15px;
   }
-  
+
   .govuk-heading-s {
     margin-top: 20px;
     margin-bottom: 10px;
   }
-  
+
   .govuk-list {
     margin-bottom: 15px;
   }
-  
+
   .govuk-inset-text {
     margin-top: 15px;
     margin-bottom: 15px;
@@ -806,7 +843,7 @@
   left: 50%;
   transform: translateX(-50%);
   z-index: 500;
-  font-family: "GDS Transport", "Helvetica Neue", Arial, sans-serif;
+  font-family: 'GDS Transport', 'Helvetica Neue', Arial, sans-serif;
   line-height: 1.4;
   color: #0b0c0c;
   letter-spacing: 0.02em;
@@ -817,7 +854,7 @@
   text-align: center;
   min-width: 200px;
   max-width: 90%;
-  
+
   .map-area-display__title {
     font-size: 12px;
     font-weight: 700;
@@ -826,32 +863,32 @@
     letter-spacing: 0.05em;
     margin-bottom: 4px;
   }
-  
+
   .map-area-display__value {
     font-size: 24px;
     font-weight: 700;
     color: #0b0c0c;
     margin-bottom: 2px;
-    
+
     &--primary {
       color: #1d70b8;
     }
-    
+
     &--error {
       color: #d4351c;
     }
-    
+
     &--success {
       color: #00703c;
     }
   }
-  
+
   .map-area-display__unit {
     font-size: 14px;
     font-weight: 400;
     color: #505a5f;
   }
-  
+
   .map-area-display__row {
     display: flex;
     justify-content: space-between;
@@ -859,31 +896,31 @@
     gap: 20px;
     padding: 6px 0;
     border-bottom: 1px solid #b1b4b6;
-    
+
     &:last-child {
       border-bottom: none;
       padding-bottom: 0;
     }
-    
+
     &:first-child {
       padding-top: 0;
     }
   }
-  
+
   .map-area-display__label {
     font-size: 13px;
     color: #505a5f;
   }
-  
+
   .map-area-display__data {
     font-size: 16px;
     font-weight: 700;
     color: #0b0c0c;
-    
+
     &--warning {
       color: #d4351c;
     }
-    
+
     &--success {
       color: #00703c;
     }
@@ -917,7 +954,9 @@
     &:focus {
       outline: 3px solid #ffdd00;
       background-color: #ffdd00;
-      box-shadow: 0 -2px #ffdd00, 0 4px #0b0c0c;
+      box-shadow:
+        0 -2px #ffdd00,
+        0 4px #0b0c0c;
       text-decoration: none;
       color: #0b0c0c;
     }
@@ -930,39 +969,39 @@
       flex-shrink: 0;
     }
 
-    &[data-action="start"]::before {
+    &[data-action='start']::before {
       content: '▶';
       color: #00703c;
       font-size: 14px;
     }
 
-    &[data-action="cancel"]::before {
+    &[data-action='cancel']::before {
       content: '✕';
       color: #d4351c;
       font-size: 16px;
       font-weight: bold;
     }
 
-    &[data-action="clear"]::before {
+    &[data-action='clear']::before {
       content: '⟲';
       color: #505a5f;
       font-size: 18px;
     }
 
-    &[data-action="save"]::before {
+    &[data-action='save']::before {
       content: '✓';
       color: #00703c;
       font-size: 18px;
       font-weight: bold;
     }
 
-    &[data-action="export"]::before {
+    &[data-action='export']::before {
       content: '⬇';
       color: #1d70b8;
       font-size: 16px;
     }
 
-    &[data-action="add"]::before {
+    &[data-action='add']::before {
       content: '+';
       color: #00703c;
       font-size: 20px;
@@ -999,7 +1038,9 @@
   color: #0b0c0c;
   opacity: 0;
   visibility: hidden;
-  transition: opacity 0.2s ease, visibility 0.2s ease;
+  transition:
+    opacity 0.2s ease,
+    visibility 0.2s ease;
 
   &.visible {
     opacity: 1;
@@ -1101,7 +1142,7 @@
   color: #ffffff;
   padding: 10px 16px;
   border-radius: 6px;
-  font-family: "GDS Transport", "Helvetica Neue", Arial, sans-serif;
+  font-family: 'GDS Transport', 'Helvetica Neue', Arial, sans-serif;
   font-size: 14px;
   box-shadow: 0 3px 12px rgba(0, 0, 0, 0.3);
   animation: keyboardHintFadeIn 0.3s ease-out;
@@ -1168,7 +1209,7 @@
     border: 1px solid #b1b4b6;
     border-radius: 4px;
     padding: 4px 8px;
-    font-family: "GDS Transport", "Helvetica Neue", Arial, sans-serif;
+    font-family: 'GDS Transport', 'Helvetica Neue', Arial, sans-serif;
     font-size: 13px;
     font-weight: 600;
     color: #0b0c0c;
@@ -1192,7 +1233,7 @@
   border: 1px solid #b1b4b6;
   border-radius: 3px;
   padding: 2px 6px;
-  font-family: "GDS Transport", "Helvetica Neue", Arial, sans-serif;
+  font-family: 'GDS Transport', 'Helvetica Neue', Arial, sans-serif;
   font-size: 12px;
   font-weight: 600;
   color: #0b0c0c;
@@ -1221,17 +1262,17 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   border-radius: 4px;
   overflow: hidden;
-  
+
   // Ensure visibility on all backgrounds
   .govuk-notification-banner__header {
     border-bottom: 1px solid #1d70b8;
     padding: 8px 12px;
   }
-  
+
   .govuk-notification-banner__title {
     font-size: 14px;
   }
-  
+
   .govuk-notification-banner__content {
     background-color: #ffffff;
     padding: 10px 12px;
@@ -1243,11 +1284,11 @@
     font-weight: 400;
     font-size: 14px;
   }
-  
+
   // Success state (optional - can be applied dynamically)
   &.govuk-notification-banner--success {
     border-color: #00703c;
-    
+
     .govuk-notification-banner__header {
       background-color: #00703c;
       border-bottom-color: #00703c;

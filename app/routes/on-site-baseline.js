@@ -13,6 +13,7 @@ const {
 const { isWithinUK, getLPA, getNCA, getLNRS } = require('../lib/arcgis-queries')
 const metricCalcs = require('../lib/metric-calcs')
 const { getBaselineUnits, distinctivenessCategories } = metricCalcs
+const geoConversion = require('../lib/geo-conversion')
 
 const upload = multer({ storage: multer.memoryStorage() })
 
@@ -41,6 +42,116 @@ const conditionScores = {
   'N/A - Other': 0
 }
 */
+
+function buildConfirmLayersViewData(req) {
+  const layers = req.session.data['geopackageLayers'] || []
+  const geometries = req.session.data['geopackageGeometries'] || {}
+
+  // Find boundary and parcel layers (heuristic based on layer names)
+  const siteBoundary =
+    layers.find(
+      (l) =>
+        l.name.toLowerCase().includes('boundary') ||
+        l.name.toLowerCase().includes('red_line') ||
+        l.name.toLowerCase().includes('redline')
+    ) || layers[0]
+
+  const habitatParcels =
+    layers.find(
+      (l) =>
+        l.name.toLowerCase().includes('parcel') ||
+        l.name.toLowerCase().includes('habitat')
+    ) || (layers.length > 1 ? layers[1] : layers[0])
+
+  // Calculate areas in hectares
+  const boundaryAreaHa = siteBoundary
+    ? (siteBoundary.totalAreaSqm / 10000).toFixed(2)
+    : 0
+  const parcelsAreaHa = habitatParcels
+    ? (habitatParcels.totalAreaSqm / 10000).toFixed(2)
+    : 0
+
+  // Find hedgerow layer
+  const hedgerowLayer = layers.find(
+    (l) =>
+      l.name.toLowerCase().includes('hedgerow') ||
+      l.name.toLowerCase().includes('hedge')
+  )
+
+  // Find watercourse layer
+  const watercourseLayer = layers.find(
+    (l) =>
+      l.name.toLowerCase().includes('watercourse') ||
+      l.name.toLowerCase().includes('river') ||
+      l.name.toLowerCase().includes('stream')
+  )
+
+  // Calculate hedgerow totals
+  let hedgerowTotalLengthM = 0
+  let hedgerowFeatureCount = 0
+  if (hedgerowLayer && geometries[hedgerowLayer.name]) {
+    const hedgerowFeatures = geometries[hedgerowLayer.name].features || []
+    hedgerowFeatureCount = hedgerowFeatures.length
+    hedgerowFeatures.forEach((feature) => {
+      if (feature.geometry) {
+        hedgerowTotalLengthM += calculateLineLength(feature.geometry)
+      }
+    })
+  }
+
+  // Calculate watercourse totals
+  let watercourseTotalLengthM = 0
+  let watercourseFeatureCount = 0
+  if (watercourseLayer && geometries[watercourseLayer.name]) {
+    const watercourseFeatures = geometries[watercourseLayer.name].features || []
+    watercourseFeatureCount = watercourseFeatures.length
+    watercourseFeatures.forEach((feature) => {
+      if (feature.geometry) {
+        watercourseTotalLengthM += calculateLineLength(feature.geometry)
+      }
+    })
+  }
+
+  return {
+    uploadSummary: {
+      layerCountMessage: `File uploaded – ${layers.length} layer${layers.length !== 1 ? 's' : ''} found`
+    },
+    layers: {
+      siteBoundary: {
+        polygonCount: siteBoundary ? siteBoundary.featureCount : 0,
+        areaHa: boundaryAreaHa,
+        layerName: siteBoundary ? siteBoundary.name : 'Not found'
+      },
+      habitatParcels: {
+        polygonCount: habitatParcels ? habitatParcels.featureCount : 0,
+        areaHa: parcelsAreaHa,
+        layerName: habitatParcels ? habitatParcels.name : 'Not found'
+      },
+      hedgerows: {
+        featureCount: hedgerowFeatureCount,
+        totalLengthM: hedgerowTotalLengthM.toFixed(1),
+        layerName: hedgerowLayer ? hedgerowLayer.name : null
+      },
+      watercourses: {
+        featureCount: watercourseFeatureCount,
+        totalLengthM: watercourseTotalLengthM.toFixed(1),
+        layerName: watercourseLayer ? watercourseLayer.name : null
+      }
+    },
+    coverage: {
+      isFull: true // Simplified for prototype
+    },
+    location: {
+      lpaName: req.session.data['lpaName'] || '<LPA Name>',
+      nationalCharacterArea:
+        req.session.data['ncaName'] || '<National Character Area>',
+      lnrsName: req.session.data['lnrsName'] || '<LNRS Name>'
+    },
+    geometries: geometries,
+    boundaryLayerName: siteBoundary ? siteBoundary.name : null,
+    parcelsLayerName: habitatParcels ? habitatParcels.name : null
+  }
+}
 
 /**
  * Register on-site baseline routes
@@ -222,118 +333,11 @@ function registerOnSiteBaselineRoutes(router) {
 
   // Confirm Layers Page - GET
   router.get('/on-site-baseline/confirm-layers', function (req, res) {
-    const layers = req.session.data['geopackageLayers'] || []
-    const geometries = req.session.data['geopackageGeometries'] || {}
-    const uploadedFiles = req.session.data['uploadedFiles'] || {}
+    res.render('on-site-baseline/confirm-layers', buildConfirmLayersViewData(req))
+  })
 
-    // Find boundary and parcel layers (heuristic based on layer names)
-    let siteBoundary =
-      layers.find(
-        (l) =>
-          l.name.toLowerCase().includes('boundary') ||
-          l.name.toLowerCase().includes('red_line') ||
-          l.name.toLowerCase().includes('redline')
-      ) || layers[0]
-
-    let habitatParcels =
-      layers.find(
-        (l) =>
-          l.name.toLowerCase().includes('parcel') ||
-          l.name.toLowerCase().includes('habitat')
-      ) || (layers.length > 1 ? layers[1] : layers[0])
-
-    // Calculate areas in hectares
-    const boundaryAreaHa = siteBoundary
-      ? (siteBoundary.totalAreaSqm / 10000).toFixed(2)
-      : 0
-    const parcelsAreaHa = habitatParcels
-      ? (habitatParcels.totalAreaSqm / 10000).toFixed(2)
-      : 0
-
-    // Find hedgerow layer
-    let hedgerowLayer = layers.find(
-      (l) =>
-        l.name.toLowerCase().includes('hedgerow') ||
-        l.name.toLowerCase().includes('hedge')
-    )
-
-    // Find watercourse layer
-    let watercourseLayer = layers.find(
-      (l) =>
-        l.name.toLowerCase().includes('watercourse') ||
-        l.name.toLowerCase().includes('river') ||
-        l.name.toLowerCase().includes('stream')
-    )
-
-    // Calculate hedgerow totals
-    let hedgerowTotalLengthM = 0
-    let hedgerowFeatureCount = 0
-    if (hedgerowLayer && geometries[hedgerowLayer.name]) {
-      const hedgerowFeatures = geometries[hedgerowLayer.name].features || []
-      hedgerowFeatureCount = hedgerowFeatures.length
-      hedgerowFeatures.forEach((feature) => {
-        if (feature.geometry) {
-          hedgerowTotalLengthM += calculateLineLength(feature.geometry)
-        }
-      })
-    }
-
-    // Calculate watercourse totals
-    let watercourseTotalLengthM = 0
-    let watercourseFeatureCount = 0
-    if (watercourseLayer && geometries[watercourseLayer.name]) {
-      const watercourseFeatures =
-        geometries[watercourseLayer.name].features || []
-      watercourseFeatureCount = watercourseFeatures.length
-      watercourseFeatures.forEach((feature) => {
-        if (feature.geometry) {
-          watercourseTotalLengthM += calculateLineLength(feature.geometry)
-        }
-      })
-    }
-
-    // Build view data
-    const viewData = {
-      uploadSummary: {
-        layerCountMessage: `File uploaded – ${layers.length} layer${layers.length !== 1 ? 's' : ''} found`
-      },
-      layers: {
-        siteBoundary: {
-          polygonCount: siteBoundary ? siteBoundary.featureCount : 0,
-          areaHa: boundaryAreaHa,
-          layerName: siteBoundary ? siteBoundary.name : 'Not found'
-        },
-        habitatParcels: {
-          polygonCount: habitatParcels ? habitatParcels.featureCount : 0,
-          areaHa: parcelsAreaHa,
-          layerName: habitatParcels ? habitatParcels.name : 'Not found'
-        },
-        hedgerows: {
-          featureCount: hedgerowFeatureCount,
-          totalLengthM: hedgerowTotalLengthM.toFixed(1),
-          layerName: hedgerowLayer ? hedgerowLayer.name : null
-        },
-        watercourses: {
-          featureCount: watercourseFeatureCount,
-          totalLengthM: watercourseTotalLengthM.toFixed(1),
-          layerName: watercourseLayer ? watercourseLayer.name : null
-        }
-      },
-      coverage: {
-        isFull: true // Simplified for prototype
-      },
-      location: {
-        lpaName: req.session.data['lpaName'] || '<LPA Name>',
-        nationalCharacterArea:
-          req.session.data['ncaName'] || '<National Character Area>',
-        lnrsName: req.session.data['lnrsName'] || '<LNRS Name>'
-      },
-      geometries: geometries,
-      boundaryLayerName: siteBoundary ? siteBoundary.name : null,
-      parcelsLayerName: habitatParcels ? habitatParcels.name : null
-    }
-
-    res.render('on-site-baseline/confirm-layers', viewData)
+  router.get('/on-site-baseline/new-map', function (req, res) {
+    res.render('on-site-baseline/new-map', buildConfirmLayersViewData(req))
   })
 
   // Confirm Layers Page - POST
