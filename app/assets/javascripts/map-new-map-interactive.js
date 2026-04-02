@@ -34,9 +34,7 @@
       zoom: 6,
       containerHeight: '500px',
       mapStyle: {
-        url: 'https://tiles.openfreemap.org/styles/liberty',
-        attribution: 'OpenFreeMap © OpenMapTiles Data from OpenStreetMap',
-        backgroundColor: '#f5f5f0'
+        url: '/api/os/tiles/style/3857'
       }
     })
 

@@ -46,16 +46,36 @@ function registerOsApiRoutes(router) {
 
       const data = await response.json()
 
-      // Inject API key into tile source URLs
+      // Rewrite tile sources to go through our proxy.
+      // The OS API returns sources with a TileJSON `url` reference — MapLibre would
+      // fetch that directly from the browser (exposing the API key + CORS issues).
+      // We convert `url` references to inline `tiles` arrays pointing at our proxy.
+      // Tile URLs must be absolute because MapLibre resolves them inside a Web Worker
+      // which has no document base URL to resolve relative paths against.
+      // Pattern: https://api.os.uk/.../collections/{collection}/tiles/{crs}?key=...
+      const osTileJsonPattern =
+        /^https:\/\/api\.os\.uk\/maps\/vector\/ngd\/ota\/v1\/collections\/([^/?]+)\/tiles\/([^/?]+)/
+      const baseUrl = `${req.protocol}://${req.get('host')}`
+
       if (data.sources) {
         Object.keys(data.sources).forEach((sourceKey) => {
           const source = data.sources[sourceKey]
-          if (source.tiles && Array.isArray(source.tiles)) {
+
+          if (source.url) {
+            const match = source.url.match(osTileJsonPattern)
+            if (match) {
+              const collection = match[1]
+              const tileCrs = match[2]
+              delete source.url
+              source.tiles = [`${baseUrl}/api/os/tiles/${collection}/${tileCrs}/{z}/{y}/{x}`]
+            }
+          } else if (source.tiles && Array.isArray(source.tiles)) {
             source.tiles = source.tiles.map((tileUrl) => {
-              // Add API key to tile URLs if not already present
-              if (!tileUrl.includes('key=')) {
-                const separator = tileUrl.includes('?') ? '&' : '?'
-                return `${tileUrl}${separator}key=${apiKey}`
+              const match = tileUrl.match(osTileJsonPattern)
+              if (match) {
+                const collection = match[1]
+                const tileCrs = match[2]
+                return `${baseUrl}/api/os/tiles/${collection}/${tileCrs}/{z}/{y}/{x}`
               }
               return tileUrl
             })
