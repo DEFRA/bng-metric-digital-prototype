@@ -243,11 +243,13 @@ function registerOnSitePostInterventionRoutes(router) {
           l.name.toLowerCase().includes('habitat')
       ) || (layers.length > 1 ? layers[1] : layers[0])
 
-    // Calculate areas in hectares (Habitat parcels total area = Site boundary total area)
+    // Calculate areas in hectares
     const boundaryAreaHa = siteBoundary
       ? (siteBoundary.totalAreaSqm / 10000).toFixed(4)
       : 0
-    const parcelsAreaHa = boundaryAreaHa
+    const parcelsAreaHa = habitatParcels
+      ? (habitatParcels.totalAreaSqm / 10000).toFixed(4)
+      : 0
 
     // Find hedgerow layer
     let hedgerowLayer = layers.find(
@@ -320,6 +322,12 @@ function registerOnSitePostInterventionRoutes(router) {
       },
       coverage: {
         isFull: true // Simplified for prototype
+      },
+      location: {
+        lpaName: req.session.data['lpaName'] || '<LPA Name>',
+        nationalCharacterArea:
+          req.session.data['ncaName'] || '<National Character Area>',
+        lnrsName: req.session.data['lnrsName'] || '<LNRS Name>'
       },
       geometries: geometries,
       boundaryLayerName: siteBoundary ? siteBoundary.name : null,
@@ -568,29 +576,44 @@ function registerOnSitePostInterventionRoutes(router) {
             }
           }
 
-          if (retentionCategory === "Retained") {
-            //units = getRetentionUnits(fullHabitat, areaHa, condition, fullHabitatBefore, conditionBefore)
-            units = getBaselineUnits(fullHabitatBefore, areaHa, conditionBefore)
-          }
-          else if (retentionCategory === "Enhanced") {
-            
+          let units = 0
 
-            units = getEnhancementUnits(
-              fullHabitatBefore,
-              conditionBefore,
-              fullHabitat,
-              areaHa,
-              condition,
-              numericDelayInStarting,
-              numericCreatedInAdvance
-            )
-          }
-          else if (retentionCategory === "Lost") {
-            // 
-            units = getCreationUnits(areaHa, fullHabitat, condition, numericDelayInStarting, numericCreatedInAdvance)
-          }
-          else {
-            units = 0
+          // Incomplete rows should not attempt metric calculations.
+          if (status === 'Complete') {
+            try {
+              if (retentionCategory === "Retained") {
+                //units = getRetentionUnits(fullHabitat, areaHa, condition, fullHabitatBefore, conditionBefore)
+                units = getBaselineUnits(fullHabitatBefore, areaHa, conditionBefore)
+              }
+              else if (retentionCategory === "Enhanced") {
+                units = getEnhancementUnits(
+                  fullHabitatBefore,
+                  conditionBefore,
+                  fullHabitat,
+                  areaHa,
+                  condition,
+                  numericDelayInStarting,
+                  numericCreatedInAdvance
+                )
+              }
+              else if (retentionCategory === "Lost") {
+                units = getCreationUnits(
+                  areaHa,
+                  fullHabitat,
+                  condition,
+                  numericDelayInStarting,
+                  numericCreatedInAdvance
+                )
+              }
+            } catch (error) {
+              console.warn(
+                '[PostIntervention] Skipping units calculation for parcel ' +
+                  parcelId +
+                  ':',
+                error.message
+              )
+              units = 0
+            }
           }
 
           // // Calculate units - use predefined values for specific parcel references
@@ -636,29 +659,31 @@ function registerOnSitePostInterventionRoutes(router) {
       }
 
       // Find hedgerow and watercourse layers from uploaded GeoPackage
-      // const hedgerowLayerInfo = layers.find(
-      //   (l) =>
-      //     l.name.toLowerCase().includes('hedgerow') ||
-      //     l.name.toLowerCase().includes('hedge')
-      // )
-      // const watercourseLayerInfo = layers.find(
-      //   (l) =>
-      //     l.name.toLowerCase().includes('watercourse') ||
-      //     l.name.toLowerCase().includes('river') ||
-      //     l.name.toLowerCase().includes('stream')
-      // )
+      const hedgerowLayerInfo = layers.find(
+        (l) =>
+          l.name.toLowerCase().includes('hedgerow') ||
+          l.name.toLowerCase().includes('hedge')
+      )
+      const watercourseLayerInfo = layers.find(
+        (l) =>
+          l.name.toLowerCase().includes('watercourse') ||
+          l.name.toLowerCase().includes('river') ||
+          l.name.toLowerCase().includes('stream')
+      )
 
-      // const hedgerowLayer = hedgerowLayerInfo
-      //   ? geometries[hedgerowLayerInfo.name]
-      //   : null
-      // const watercourseLayer = watercourseLayerInfo
-      //   ? geometries[watercourseLayerInfo.name]
-      //   : null
+      const hedgerowLayer = hedgerowLayerInfo
+        ? geometries[hedgerowLayerInfo.name]
+        : null
+      const watercourseLayer = watercourseLayerInfo
+        ? geometries[watercourseLayerInfo.name]
+        : null
 
       // Prepare map data
       mapData = {
         siteBoundary: boundaryLayer,
-        parcels: parcelsLayer
+        parcels: parcelsLayer,
+        hedgerows: hedgerowLayer,
+        watercourses: watercourseLayer
       }
     }
 
@@ -1274,6 +1299,7 @@ function registerOnSitePostInterventionRoutes(router) {
       area_hectares: habitatData.areaHa,
       distinctiveness: habitatData.distinctiveness || '',
       condition: habitatData.condition || '',
+      target_condition: habitatData.condition || '',
       retention_category: retentionCategoryFromProps || habitatData.retentionCategory || '',
       habitat_units: habitatUnits,
       strategic_significance: habitatData.strategicSignificance || '',
@@ -1284,6 +1310,38 @@ function registerOnSitePostInterventionRoutes(router) {
       years_delay: yearsDelay,
       comments: habitatData.props['Comments'] || '',
       strategic_significance_options: STRATEGIC_SIGNIFICANCE_OPTIONS
+    }
+
+    const validationStore = req.session.data['postInterventionHabitatEditValidation'] || {}
+    const validationState = validationStore[parcelRef] || null
+    let validationErrors = []
+    let fieldErrors = {}
+
+    if (validationState && validationState.values) {
+      const values = validationState.values
+
+      habitat.broad_habitat = values.broad_habitat || ''
+      habitat.habitat_type = values.habitat_type || ''
+      habitat.strategic_significance = values.strategic_significance || ''
+      habitat.target_condition = values.target_condition || ''
+      habitat.advance_or_delay = values.advance_or_delay || ''
+      habitat.years_advance = values.years_advance || ''
+      habitat.years_delay = values.years_delay || ''
+      habitat.comments = values.supporting_evidence || ''
+
+      validationErrors = Array.isArray(validationState.errors)
+        ? validationState.errors
+        : []
+
+      fieldErrors = validationErrors.reduce(function (acc, error) {
+        if (error && error.field) {
+          acc[error.field] = { text: error.text }
+        }
+        return acc
+      }, {})
+
+      delete validationStore[parcelRef]
+      req.session.data['postInterventionHabitatEditValidation'] = validationStore
     }
 
     // Organize habitat types by broad habitat
@@ -1352,7 +1410,9 @@ function registerOnSitePostInterventionRoutes(router) {
       habitatDifficultyMultiplier: JSON.stringify(habitatDifficultyMultiplier),
       baselineData: JSON.stringify(baselineData),
       proposedStatus: 'Post-intervention',
-      mapData: mapData
+      mapData: mapData,
+      validationErrors: validationErrors,
+      fieldErrors: fieldErrors
     })
   })
 
@@ -1411,31 +1471,116 @@ function registerOnSitePostInterventionRoutes(router) {
       return res.status(404).send('Habitat parcel not found')
     }
 
+    const broadHabitatInput = (req.body.broad_habitat || '').trim()
+    const habitatTypeInput = (req.body.habitat_type || '').trim()
+    const targetConditionInput = (req.body.target_condition || '').trim()
+    const advanceOrDelay = (req.body.advance_or_delay || '').trim()
+    const yearsAdvanceRaw =
+      req.body.years_advance !== undefined && req.body.years_advance !== null
+        ? String(req.body.years_advance).trim()
+        : ''
+    const yearsDelayRaw =
+      req.body.years_delay !== undefined && req.body.years_delay !== null
+        ? String(req.body.years_delay).trim()
+        : ''
+
+    const validationErrors = []
+
+    if (!broadHabitatInput) {
+      validationErrors.push({
+        text: 'Select broad habitat',
+        href: '#broad_habitat',
+        field: 'broad_habitat'
+      })
+    }
+
+    if (!habitatTypeInput) {
+      validationErrors.push({
+        text: 'Select habitat type',
+        href: '#habitat_type',
+        field: 'habitat_type'
+      })
+    }
+
+    if (!targetConditionInput) {
+      validationErrors.push({
+        text: 'Select target condition',
+        href: '#target_condition',
+        field: 'target_condition'
+      })
+    }
+
+    if (!advanceOrDelay) {
+      validationErrors.push({
+        text: 'Select if habitat was created in advance or delayed',
+        href: '#advance_or_delay',
+        field: 'advance_or_delay'
+      })
+    }
+
+    if (advanceOrDelay === 'advance' && !yearsAdvanceRaw) {
+      validationErrors.push({
+        text: 'Enter years habitat was created in advance',
+        href: '#years_advance',
+        field: 'years_advance'
+      })
+    }
+
+    if (advanceOrDelay === 'delay' && !yearsDelayRaw) {
+      validationErrors.push({
+        text: 'Enter years delay in starting habitat creation',
+        href: '#years_delay',
+        field: 'years_delay'
+      })
+    }
+
+    if (validationErrors.length > 0) {
+      const validationStore =
+        req.session.data['postInterventionHabitatEditValidation'] || {}
+
+      validationStore[parcelRef] = {
+        errors: validationErrors,
+        values: {
+          broad_habitat: req.body.broad_habitat || '',
+          habitat_type: req.body.habitat_type || '',
+          strategic_significance: req.body.strategic_significance || '',
+          target_condition: req.body.target_condition || '',
+          advance_or_delay: req.body.advance_or_delay || '',
+          years_advance: req.body.years_advance || '',
+          years_delay: req.body.years_delay || '',
+          supporting_evidence: req.body.supporting_evidence || ''
+        }
+      }
+
+      req.session.data['postInterventionHabitatEditValidation'] = validationStore
+      return res.redirect(
+        '/on-site-post-intervention/habitat/' +
+          encodeURIComponent(parcelRef) +
+          '/edit'
+      )
+    }
+
     // Update feature properties with form data
     // Save broad habitat to both possible property names to ensure it's found
-    const broadHabitat = req.body.broad_habitat || ''
+    const broadHabitat = broadHabitatInput
     feature.properties['Proposed Broad Habitat Type'] = broadHabitat
     feature.properties['Broad Habitat Type'] = broadHabitat
     
     // Extract habitat type without broad habitat prefix (format: "[Broad habitat] - [Habitat type]")
-    let habitatTypeToSave = req.body.habitat_type || ''
+    let habitatTypeToSave = habitatTypeInput
     if (habitatTypeToSave.includes(' - ')) {
       // Remove the broad habitat prefix (everything before and including " - ")
       habitatTypeToSave = habitatTypeToSave.split(' - ').slice(1).join(' - ')
     }
     feature.properties['Proposed Habitat Type'] = habitatTypeToSave
     feature.properties['Proposed Distinctiveness'] = req.body.distinctiveness || ''
-    feature.properties['Proposed Condition'] = req.body.target_condition || ''
+    feature.properties['Proposed Condition'] = targetConditionInput
     
     // Save strategic significance to both possible property names to ensure it's found
     const strategicSignificance = req.body.strategic_significance || ''
     feature.properties['Proposed Strategic Significance'] = strategicSignificance
     feature.properties['Strategic significance'] = strategicSignificance
-
     // Derive advance/delay years from radio and years inputs: Neither → both 0; Advance → advance=years_advance, delay=0; Delay → advance=0, delay=years_delay
-    const advanceOrDelay = (req.body.advance_or_delay || '').trim()
-    const yearsAdvanceRaw = req.body.years_advance !== undefined && req.body.years_advance !== null ? String(req.body.years_advance).trim() : ''
-    const yearsDelayRaw = req.body.years_delay !== undefined && req.body.years_delay !== null ? String(req.body.years_delay).trim() : ''
     let createdInAdvanceToSave = ''
     let delayInStartingToSave = ''
     if (advanceOrDelay === 'advance') {

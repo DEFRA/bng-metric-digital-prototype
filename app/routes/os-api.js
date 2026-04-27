@@ -10,9 +10,35 @@ const { proxyFetch } = require('../lib/proxy-fetch')
  * @param {Router} router - Express router instance
  */
 function registerOsApiRoutes(router) {
+  function toProxyTileTemplate(url, fallbackCollection, fallbackCrs, origin) {
+    if (!url || typeof url !== 'string') {
+      return null
+    }
+
+    const match = url.match(/\/collections\/([^/]+)\/tiles\/([^/?]+)/)
+    if (!match) {
+      return null
+    }
+
+    const collection = match[1] || fallbackCollection || 'ngd-base'
+    const crs = match[2] || fallbackCrs || '27700'
+
+    // MapLibre uses {z}/{x}/{y}; the route then maps to OGC tileMatrix/tileRow/tileCol.
+    const localPath = `/api/os/tiles/${collection}/${crs}/{z}/{x}/{y}`
+    if (!origin) {
+      return localPath
+    }
+
+    return `${origin}${localPath}`
+  }
+
   // Tiles Style Endpoint - proxies OS NGD Vector Tile Styles API
   // Supports both EPSG:27700 (British National Grid) and EPSG:3857 (Web Mercator)
   router.get('/api/os/tiles/style/:crs?', async function (req, res) {
+    const referer = req.get('referer')
+    const requestOrigin =
+      req.get('origin') ||
+      (referer ? new URL(referer).origin : `${req.protocol}://${req.get('host')}`)
     const apiKey = process.env.OS_PROJECT_API_KEY
 
     if (!apiKey) {
@@ -46,17 +72,53 @@ function registerOsApiRoutes(router) {
 
       const data = await response.json()
 
-      // Inject API key into tile source URLs
+      // Rewrite sources to explicit proxy tile templates for MapLibre compatibility.
       if (data.sources) {
         Object.keys(data.sources).forEach((sourceKey) => {
           const source = data.sources[sourceKey]
+
+          // OS style responses can provide a TileJSON metadata URL in `source.url`.
+          // Convert this to explicit tiles templates so the map requests tile coordinates.
+          const proxyFromUrl = toProxyTileTemplate(
+            source.url,
+            sourceKey,
+            crs,
+            requestOrigin
+          )
+          if (proxyFromUrl) {
+            source.tiles = [proxyFromUrl]
+            source.scheme = source.scheme || 'xyz'
+            delete source.url
+          }
+
           if (source.tiles && Array.isArray(source.tiles)) {
             source.tiles = source.tiles.map((tileUrl) => {
-              // Add API key to tile URLs if not already present
+              // Normalize local proxy URLs (absolute or relative) and strip any query string.
+              const localProxyMatch =
+                typeof tileUrl === 'string'
+                  ? tileUrl.match(/\/api\/os\/tiles\/[^?\s]*/)
+                  : null
+              if (localProxyMatch) {
+                return `${requestOrigin}${localProxyMatch[0]}`
+              }
+
+              // If the source already points at OS tiles, route them through the local proxy.
+              const proxyTemplate = toProxyTileTemplate(
+                tileUrl,
+                sourceKey,
+                crs,
+                requestOrigin
+              )
+              if (proxyTemplate) {
+                return proxyTemplate
+              }
+
+              // Fallback for external tile URLs that need API key injection.
               if (!tileUrl.includes('key=')) {
                 const separator = tileUrl.includes('?') ? '&' : '?'
                 return `${tileUrl}${separator}key=${apiKey}`
               }
+
               return tileUrl
             })
           }
@@ -71,11 +133,11 @@ function registerOsApiRoutes(router) {
   })
 
   // Tiles Endpoint - proxies OS NGD Vector Tile requests
-  // OGC API Tiles standard uses {z}/{y}/{x} order (TileMatrix/TileRow/TileCol)
-  // Supports optional CRS parameter: /api/os/tiles/:collection/:crs/:z/:y/:x
+  // Client template uses {z}/{x}/{y}; proxy maps this to OGC TileMatrix/TileCol/TileRow params.
+  // Supports optional CRS parameter: /api/os/tiles/:collection/:crs/:z/:x/:y
   // Default CRS is 27700 (British National Grid) for better alignment with WFS features
   router.get(
-    '/api/os/tiles/:collection/:crs/:z/:y/:x',
+    '/api/os/tiles/:collection/:crs/:z/:x/:y',
     async function (req, res) {
       const apiKey = process.env.OS_PROJECT_API_KEY
 
@@ -84,7 +146,7 @@ function registerOsApiRoutes(router) {
         return res.status(500).json({ error: 'API key not configured' })
       }
 
-      const { collection, crs, z, y, x } = req.params
+      const { collection, crs, z, x, y } = req.params
 
       const osUrl = `https://api.os.uk/maps/vector/ngd/ota/v1/collections/${collection}/tiles/${crs}/${z}/${y}/${x}?key=${apiKey}`
 
@@ -93,7 +155,7 @@ function registerOsApiRoutes(router) {
 
         if (!response.ok) {
           console.error(
-            `OS NGD Tiles API error: ${response.status} for tile ${crs}/${z}/${y}/${x}`
+            `OS NGD Tiles API error: ${response.status} for tile ${crs}/${z}/${x}/${y}`
           )
           // Return 204 No Content instead of forwarding the error status.
           // This prevents OpenLayers flooding the console with errors when

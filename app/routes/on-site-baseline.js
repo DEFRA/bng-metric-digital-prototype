@@ -22,6 +22,31 @@ const boundaryLayerName = 'Red Line Boundary'
 const maxBoundaryFeatures = 10
 const maxPolygonSize = 1000000000 // 1000 sq km
 
+function getHabitatTypesByBroadHabitat() {
+  const habitatTypesByBroad = {}
+  const allHabitatTypes = Object.keys(distinctivenessCategories)
+
+  allHabitatTypes.forEach((habitatType) => {
+    if (habitatType.includes(' - ')) {
+      const [broad] = habitatType.split(' - ', 2)
+      if (!habitatTypesByBroad[broad]) {
+        habitatTypesByBroad[broad] = []
+      }
+      habitatTypesByBroad[broad].push(habitatType)
+    }
+  })
+
+  return habitatTypesByBroad
+}
+
+function activateUploadedBaselineLayers(req) {
+  req.session.data['layersConfirmed'] = true
+  req.session.data['redLineBoundary'] = null
+  req.session.data['habitatParcels'] = null
+  req.session.data['hedgerows'] = null
+  req.session.data['watercourses'] = null
+}
+
 /*
 const distinctivenessScores = {
   'V.High': 8,
@@ -209,8 +234,11 @@ function registerOnSiteBaselineRoutes(router) {
         req.session.data['lpaName'] = lpaName
         req.session.data['ncaName'] = ncaName
         req.session.data['lnrsName'] = lnrsName
-        // Redirect to confirm page
-        res.redirect('/on-site-baseline/confirm-layers')
+
+        activateUploadedBaselineLayers(req)
+
+        // Skip the check page and continue straight to habitats summary.
+        res.redirect('/on-site-baseline/habitats-summary')
       } catch (err) {
         console.error('GeoPackage parsing error:', err)
         return res.redirect(
@@ -338,15 +366,8 @@ function registerOnSiteBaselineRoutes(router) {
 
   // Confirm Layers Page - POST
   router.post('/on-site-baseline/confirm-layers', function (req, res) {
-    // Mark layers as confirmed
-    req.session.data['layersConfirmed'] = true
+    activateUploadedBaselineLayers(req)
 
-    // Clear hand-drawn data when confirming GeoPackage layers
-    // This ensures the GeoPackage flow is used on the habitats-summary page
-    req.session.data['redLineBoundary'] = null
-    req.session.data['habitatParcels'] = null
-    req.session.data['hedgerows'] = null
-    req.session.data['watercourses'] = null
     console.log(
       'Cleared hand-drawn data - GeoPackage upload is now authoritative'
     )
@@ -658,8 +679,27 @@ function registerOnSiteBaselineRoutes(router) {
     }, 0);
     req.session.data['baselineUnits'] = baselineUnits;
 
+    const areaHabitatsSize = habitatParcels.reduce(function (sum, parcel) {
+      const area = parseFloat(parcel.areaHectares)
+      return sum + (isNaN(area) ? 0 : area)
+    }, 0)
+
+    const areasTableRowsWithTotals = tableRows.concat([
+      [
+        { html: '<strong>Total</strong>' },
+        { html: '<strong>' + areaHabitatsSize.toFixed(2) + '</strong>' },
+        { text: '' },
+        { text: '' },
+        { text: '' },
+        { html: '<strong>' + baselineUnits.toFixed(2) + '</strong>' },
+        { text: '' },
+        { text: '' }
+      ]
+    ])
+
     // Build hedgerow table rows
     const hedgerows = mapData.hedgerows?.features || []
+    let hedgerowTotalLengthM = 0
     const hedgerowTableRows = hedgerows.map(function (feature, index) {
       // Use lengthM property if available, otherwise calculate from geometry
       let lengthM = feature.properties?.lengthM
@@ -667,6 +707,8 @@ function registerOnSiteBaselineRoutes(router) {
         lengthM = calculateLineLength(feature.geometry)
       }
       lengthM = lengthM || 0
+      hedgerowTotalLengthM += lengthM
+      const lengthKm = lengthM / 1000
       return [
         {
           html:
@@ -676,7 +718,7 @@ function registerOnSiteBaselineRoutes(router) {
             (index + 1).toString().padStart(3, '0') +
             '</a>'
         },
-        { text: lengthM.toFixed(1) },
+        { text: lengthKm.toFixed(2) },
         { text: feature.properties["Baseline Hedge Type"] || '' },
         { text: feature.properties["Baseline Distinctiveness"] || '' },
         { text: feature.properties["Baseline Condition"] || '' },
@@ -691,8 +733,22 @@ function registerOnSiteBaselineRoutes(router) {
       ]
     })
 
+    const hedgerowTableRowsWithTotals = hedgerowTableRows.concat([
+      [
+        { html: '<strong>Total</strong>' },
+        { html: '<strong>' + (hedgerowTotalLengthM / 1000).toFixed(2) + '</strong>' },
+        { text: '' },
+        { text: '' },
+        { text: '' },
+        { html: '<strong>0.00</strong>' },
+        { text: '' },
+        { text: '' }
+      ]
+    ])
+
     // Build watercourse table rows
     const watercourses = mapData.watercourses?.features || []
+    let watercourseTotalLengthM = 0
     const watercourseTableRows = watercourses.map(function (feature, index) {
       // Use lengthM property if available, otherwise calculate from geometry
       let lengthM = feature.properties?.lengthM
@@ -700,6 +756,8 @@ function registerOnSiteBaselineRoutes(router) {
         lengthM = calculateLineLength(feature.geometry)
       }
       lengthM = lengthM || 0
+      watercourseTotalLengthM += lengthM
+      const lengthKm = lengthM / 1000
 
       return [
         {
@@ -710,7 +768,7 @@ function registerOnSiteBaselineRoutes(router) {
             (index + 1).toString().padStart(3, '0') +
             '</a>'
         },
-        { text: lengthM.toFixed(1) },
+        { text: lengthKm.toFixed(2) },
         { text: feature.properties["Baseline River Type"] || '' },
         { text: feature.properties["Baseline Distinctiveness"] || '' },
         { text: feature.properties["Baseline Condition"]?.replace(/^\d+\.\s*/, '') || '' },
@@ -725,6 +783,19 @@ function registerOnSiteBaselineRoutes(router) {
       ]
     })
 
+    const watercourseTableRowsWithTotals = watercourseTableRows.concat([
+      [
+        { html: '<strong>Total</strong>' },
+        { html: '<strong>' + (watercourseTotalLengthM / 1000).toFixed(2) + '</strong>' },
+        { text: '' },
+        { text: '' },
+        { text: '' },
+        { html: '<strong>0.00</strong>' },
+        { text: '' },
+        { text: '' }
+      ]
+    ])
+
     res.render('on-site-baseline/habitats-summary', {
       baselineSummary: {
         parcelCountMessage: parcelCountMessage
@@ -736,9 +807,29 @@ function registerOnSiteBaselineRoutes(router) {
       },
       mapData: mapData,
       habitatParcels: habitatParcels,
+      summaryRows: [
+        [
+          { text: 'Area habitats' },
+          { text: areaHabitatsSize.toFixed(2) + ' ha' },
+          { text: baselineUnits.toFixed(2) }
+        ],
+        [
+          { text: 'Hedgerows' },
+          { text: (hedgerowTotalLengthM / 1000).toFixed(2) + ' km' },
+          { text: '0.00' }
+        ],
+        [
+          { text: 'Water courses' },
+          { text: (watercourseTotalLengthM / 1000).toFixed(2) + ' km' },
+          { text: '0.00' }
+        ]
+      ],
       tableRows: tableRows,
+      areasTableRowsWithTotals: areasTableRowsWithTotals,
       hedgerowTableRows: hedgerowTableRows,
+      hedgerowTableRowsWithTotals: hedgerowTableRowsWithTotals,
       watercourseTableRows: watercourseTableRows,
+      watercourseTableRowsWithTotals: watercourseTableRowsWithTotals,
       actions: {
         startPostIntervention: {
           url: '/on-site-post-intervention/post-intervention-start'
@@ -751,6 +842,216 @@ function registerOnSiteBaselineRoutes(router) {
   router.get('/api/on-site-baseline/geometries', function (req, res) {
     const geometries = req.session.data['geopackageGeometries'] || {}
     res.json(geometries)
+  })
+
+  // Baseline parcel edit page - GET
+  router.get('/on-site-baseline/parcel/:parcelId/habitat-type', function (req, res) {
+    const parcelIdParam = req.params.parcelId
+    const layersConfirmed = req.session.data['layersConfirmed']
+    const hasGeoPackageData =
+      req.session.data['geopackageLayers'] &&
+      req.session.data['geopackageLayers'].length > 0
+    const isGeoPackageFlow = layersConfirmed && hasGeoPackageData
+
+    let parcelsFeatureCollection = null
+    let siteBoundaryFeatureCollection = null
+
+    if (isGeoPackageFlow) {
+      const layers = req.session.data['geopackageLayers'] || []
+      const geometries = req.session.data['geopackageGeometries'] || {}
+
+      const boundaryLayerInfo = layers.find(
+        (l) =>
+          l.name.toLowerCase().includes('boundary') ||
+          l.name.toLowerCase().includes('site')
+      )
+      const parcelsLayerInfo = layers.find(
+        (l) =>
+          l.name.toLowerCase().includes('parcel') ||
+          l.name.toLowerCase().includes('habitat')
+      )
+
+      siteBoundaryFeatureCollection = boundaryLayerInfo
+        ? geometries[boundaryLayerInfo.name]
+        : null
+      parcelsFeatureCollection = parcelsLayerInfo
+        ? geometries[parcelsLayerInfo.name]
+        : null
+    } else {
+      const drawnBoundary = req.session.data['redLineBoundary']
+      if (drawnBoundary && drawnBoundary.type === 'Feature' && drawnBoundary.geometry) {
+        siteBoundaryFeatureCollection = {
+          type: 'FeatureCollection',
+          features: [drawnBoundary]
+        }
+      }
+
+      parcelsFeatureCollection = req.session.data['habitatParcels'] || null
+    }
+
+    if (
+      !parcelsFeatureCollection ||
+      !Array.isArray(parcelsFeatureCollection.features) ||
+      !parcelsFeatureCollection.features.length
+    ) {
+      return res.status(404).send('Habitat parcel not found')
+    }
+
+    const parcelIndex = parseInt(parcelIdParam, 10) - 1
+    const feature =
+      Number.isInteger(parcelIndex) &&
+      parcelIndex >= 0 &&
+      parcelIndex < parcelsFeatureCollection.features.length
+        ? parcelsFeatureCollection.features[parcelIndex]
+        : null
+
+    if (!feature) {
+      return res.status(404).send('Habitat parcel not found')
+    }
+
+    const parcelRef =
+      feature.properties?.['Parcel Ref'] ||
+      'HP-' + (parcelIndex + 1).toString().padStart(3, '0')
+
+    const areaSqm = feature.geometry ? calculatePolygonArea(feature.geometry) : 0
+    const areaHa = (areaSqm / 10000).toFixed(2)
+
+    const broadHabitat = feature.properties?.['Baseline Broad Habitat Type'] || ''
+    const habitatType = feature.properties?.['Baseline Habitat Type'] || ''
+    const fullHabitatType =
+      broadHabitat && habitatType ? broadHabitat + ' - ' + habitatType : ''
+    const conditionRaw = feature.properties?.['Baseline Condition'] || ''
+    const condition = conditionRaw ? conditionRaw.replace(/^\d+\.\s*/, '') : ''
+
+    const habitatTypesByBroadHabitat = getHabitatTypesByBroadHabitat()
+    const allHabitatTypeOptions = Object.keys(distinctivenessCategories)
+      .sort()
+      .map((value) => ({ value: value, text: value }))
+
+    const conditionItems = [
+      { value: '', text: 'Select' },
+      { value: 'Poor', text: 'Poor' },
+      { value: 'Fairly Poor', text: 'Fairly Poor' },
+      { value: 'Moderate', text: 'Moderate' },
+      { value: 'Fairly Good', text: 'Fairly Good' },
+      { value: 'Good', text: 'Good' },
+      { value: 'Condition Assessment N/A', text: 'Condition Assessment N/A' },
+      { value: 'N/A - Other', text: 'N/A - Other' }
+    ]
+
+    const mapData = {
+      siteBoundary: siteBoundaryFeatureCollection || null,
+      parcels: parcelsFeatureCollection || null,
+      parcel: {
+        type: 'FeatureCollection',
+        features: [feature]
+      }
+    }
+
+    res.render('on-site-baseline/habitat-edit', {
+      habitat: {
+        ref: parcelRef,
+        index: parcelIndex + 1,
+        area_hectares: areaHa,
+        habitat_type: fullHabitatType,
+        condition: condition
+      },
+      broadHabitatGroups: Object.keys(habitatTypesByBroadHabitat).sort(),
+      habitatTypeItems: [{ value: '', text: 'Select' }, ...allHabitatTypeOptions],
+      conditionItems: conditionItems,
+      mapData: mapData
+    })
+  })
+
+  // Baseline parcel edit page - POST
+  router.post('/on-site-baseline/parcel/:parcelId/habitat-type', function (req, res) {
+    const parcelIdParam = req.params.parcelId
+    const parcelIndex = parseInt(parcelIdParam, 10) - 1
+    const habitatTypeInput = (req.body.habitat_type || '').trim()
+    const conditionInput = (req.body.condition || '').trim()
+
+    const layersConfirmed = req.session.data['layersConfirmed']
+    const hasGeoPackageData =
+      req.session.data['geopackageLayers'] &&
+      req.session.data['geopackageLayers'].length > 0
+    const isGeoPackageFlow = layersConfirmed && hasGeoPackageData
+
+    let parcelsFeatureCollection = null
+    let updateSession = null
+
+    if (isGeoPackageFlow) {
+      const layers = req.session.data['geopackageLayers'] || []
+      const geometries = req.session.data['geopackageGeometries'] || {}
+      const parcelsLayerInfo = layers.find(
+        (l) =>
+          l.name.toLowerCase().includes('parcel') ||
+          l.name.toLowerCase().includes('habitat')
+      )
+
+      if (!parcelsLayerInfo || !geometries[parcelsLayerInfo.name]) {
+        return res.status(404).send('Habitat parcel not found')
+      }
+
+      parcelsFeatureCollection = geometries[parcelsLayerInfo.name]
+      updateSession = function () {
+        req.session.data['geopackageGeometries'] = geometries
+      }
+    } else {
+      parcelsFeatureCollection = req.session.data['habitatParcels'] || null
+      updateSession = function () {
+        req.session.data['habitatParcels'] = parcelsFeatureCollection
+      }
+    }
+
+    if (
+      !parcelsFeatureCollection ||
+      !Array.isArray(parcelsFeatureCollection.features) ||
+      !parcelsFeatureCollection.features.length ||
+      !Number.isInteger(parcelIndex) ||
+      parcelIndex < 0 ||
+      parcelIndex >= parcelsFeatureCollection.features.length
+    ) {
+      return res.status(404).send('Habitat parcel not found')
+    }
+
+    const feature = parcelsFeatureCollection.features[parcelIndex]
+    feature.properties = feature.properties || {}
+
+    let broadHabitat = ''
+    let habitatType = ''
+    if (habitatTypeInput && habitatTypeInput.includes(' - ')) {
+      const parts = habitatTypeInput.split(' - ', 2)
+      broadHabitat = (parts[0] || '').trim()
+      habitatType = (parts[1] || '').trim()
+    } else {
+      habitatType = habitatTypeInput
+    }
+
+    feature.properties['Baseline Broad Habitat Type'] = broadHabitat || null
+    feature.properties['Baseline Habitat Type'] = habitatType || null
+    feature.properties['Baseline Condition'] = conditionInput || null
+
+    const fullHabitat =
+      broadHabitat && habitatType ? broadHabitat + ' - ' + habitatType : null
+    const distinctiveness = fullHabitat
+      ? distinctivenessCategories[fullHabitat] || null
+      : null
+    feature.properties['Baseline Distinctiveness'] = distinctiveness
+
+    // Keep compatibility with hand-drawn parcel data shape.
+    feature.properties['habitatType'] = habitatType || null
+
+    updateSession()
+
+    res.redirect('/on-site-baseline/habitats-summary')
+  })
+
+  router.get('/on-site-baseline/hedgerow/:hedgerowId/details', function (req, res) {
+    res.redirect('/on-site-habitat-baseline')
+  })
+
+  router.get('/on-site-baseline/watercourse/:watercourseId/details', function (req, res) {
+    res.redirect('/on-site-habitat-baseline')
   })
 }
 
