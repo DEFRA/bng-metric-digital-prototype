@@ -1,3 +1,3 @@
 module.exports = {
-  // Insert values here
+  projectName: 'Test project'
 }

@@ -1,0 +1,111 @@
+{% extends "layouts/main.html" %}
+
+{% from "govuk/components/back-link/macro.njk" import govukBackLink %}
+{% from "govuk/components/select/macro.njk" import govukSelect %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/summary-list/macro.njk" import govukSummaryList %}
+
+{% set pageName = "Habitat " ~ habitat.ref %}
+
+{% block pageTitle %}{{ pageName }} – {{ serviceName }} – GOV.UK{% endblock %}
+
+{% block head %}
+  {{ super() }}
+  <link rel="stylesheet" href="/public/javascripts/interactive-map/vendor/core/index.css" />
+  <style>
+    .map-preview-container {
+      margin: 30px 0;
+      position: relative;
+    }
+
+    .map-preview-container .map-preview {
+      width: 100%;
+      height: 320px;
+      border: 2px solid #b1b4b6;
+    }
+
+    @media (min-width: 641px) {
+      .map-preview-container .map-preview {
+        height: 420px;
+      }
+    }
+  </style>
+{% endblock %}
+
+{% block beforeContent %}
+  {{ govukBackLink({
+    text: "Back",
+    href: "/on-site-baseline/habitats-summary"
+  }) }}
+{% endblock %}
+
+{% block content %}
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+    <span class="govuk-caption-l">Habitat {{ habitat.ref }} – Baseline</span>
+    <h1 class="govuk-heading-l">Edit baseline habitat</h1>
+
+    {% if mapData and mapData.parcel and mapData.parcel.features and mapData.parcel.features.length > 0 %}
+    <div class="map-preview-container">
+      <div id="map-habitat-details" class="map-preview" role="img" aria-label="Map showing habitat parcel {{ habitat.ref }}"></div>
+    </div>
+    {% endif %}
+
+    {% if mapData %}
+    <script type="application/json" id="geometries-data">{{ mapData | dump | safe }}</script>
+    {% endif %}
+
+    <form method="post" action="/on-site-baseline/parcel/{{ habitat.index }}/habitat-type">
+      {{ govukSummaryList({
+        rows: [
+          {
+            key: { text: "Reference" },
+            value: { text: habitat.ref }
+          },
+          {
+            key: { text: "Area" },
+            value: { text: habitat.area_hectares ~ " ha" }
+          },
+          {
+            key: { text: "Habitat type" },
+            value: {
+              html: govukSelect({
+                id: "habitat_type",
+                name: "habitat_type",
+                label: { text: "Habitat type", classes: "govuk-visually-hidden" },
+                items: habitatTypeItems,
+                value: habitat.habitat_type
+              })
+            }
+          },
+          {
+            key: { text: "Condition" },
+            value: {
+              html: govukSelect({
+                id: "condition",
+                name: "condition",
+                label: { text: "Condition", classes: "govuk-visually-hidden" },
+                items: conditionItems,
+                value: habitat.condition
+              })
+            }
+          }
+        ]
+      }) }}
+
+      <div class="govuk-button-group">
+        {{ govukButton({ text: "Save" }) }}
+        <a class="govuk-link" href="/on-site-baseline/habitats-summary">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block pageScripts %}
+  <script src="https://cdn.jsdelivr.net/npm/proj4@2.9.0/dist/proj4.js"></script>
+  <script src="/public/javascripts/interactive-map/vendor/core/index.js"></script>
+  <script src="/public/javascripts/interactive-map/vendor/maplibre/index.js"></script>
+  <script src="/public/javascripts/interactive-map/vendor/datasets/index.js"></script>
+  <script src="/public/javascripts/interactive-map/habitat-details/map-init.js"></script>
+{% endblock %}

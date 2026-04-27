@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@cucumber/cucumber": "12.7.0",
+    "@defra/interactive-map": "0.0.1-alpha",
     "@govuk-prototype-kit/common-templates": "2.0.1",
     "better-sqlite3": "12.6.0",
     "dotenv": "^17.2.3",
