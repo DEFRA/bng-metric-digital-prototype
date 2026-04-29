@@ -640,14 +640,7 @@ function registerOnSiteBaselineRoutes(router) {
       }
 
       return [
-        {
-          html:
-            '<a href="#" class="govuk-link habitat-ref-link" data-feature-type="parcel" data-feature-index="' +
-            index +
-            '">' +
-            parcel.parcelId +
-            '</a>'
-        },
+        { html: '<span class="habitat-ref-cell" data-feature-type="parcel" data-feature-index="' + index + '">' + parcel.parcelId + '</span>' },
         { text: parcel.areaHectares },
         { text: parcel.habitatLabel || '' },
         { text: parcel.distinctiveness || '' },
@@ -710,14 +703,7 @@ function registerOnSiteBaselineRoutes(router) {
       hedgerowTotalLengthM += lengthM
       const lengthKm = lengthM / 1000
       return [
-        {
-          html:
-            '<a href="#" class="govuk-link habitat-ref-link" data-feature-type="hedgerow" data-feature-index="' +
-            index +
-            '">H-' +
-            (index + 1).toString().padStart(3, '0') +
-            '</a>'
-        },
+        { html: '<span class="habitat-ref-cell" data-feature-type="hedgerow" data-feature-index="' + index + '">H-' + (index + 1).toString().padStart(3, '0') + '</span>' },
         { text: lengthKm.toFixed(2) },
         { text: feature.properties["Baseline Hedge Type"] || '' },
         { text: feature.properties["Baseline Distinctiveness"] || '' },
@@ -760,14 +746,7 @@ function registerOnSiteBaselineRoutes(router) {
       const lengthKm = lengthM / 1000
 
       return [
-        {
-          html:
-            '<a href="#" class="govuk-link habitat-ref-link" data-feature-type="watercourse" data-feature-index="' +
-            index +
-            '">W-' +
-            (index + 1).toString().padStart(3, '0') +
-            '</a>'
-        },
+        { html: '<span class="habitat-ref-cell" data-feature-type="watercourse" data-feature-index="' + index + '">W-' + (index + 1).toString().padStart(3, '0') + '</span>' },
         { text: lengthKm.toFixed(2) },
         { text: feature.properties["Baseline River Type"] || '' },
         { text: feature.properties["Baseline Distinctiveness"] || '' },
@@ -1043,7 +1022,7 @@ function registerOnSiteBaselineRoutes(router) {
 
     updateSession()
 
-    res.redirect('/on-site-baseline/habitats-summary')
+    res.redirect('/on-site-baseline/habitats-summary?selected=parcel:' + parcelIndex)
   })
 
   router.get('/on-site-baseline/hedgerow/:hedgerowId/details', function (req, res) {

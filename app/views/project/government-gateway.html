@@ -1,0 +1,93 @@
+{% extends "layouts/main.html" %}
+
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/input/macro.njk" import govukInput %}
+{% from "govuk/components/notification-banner/macro.njk" import govukNotificationBanner %}
+{% from "govuk/components/password-input/macro.njk" import govukPasswordInput %}
+
+{% set pageName = "Sign in using Government Gateway" %}
+
+{% block pageTitle %}{{ pageName }} – {{ serviceName }} – GOV.UK{% endblock %}
+
+{% block content %}
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-full">
+      <div class="govuk-grid-row">
+        <div class="govuk-grid-column-two-thirds govuk-!-margin-top-1"></div>
+        <div class="govuk-grid-column-one-third govuk-!-margin-top-3 govuk-!-text-align-right">
+          <nav aria-label="Language switcher">
+            <span class="govuk-body-s">English</span>
+            <span class="govuk-body-s" aria-hidden="true"> | </span>
+            <a href="#" class="govuk-link govuk-body-s">Cymraeg</a>
+          </nav>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-two-thirds">
+
+      {% set securityBannerHtml %}
+        <p class="govuk-body govuk-!-margin-bottom-0">
+          Do not share your Government Gateway user ID and password with anyone else.
+        </p>
+      {% endset %}
+
+      {{ govukNotificationBanner({
+        titleText: "Keeping your information secure",
+        html: securityBannerHtml
+      }) }}
+
+      <h1 class="govuk-heading-xl">{{ pageName }}</h1>
+
+      <form method="post" action="/government-gateway" novalidate>
+        {{ govukInput({
+          id: "gatewayUserId",
+          name: "gatewayUserId",
+          label: {
+            text: "Government Gateway user ID"
+          },
+          hint: {
+            text: "This could be up to 12 characters."
+          },
+          classes: "govuk-!-width-one-half",
+          autocomplete: "username",
+          value: gatewayUserId
+        }) }}
+
+        {{ govukPasswordInput({
+          id: "gatewayPassword",
+          name: "gatewayPassword",
+          label: {
+            text: "Password"
+          },
+          autocomplete: "current-password",
+          showPasswordAriaLabelText: "Show current password",
+          hidePasswordAriaLabelText: "Hide current password"
+        }) }}
+
+        {{ govukButton({
+          text: "Sign in"
+        }) }}
+      </form>
+
+      <h2 class="govuk-heading-m">No sign in details</h2>
+      <p class="govuk-body">
+        <a href="/government-gateway/create-sign-in-details" class="govuk-link">I do not have a Government Gateway User ID</a>
+      </p>
+
+      <h2 class="govuk-heading-m">Problems signing in</h2>
+      <ul class="govuk-list">
+        <li><a href="#" class="govuk-link">I have forgotten my password</a></li>
+        <li><a href="#" class="govuk-link">I have forgotten my Government Gateway user ID</a></li>
+        <li><a href="#" class="govuk-link">I have forgotten my Government Gateway user ID and password</a></li>
+      </ul>
+
+      <p class="govuk-body govuk-!-margin-top-8">
+        <a href="#" class="govuk-link">Get help with this page</a>
+      </p>
+
+    </div>
+  </div>
+{% endblock %}

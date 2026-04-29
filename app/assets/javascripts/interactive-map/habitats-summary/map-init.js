@@ -244,11 +244,21 @@
 
       configureHabitatHelpBanner(window.habitatsSummaryInteractiveMap);
 
-      setupTableClickHandlers();
-
       if (typeof window.habitatsSummaryInteractiveMap.on === 'function') {
         window.habitatsSummaryInteractiveMap.on('map:ready', function (event) {
           configureHabitatHelpBanner(window.habitatsSummaryInteractiveMap);
+
+          window.habitatsSummaryInteractiveMap.addButton('fitToExtent', {
+            group: 'zoom',
+            label: 'Fit to full extent',
+            iconSvgContent: '<path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/>',
+            onClick: function () {
+              zoomToFullExtent();
+            },
+            mobile: { slot: 'right-top', showLabel: false },
+            tablet: { slot: 'right-top', showLabel: false },
+            desktop: { slot: 'right-top', showLabel: false }
+          });
 
           interactiveMapState.map = event && event.map ? event.map : getMapInstance();
 
@@ -267,6 +277,8 @@
           ) {
             interactiveMapState.interactPlugin.enable();
           }
+
+          restoreReturnSelection();
         });
 
         window.habitatsSummaryInteractiveMap.on('map:click', function (event) {
@@ -284,6 +296,21 @@
           clearSelectedRow();
           hideHabitatDetailsPanel();
           zoomToFullExtent();
+        });
+
+        window.habitatsSummaryInteractiveMap.on('app:panelclosed', function (event) {
+          if (event && event.panelId === HABITAT_DETAILS_PANEL_ID) {
+            var featureKey = interactiveMapState.selectedFeatureKey;
+            var parsed = featureKey ? parseFeatureKey(featureKey, null) : null;
+            clearSelectedRow();
+            if (parsed && interactiveMapState.interactPlugin) {
+              interactiveMapState.interactPlugin.unselectFeature({
+                featureId: featureKey,
+                layerId: getLayerIdForFeatureType(parsed.featureType),
+                idProperty: '__imFeatureKey'
+              });
+            }
+          }
         });
       }
     } catch (error) {
@@ -369,24 +396,23 @@
     };
   }
 
-  function setupTableClickHandlers() {
-    document.querySelectorAll('.habitat-ref-link').forEach(function (link) {
-      if (link.dataset.imBound === 'true') {
-        return;
-      }
+  function restoreReturnSelection() {
+    var params = new URLSearchParams(window.location.search);
+    var featureKey = params.get('selected');
 
-      link.dataset.imBound = 'true';
-      link.addEventListener('click', function (event) {
-        event.preventDefault();
-        event.stopImmediatePropagation();
+    if (!featureKey) {
+      return;
+    }
 
-        handleTableSelection(
-          this.dataset.featureType,
-          parseInt(this.dataset.featureIndex, 10),
-          this
-        );
-      }, true);
-    });
+    var parsed = parseFeatureKey(featureKey, null);
+    if (!parsed) {
+      return;
+    }
+
+    window.setTimeout(function () {
+      var link = getTableLink(parsed.featureType, parsed.featureIndex);
+      handleTableSelection(parsed.featureType, parsed.featureIndex, link || null);
+    }, 100);
   }
 
   function getMapInstance() {
@@ -708,7 +734,8 @@
     }
 
     mapApp.addPanel(HABITAT_HELP_PANEL_ID, {
-      label: '',
+      label: 'Map help',
+      showLabel: false,
       mobile: {
         slot: 'banner',
         dismissable: true,
@@ -728,13 +755,12 @@
         initiallyOpen: true
       },
       html:
-        '<div class="govuk-body govuk-!-margin-bottom-0" style="display:flex;align-items:center;gap:8px;">' +
-        '<svg aria-hidden="true" focusable="false" width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">' +
-        '<circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"></circle>' +
-        '<line x1="12" y1="10" x2="12" y2="16" stroke="currentColor" stroke-width="2" stroke-linecap="round"></line>' +
-        '<circle cx="12" cy="7" r="1.4" fill="currentColor"></circle>' +
+        '<div class="habitat-help-banner-content" role="status">' +
+        '<svg aria-hidden="true" focusable="false" viewBox="0 0 20 20" class="habitat-help-banner-icon" xmlns="http://www.w3.org/2000/svg">' +
+        '<circle cx="10" cy="10" r="8.5" fill="none" stroke="currentColor" stroke-width="1.5"></circle>' +
+        '<path d="M8.584 5.228h2.832v2.174L10.869 11H9.118l-.534-3.598V5.228zm.098 7.207h2.643v2.337H8.682v-2.337z" fill="currentColor"></path>' +
         '</svg>' +
-        '<span>Click on the habitats for information</span>' +
+        '<span><span class="im-u-visually-hidden">Alert: </span>Click on the habitats for information</span>' +
         '</div>'
     });
 
@@ -796,23 +822,37 @@
       position: firstDefinedValue([
         properties.Position,
         properties.position,
+        properties.positionType,
+        properties.position_type,
         properties['Baseline Position'],
-        properties['Proposed Position']
+        properties['Baseline position'],
+        properties['Proposed Position'],
+        properties['Proposed position']
       ]) || '-',
       adjacentTo: firstDefinedValue([
         properties['Adjacent To'],
         properties['Adjacent to'],
+        properties.adjacentTo,
+        properties.adjacent_to,
+        properties.AdjacentTo,
         properties['Adjent To'],
         properties['Baseline Adjacent To'],
-        properties['Proposed Adjacent To']
+        properties['Baseline Adjacent to'],
+        properties['Proposed Adjacent To'],
+        properties['Proposed Adjacent to']
       ]) || '-',
       boundaryEdge: firstDefinedValue([
         properties['Boundary edge'],
         properties['Boundary Edge'],
         properties['Boundary-edge'],
+        properties.boundaryEdge,
+        properties.boundary_edge,
+        properties.BoundaryEdge,
         properties['On boundary edge'],
         properties['Baseline Boundary edge'],
-        properties['Proposed Boundary edge']
+        properties['Baseline Boundary Edge'],
+        properties['Proposed Boundary edge'],
+        properties['Proposed Boundary Edge']
       ]) || '-',
       editUrl: row ? getRowActionHref(row) : '#'
     };
@@ -829,7 +869,7 @@
     }
 
     mapApp.addPanel(HABITAT_DETAILS_PANEL_ID, {
-      label: 'Habitat details',
+      label: escapeHtml(details.titlePrefix || 'Habitat ') + escapeHtml(details.reference || ''),
       mobile: {
         slot: 'inset',
         dismissable: true,
@@ -864,8 +904,6 @@
   }
 
   function buildHabitatDetailsPanelHtml(details) {
-    var safeTitlePrefix = escapeHtml(details.titlePrefix || 'Habitat ');
-    var safeReference = escapeHtml(details.reference || '-');
     var safeHabitatType = escapeHtml(details.habitatType || '-');
     var safeMetricLabel = escapeHtml(details.metricLabel || 'Area');
     var safeMetricValue = escapeHtml(details.metricValue || '-');
@@ -875,10 +913,6 @@
     var safeEditUrl = escapeAttribute(details.editUrl || '#');
 
     return (
-      '<h2 class="govuk-heading-m govuk-!-margin-bottom-2">' +
-      safeTitlePrefix +
-      safeReference +
-      '</h2>' +
       '<p class="govuk-body govuk-!-margin-bottom-4">' +
       safeHabitatType +
       '</p>' +
@@ -1065,7 +1099,7 @@
 
   function getTableLink(featureType, featureIndex) {
     return document.querySelector(
-      '.habitat-ref-link[data-feature-type="' +
+      '.habitat-ref-cell[data-feature-type="' +
         featureType +
         '"][data-feature-index="' +
         featureIndex +

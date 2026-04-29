@@ -3,7 +3,7 @@
 {% from "govuk/components/input/macro.njk" import govukInput %}
 {% from "govuk/components/button/macro.njk" import govukButton %}
 
-{% set pageName = "Project name" %}
+{% set pageName = "Add a name for your Biodiversity Net Gain project" %}
 
 {% block pageTitle %}{{ pageName }} – {{ serviceName }} – GOV.UK{% endblock %}
 
@@ -19,7 +19,7 @@
         id: "projectName",
         name: "projectName",
         label: {
-          text: "Enter a description name to help you find your project later"
+          text: "Enter a unique name to help you find your project later."
         },
         value: projectName
       }) }}
