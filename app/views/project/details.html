@@ -3,7 +3,7 @@
 {% from "govuk/components/button/macro.njk" import govukButton %}
 {% from "govuk/components/task-list/macro.njk" import govukTaskList %}
 
-{% set pageName = "Project details" %}
+{% set pageName = "Add your Biodiversity Net Gain project details" %}
 
 {% block pageTitle %}{{ pageName }} – {{ serviceName }} – GOV.UK{% endblock %}
 
@@ -11,16 +11,17 @@
 <div class="govuk-grid-row">
   <div class="govuk-grid-column-two-thirds">
 
-    <h1 class="govuk-heading-l">{{ projectName or 'Not set' }}</h1>
+    <span class="govuk-caption-l">{{ projectName or 'Project name' }}</span>
+    <h1 class="govuk-heading-l">{{ pageName }}</h1>
 
     <p class="govuk-body govuk-!-margin-top-6">
       When you provide your information:
     </p>
 
     <ul class="govuk-list govuk-list--bullet">
-      <li>you'll need to complete each section before you can send the information</li>
-      <li>you can still make changes to a section even after it's marked as complete</li>
-      <li>you can save your progress at the end of each section if you need to come back later</li>
+      <li>complete each section before sending the information</li>
+      <li>you can edit sections after completing them</li>
+      <li>you can save your progress at the end of each section to return later</li>
     </ul>
 
     {% if baselineComplete %}
@@ -71,7 +72,7 @@
             title: {
               text: "Baseline"
             },
-            href: "/on-site-baseline/start",
+            href: "/on-site-baseline/upload-single-file",
             status: {
               text: "Completed"
             }
@@ -113,7 +114,7 @@
             title: {
               text: "Baseline"
             },
-            href: "/on-site-baseline/start",
+            href: "/on-site-baseline/upload-single-file",
             status: {
               tag: {
                 text: "Not yet started",

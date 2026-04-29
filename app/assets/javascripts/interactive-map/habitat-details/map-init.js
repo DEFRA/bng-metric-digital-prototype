@@ -112,7 +112,7 @@
           mapProvider: window.defra.maplibreProvider(),
           behaviour: 'inline',
           mapLabel: 'Habitat parcel map preview',
-          containerHeight: '400px',
+          containerHeight: '500px',
           bounds: mapBounds || [[-7.57, 49.96], [1.68, 58.64]],
           minZoom: 5,
           maxZoom: 20,
@@ -127,6 +127,24 @@
           ]
         }
       );
+
+      if (typeof window.habitatDetailsInteractiveMap.on === 'function') {
+        window.habitatDetailsInteractiveMap.on('map:ready', function () {
+          window.habitatDetailsInteractiveMap.addButton('fitToExtent', {
+            group: 'zoom',
+            label: 'Fit to full extent',
+            iconSvgContent: '<path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/>',
+            onClick: function (event, context) {
+              if (mapBounds && context && context.mapProvider) {
+                context.mapProvider.fitToBounds(mapBounds);
+              }
+            },
+            mobile: { slot: 'right-top', showLabel: false },
+            tablet: { slot: 'right-top', showLabel: false },
+            desktop: { slot: 'right-top', showLabel: false }
+          });
+        });
+      }
     } catch (error) {
       console.error('Failed to initialize habitat details interactive map:', error);
       showMapPlaceholder(mapContainer, 'Could not load interactive map');

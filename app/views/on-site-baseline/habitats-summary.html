@@ -13,7 +13,7 @@
   <link rel="stylesheet" href="/public/javascripts/interactive-map/vendor/core/index.css" />
   <style>
     .map-preview-container {
-      margin: 30px 0;
+      margin: 0 0 30px;
       position: relative;
     }
 
@@ -152,11 +152,50 @@
     }
 
     .map-toggle-row {
-      margin-bottom: 15px;
+      margin-bottom: 45px;
     }
 
     .map-toggle-button {
       margin-bottom: 0;
+    }
+
+    /* Floodmap-style help banner in the interactive map */
+    .map-preview-container [id$='-panel-habitat-help-banner'] {
+      border-radius: 3px;
+      border: 1px solid #b1b4b6;
+      box-shadow: none;
+      min-width: 0;
+    }
+
+    .map-preview-container [id$='-panel-habitat-help-banner'] .im-c-panel__body {
+      padding: 10px 44px 10px 12px;
+    }
+
+    .map-preview-container [id$='-panel-habitat-help-banner'] .im-c-panel__close {
+      top: 6px;
+      right: 6px;
+      min-width: 30px;
+      min-height: 30px;
+      color: #0b0c0c;
+    }
+
+    .map-preview-container [id$='-panel-habitat-help-banner'] .im-c-panel__close:hover {
+      background-color: #f3f2f1;
+    }
+
+    .habitat-help-banner-content {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #0b0c0c;
+      font-size: 16px;
+      line-height: 1.3;
+    }
+
+    .habitat-help-banner-icon {
+      width: 20px;
+      height: 20px;
+      flex-shrink: 0;
     }
   </style>
 {% endblock %}
@@ -205,7 +244,7 @@
           { text: "Status" },
           { text: "Action", classes: "govuk-visually-hidden" }
         ],
-        rows: areasTableRowsWithTotals
+        rows: tableRows
       }) }}
     {% endset %}
 
@@ -223,7 +262,7 @@
             { text: "Status" },
             { text: "Action", classes: "govuk-visually-hidden" }
           ],
-          rows: hedgerowTableRowsWithTotals
+          rows: hedgerowTableRows
         }) }}
       {% else %}
         <p class="govuk-body">No hedgerows available.</p>
@@ -244,7 +283,7 @@
             { text: "Status" },
             { text: "Action", classes: "govuk-visually-hidden" }
           ],
-          rows: watercourseTableRowsWithTotals
+          rows: watercourseTableRows
         }) }}
       {% else %}
         <p class="govuk-body">No watercourses available.</p>

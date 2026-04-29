@@ -2,7 +2,7 @@
 
 {% from "govuk/components/table/macro.njk" import govukTable %}
 
-{% set pageName = "Projects" %}
+{% set pageName = "Manage your Biodiversity Net Gain projects" %}
 
 {% block pageTitle %}{{ pageName }} – {{ serviceName }} – GOV.UK{% endblock %}
 
@@ -28,42 +28,10 @@
       firstCellIsHeader: false,
       head: [
         { text: "Project name" },
-        { text: "Reference" },
-        { text: "Status" },
-        { text: "Actions" }
+        { text: "Last Modified" },
+        { text: "Date Created" }
       ],
-      rows: [
-        [
-          { text: "Project one" },
-          { text: "PRJ-001" },
-          { text: "" },
-          { text: "" }
-        ],
-        [
-          { text: "Project two" },
-          { text: "PRJ-002" },
-          { text: "" },
-          { text: "" }
-        ],
-        [
-          { text: "Project three" },
-          { text: "PRJ-003" },
-          { text: "" },
-          { text: "" }
-        ],
-        [
-          { text: "Project four" },
-          { text: "PRJ-004" },
-          { text: "" },
-          { text: "" }
-        ],
-        [
-          { text: "Project five" },
-          { text: "PRJ-005" },
-          { text: "" },
-          { text: "" }
-        ]
-      ]
+      rows: projectRows
     }) }}
 
   </div>
