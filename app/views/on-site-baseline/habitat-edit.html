@@ -2,6 +2,7 @@
 
 {% from "govuk/components/back-link/macro.njk" import govukBackLink %}
 {% from "govuk/components/select/macro.njk" import govukSelect %}
+{% from "govuk/components/textarea/macro.njk" import govukTextarea %}
 {% from "govuk/components/button/macro.njk" import govukButton %}
 {% from "govuk/components/summary-list/macro.njk" import govukSummaryList %}
 
@@ -20,22 +21,57 @@
 
     .map-preview-container .map-preview {
       width: 100%;
-      height: 500px;
+      height: 540px;
       border: 2px solid #b1b4b6;
     }
 
     @media (min-width: 641px) {
       .map-preview-container .map-preview {
-        height: 620px;
+        height: 660px;
       }
     }
 
-    .map-toggle-row {
-      margin-bottom: 15px;
+    .map-preview-container .im-c-panel__heading {
+      padding-bottom: 8px;
     }
 
-    .map-toggle-button {
+    .map-preview-container .im-c-panel__body {
+      padding: 8px 16px 16px;
+    }
+
+    .map-preview-container .im-c-panel__body > .govuk-body:first-child {
+      margin-top: 0;
+      margin-bottom: 12px;
+    }
+
+    .map-preview-container .im-c-panel__body .govuk-table {
+      width: 100%;
+      table-layout: auto;
+    }
+
+    .map-preview-container .im-c-panel__body .govuk-table__header {
+      width: 44%;
+      white-space: nowrap;
+      vertical-align: top;
+      padding-right: 12px;
+    }
+
+    .map-preview-container .im-c-panel__body .govuk-table__cell {
+      vertical-align: top;
+      padding-left: 12px;
+      overflow-wrap: anywhere;
+    }
+
+    .habitat-details-card .govuk-summary-list {
       margin-bottom: 0;
+    }
+
+    .habitat-details-card .govuk-summary-list__key {
+      width: 32%;
+    }
+
+    .habitat-details-card .govuk-summary-list__value {
+      width: 68%;
     }
   </style>
 {% endblock %}
@@ -50,13 +86,10 @@
 {% block content %}
 <div class="govuk-grid-row">
   <div class="govuk-grid-column-full">
-    <span class="govuk-caption-l">Habitat {{ habitat.ref }} – Baseline</span>
-    <h1 class="govuk-heading-l">Edit baseline habitat</h1>
+    <span class="govuk-caption-l">On-site baseline</span>
+    <h1 class="govuk-heading-l">{{ pageName }}</h1>
 
     {% if mapData and mapData.parcel and mapData.parcel.features and mapData.parcel.features.length > 0 %}
-    <div class="map-toggle-row">
-      <button id="toggle-habitat-map" type="button" class="govuk-button govuk-button--secondary map-toggle-button" data-module="govuk-button">Hide map</button>
-    </div>
     <div id="habitat-map-section" class="map-preview-container">
       <div id="map-habitat-details" class="map-preview" role="img" aria-label="Map showing habitat parcel {{ habitat.ref }}"></div>
     </div>
@@ -65,43 +98,103 @@
     {% if mapData %}
     <script type="application/json" id="geometries-data">{{ mapData | dump | safe }}</script>
     {% endif %}
+    <script type="application/json" id="selected-habitat-panel-data">{{ {
+      reference: habitat.ref,
+      habitatType: habitat.habitat_type,
+      area: habitat.area_hectares ~ 'ha'
+    } | dump | safe }}</script>
+    <script type="application/json" id="habitat-types-by-broad">{{ habitatTypesByBroadHabitat | safe }}</script>
+    <script type="application/json" id="distinctiveness-categories">{{ distinctivenessCategories | safe }}</script>
+  </div>
+</div>
 
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
     <form method="post" action="/on-site-baseline/parcel/{{ habitat.index }}/habitat-type">
-      {{ govukSummaryList({
-        rows: [
-          {
-            key: { text: "Reference" },
-            value: { text: habitat.ref }
-          },
-          {
-            key: { text: "Area" },
-            value: { text: habitat.area_hectares ~ " ha" }
-          },
-          {
-            key: { text: "Habitat type" },
-            value: {
-              html: govukSelect({
-                id: "habitat_type",
-                name: "habitat_type",
-                label: { text: "Habitat type", classes: "govuk-visually-hidden" },
-                items: habitatTypeItems,
-                value: habitat.habitat_type
-              })
-            }
-          },
-          {
-            key: { text: "Condition" },
-            value: {
-              html: govukSelect({
-                id: "condition",
-                name: "condition",
-                label: { text: "Condition", classes: "govuk-visually-hidden" },
-                items: conditionItems,
-                value: habitat.condition
-              })
-            }
-          }
-        ]
+      <h2 class="govuk-heading-m">Baseline details</h2>
+
+      <div class="govuk-summary-card habitat-details-card govuk-!-margin-bottom-7">
+        <div class="govuk-summary-card__content">
+          {% set broadHabitatSelect %}
+            {{ govukSelect({
+              id: "broad_habitat",
+              name: "broad_habitat",
+              label: { text: "Broad habitat", classes: "govuk-visually-hidden" },
+              items: broadHabitatItems,
+              value: habitat.broad_habitat
+            }) }}
+          {% endset %}
+
+          {% set habitatTypeSelect %}
+            {{ govukSelect({
+              id: "habitat_type",
+              name: "habitat_type",
+              label: { text: "Habitat type", classes: "govuk-visually-hidden" },
+              items: habitatTypeItems,
+              value: habitat.habitat_type
+            }) }}
+          {% endset %}
+
+          {% set irreplaceableHabitatSelect %}
+            {{ govukSelect({
+              id: "irreplaceable_habitat",
+              name: "irreplaceable_habitat",
+              label: { text: "Irreplaceable habitat", classes: "govuk-visually-hidden" },
+              items: [
+                { value: "", text: "Select" },
+                { value: "Yes", text: "Yes" },
+                { value: "No", text: "No" }
+              ],
+              value: habitat.irreplaceable_habitat or "No"
+            }) }}
+          {% endset %}
+
+          {% set conditionSelect %}
+            {{ govukSelect({
+              id: "condition",
+              name: "condition",
+              label: { text: "Condition", classes: "govuk-visually-hidden" },
+              items: conditionItems,
+              value: habitat.condition
+            }) }}
+          {% endset %}
+
+          {{ govukSummaryList({
+            rows: [
+              { key: { text: "Reference" }, value: { text: habitat.ref } },
+              { key: { text: "Area" }, value: { text: habitat.area_hectares } },
+              { key: { text: "Broad habitat" }, value: { html: broadHabitatSelect } },
+              { key: { text: "Habitat type" }, value: { html: habitatTypeSelect } },
+              { key: { text: "Irreplaceable habitat" }, value: { html: irreplaceableHabitatSelect } },
+              { key: { text: "Distinctiveness" }, value: { html: '<span id="distinctiveness-text">' ~ (habitat.distinctiveness or '-') ~ '</span>' } },
+              { key: { text: "Required action to meeting trading rules" }, value: { text: habitat.required_action or '-' } },
+              { key: { text: "Condition" }, value: { html: conditionSelect } }
+            ]
+          }) }}
+        </div>
+      </div>
+
+      <div class="govuk-summary-card govuk-!-margin-bottom-7">
+        <div class="govuk-summary-card__content">
+          {{ govukSummaryList({
+            rows: [
+              {
+                key: { text: "Total habitat units" },
+                value: { html: '<span id="total-habitat-units">' ~ ((habitat.total_units or 0) | round(2)) ~ '</span>' }
+              }
+            ]
+          }) }}
+        </div>
+      </div>
+
+      <h2 class="govuk-heading-m">Supporting evidence</h2>
+
+      {{ govukTextarea({
+        name: "supporting_evidence",
+        id: "supporting_evidence",
+        value: habitat.supporting_evidence or "",
+        label: { text: "Supporting evidence", classes: "govuk-visually-hidden" },
+        rows: 5
       }) }}
 
       <div class="govuk-button-group">
@@ -121,25 +214,67 @@
   <script src="/public/javascripts/interactive-map/habitat-details/map-init.js"></script>
   <script>
     (function () {
-      var mapSection = document.getElementById('habitat-map-section');
-      var toggleButton = document.getElementById('toggle-habitat-map');
+      var mappingEl = document.getElementById('habitat-types-by-broad');
+      var distinctivenessEl = document.getElementById('distinctiveness-categories');
+      var broadSelect = document.getElementById('broad_habitat');
+      var typeSelect = document.getElementById('habitat_type');
+      var distinctivenessText = document.getElementById('distinctiveness-text');
 
-      if (!mapSection || !toggleButton) {
+      if (!mappingEl || !broadSelect || !typeSelect || !distinctivenessText) {
         return;
       }
 
-      toggleButton.addEventListener('click', function () {
-        var isHidden = mapSection.style.display === 'none';
+      var mapping = JSON.parse(mappingEl.textContent || '{}');
+      var distinctivenessCategories = distinctivenessEl
+        ? JSON.parse(distinctivenessEl.textContent || '{}')
+        : {};
 
-        if (isHidden) {
-          mapSection.style.display = '';
-          toggleButton.textContent = 'Hide map';
-          return;
-        }
+      function updateDistinctiveness() {
+        var fullHabitatType = typeSelect.value || '';
+        var distinctiveness = fullHabitatType
+          ? (distinctivenessCategories[fullHabitatType] || '-')
+          : '-';
 
-        mapSection.style.display = 'none';
-        toggleButton.textContent = 'Show map';
+        distinctivenessText.textContent = distinctiveness;
+      }
+
+      function setHabitatTypeOptions(broadValue, preserveValue) {
+        var types = broadValue && mapping[broadValue] ? mapping[broadValue] : [];
+        var currentValue = preserveValue !== undefined ? preserveValue : (typeSelect.value || '');
+
+        typeSelect.length = 0;
+
+        var defaultOption = document.createElement('option');
+        defaultOption.value = '';
+        defaultOption.textContent = 'Select';
+        typeSelect.appendChild(defaultOption);
+
+        types.forEach(function (type) {
+          var option = document.createElement('option');
+          option.value = type;
+          option.textContent = type;
+
+          if (type === currentValue) {
+            option.selected = true;
+          }
+
+          typeSelect.appendChild(option);
+        });
+
+        updateDistinctiveness();
+      }
+
+      broadSelect.addEventListener('change', function () {
+        setHabitatTypeOptions(this.value);
       });
+
+      typeSelect.addEventListener('change', updateDistinctiveness);
+
+      if (broadSelect.value) {
+        setHabitatTypeOptions(broadSelect.value, typeSelect.value || '');
+      } else {
+        updateDistinctiveness();
+      }
     })();
   </script>
 {% endblock %}

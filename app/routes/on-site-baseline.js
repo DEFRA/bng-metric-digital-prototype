@@ -8,7 +8,8 @@ const { parseGeoPackage } = require('../lib/geopackage-parser')
 const {
   calculatePolygonArea,
   calculateLineLength,
-  isPolygonSelfIntersecting
+  isPolygonSelfIntersecting,
+  doLineSegmentsIntersect
 } = require('../lib/geometry-utils')
 const { isWithinUK, getLPA, getNCA, getLNRS } = require('../lib/arcgis-queries')
 const metricCalcs = require('../lib/metric-calcs')
@@ -37,6 +38,432 @@ function getHabitatTypesByBroadHabitat() {
   })
 
   return habitatTypesByBroad
+}
+
+function getPolygonOuterRings(geometry) {
+  if (!geometry) {
+    return []
+  }
+
+  if (geometry.type === 'Polygon') {
+    return geometry.coordinates && geometry.coordinates[0]
+      ? [geometry.coordinates[0]]
+      : []
+  }
+
+  if (geometry.type === 'MultiPolygon') {
+    return (geometry.coordinates || [])
+      .map((polygon) => (polygon && polygon[0] ? polygon[0] : null))
+      .filter(Boolean)
+  }
+
+  return []
+}
+
+function getLinePaths(geometry) {
+  if (!geometry) {
+    return []
+  }
+
+  if (geometry.type === 'LineString') {
+    return [geometry.coordinates || []]
+  }
+
+  if (geometry.type === 'MultiLineString') {
+    return geometry.coordinates || []
+  }
+
+  return []
+}
+
+function pointsEqual(a, b) {
+  return !!(
+    a &&
+    b &&
+    a.length >= 2 &&
+    b.length >= 2 &&
+    Math.abs(a[0] - b[0]) < 0.001 &&
+    Math.abs(a[1] - b[1]) < 0.001
+  )
+}
+
+function isPointOnSegment(point, segmentStart, segmentEnd) {
+  if (!point || !segmentStart || !segmentEnd) {
+    return false
+  }
+
+  const cross =
+    (point[1] - segmentStart[1]) * (segmentEnd[0] - segmentStart[0]) -
+    (point[0] - segmentStart[0]) * (segmentEnd[1] - segmentStart[1])
+
+  if (Math.abs(cross) > 0.001) {
+    return false
+  }
+
+  const dot =
+    (point[0] - segmentStart[0]) * (segmentEnd[0] - segmentStart[0]) +
+    (point[1] - segmentStart[1]) * (segmentEnd[1] - segmentStart[1])
+
+  if (dot < 0) {
+    return false
+  }
+
+  const squaredLength =
+    Math.pow(segmentEnd[0] - segmentStart[0], 2) +
+    Math.pow(segmentEnd[1] - segmentStart[1], 2)
+
+  return dot <= squaredLength
+}
+
+function ringsTouch(ringA, ringB) {
+  if (!ringA || !ringB || ringA.length < 2 || ringB.length < 2) {
+    return false
+  }
+
+  for (let i = 0; i < ringA.length - 1; i++) {
+    const a1 = ringA[i]
+    const a2 = ringA[i + 1]
+
+    for (let j = 0; j < ringB.length - 1; j++) {
+      const b1 = ringB[j]
+      const b2 = ringB[j + 1]
+
+      if (doLineSegmentsIntersect(a1, a2, b1, b2)) {
+        return true
+      }
+
+      if (
+        pointsEqual(a1, b1) ||
+        pointsEqual(a1, b2) ||
+        pointsEqual(a2, b1) ||
+        pointsEqual(a2, b2)
+      ) {
+        return true
+      }
+    }
+  }
+
+  return false
+}
+
+function polygonTouchesLine(geometry, lineGeometry) {
+  const rings = getPolygonOuterRings(geometry)
+  const paths = getLinePaths(lineGeometry)
+
+  return rings.some((ring) => {
+    return paths.some((path) => {
+      if (!path || path.length < 2) {
+        return false
+      }
+
+      for (let i = 0; i < ring.length - 1; i++) {
+        const a1 = ring[i]
+        const a2 = ring[i + 1]
+
+        for (let j = 0; j < path.length - 1; j++) {
+          const b1 = path[j]
+          const b2 = path[j + 1]
+
+          if (doLineSegmentsIntersect(a1, a2, b1, b2)) {
+            return true
+          }
+
+          if (
+            isPointOnSegment(a1, b1, b2) ||
+            isPointOnSegment(a2, b1, b2) ||
+            isPointOnSegment(b1, a1, a2) ||
+            isPointOnSegment(b2, a1, a2)
+          ) {
+            return true
+          }
+        }
+      }
+
+      return false
+    })
+  })
+}
+
+function getFeatureBoundingBox(geometry) {
+  const rings = getPolygonOuterRings(geometry)
+  let minX = Infinity
+  let minY = Infinity
+  let maxX = -Infinity
+  let maxY = -Infinity
+
+  rings.forEach((ring) => {
+    ring.forEach((coordinate) => {
+      if (!coordinate || coordinate.length < 2) {
+        return
+      }
+
+      minX = Math.min(minX, coordinate[0])
+      minY = Math.min(minY, coordinate[1])
+      maxX = Math.max(maxX, coordinate[0])
+      maxY = Math.max(maxY, coordinate[1])
+    })
+  })
+
+  if (!isFinite(minX) || !isFinite(minY) || !isFinite(maxX) || !isFinite(maxY)) {
+    return null
+  }
+
+  return { minX, minY, maxX, maxY }
+}
+
+function getBoundingBoxCenter(bounds) {
+  if (!bounds) {
+    return null
+  }
+
+  return {
+    x: (bounds.minX + bounds.maxX) / 2,
+    y: (bounds.minY + bounds.maxY) / 2
+  }
+}
+
+function getBoundaryEdgeDirection(parcelGeometry, boundaryFeatures) {
+  const parcelBounds = getFeatureBoundingBox(parcelGeometry)
+  if (!parcelBounds || !boundaryFeatures || !boundaryFeatures.length) {
+    return 'Yes'
+  }
+
+  let boundaryBounds = null
+
+  boundaryFeatures.forEach(function (feature) {
+    const currentBounds = feature && feature.geometry ? getFeatureBoundingBox(feature.geometry) : null
+    if (!currentBounds) {
+      return
+    }
+
+    if (!boundaryBounds) {
+      boundaryBounds = Object.assign({}, currentBounds)
+      return
+    }
+
+    boundaryBounds.minX = Math.min(boundaryBounds.minX, currentBounds.minX)
+    boundaryBounds.minY = Math.min(boundaryBounds.minY, currentBounds.minY)
+    boundaryBounds.maxX = Math.max(boundaryBounds.maxX, currentBounds.maxX)
+    boundaryBounds.maxY = Math.max(boundaryBounds.maxY, currentBounds.maxY)
+  })
+
+  const parcelCenter = getBoundingBoxCenter(parcelBounds)
+  const boundaryCenter = getBoundingBoxCenter(boundaryBounds)
+  if (!parcelCenter || !boundaryCenter) {
+    return 'Yes'
+  }
+
+  const dx = parcelCenter.x - boundaryCenter.x
+  const dy = parcelCenter.y - boundaryCenter.y
+  const thresholdX = (boundaryBounds.maxX - boundaryBounds.minX) * 0.1
+  const thresholdY = (boundaryBounds.maxY - boundaryBounds.minY) * 0.1
+
+  let vertical = ''
+  let horizontal = ''
+
+  if (dy > thresholdY) {
+    vertical = 'north'
+  } else if (dy < -thresholdY) {
+    vertical = 'south'
+  }
+
+  if (dx > thresholdX) {
+    horizontal = 'east'
+  } else if (dx < -thresholdX) {
+    horizontal = 'west'
+  }
+
+  const direction = [vertical, horizontal].filter(Boolean).join(', ')
+  return direction ? 'Yes - ' + direction : 'Yes'
+}
+
+function getRelativePositionOfSite(parcelGeometry, boundaryFeatures) {
+  const parcelBounds = getFeatureBoundingBox(parcelGeometry)
+  if (!parcelBounds || !boundaryFeatures || !boundaryFeatures.length) {
+    return 'Within site'
+  }
+
+  let boundaryBounds = null
+
+  boundaryFeatures.forEach(function (feature) {
+    const currentBounds = feature && feature.geometry ? getFeatureBoundingBox(feature.geometry) : null
+    if (!currentBounds) {
+      return
+    }
+
+    if (!boundaryBounds) {
+      boundaryBounds = Object.assign({}, currentBounds)
+      return
+    }
+
+    boundaryBounds.minX = Math.min(boundaryBounds.minX, currentBounds.minX)
+    boundaryBounds.minY = Math.min(boundaryBounds.minY, currentBounds.minY)
+    boundaryBounds.maxX = Math.max(boundaryBounds.maxX, currentBounds.maxX)
+    boundaryBounds.maxY = Math.max(boundaryBounds.maxY, currentBounds.maxY)
+  })
+
+  const parcelCenter = getBoundingBoxCenter(parcelBounds)
+  const boundaryCenter = getBoundingBoxCenter(boundaryBounds)
+  if (!parcelCenter || !boundaryCenter) {
+    return 'Within site'
+  }
+
+  const dx = parcelCenter.x - boundaryCenter.x
+  const dy = parcelCenter.y - boundaryCenter.y
+  const thresholdX = (boundaryBounds.maxX - boundaryBounds.minX) * 0.1
+  const thresholdY = (boundaryBounds.maxY - boundaryBounds.minY) * 0.1
+
+  let vertical = ''
+  let horizontal = ''
+
+  if (dy > thresholdY) {
+    vertical = 'north'
+  } else if (dy < -thresholdY) {
+    vertical = 'south'
+  }
+
+  if (dx > thresholdX) {
+    horizontal = 'east'
+  } else if (dx < -thresholdX) {
+    horizontal = 'west'
+  }
+
+  if (vertical && horizontal) {
+    return vertical + '-' + horizontal + ' of site'
+  }
+
+  if (vertical || horizontal) {
+    return (vertical || horizontal) + ' of site'
+  }
+
+  return 'Centre of site'
+}
+
+function getParcelReference(feature, index) {
+  return (
+    (feature && feature.properties && feature.properties['Parcel Ref']) ||
+    'H' + (index + 1)
+  )
+}
+
+function annotateParcelAdjacency(parcelFeatureCollection, context) {
+  if (
+    !parcelFeatureCollection ||
+    !Array.isArray(parcelFeatureCollection.features) ||
+    !parcelFeatureCollection.features.length
+  ) {
+    return
+  }
+
+  const boundaryFeatures =
+    context && context.siteBoundary && Array.isArray(context.siteBoundary.features)
+      ? context.siteBoundary.features
+      : []
+  const hedgerowFeatures =
+    context && context.hedgerows && Array.isArray(context.hedgerows.features)
+      ? context.hedgerows.features
+      : []
+  const watercourseFeatures =
+    context && context.watercourses && Array.isArray(context.watercourses.features)
+      ? context.watercourses.features
+      : []
+
+  parcelFeatureCollection.features.forEach(function (feature, index) {
+    if (!feature || !feature.geometry) {
+      return
+    }
+
+    feature.properties = feature.properties || {}
+
+    const existingAdjacentTo =
+      feature.properties['Adjacent To'] ||
+      feature.properties['Adjacent to'] ||
+      feature.properties['Baseline Adjacent To'] ||
+      feature.properties['Baseline Adjacent to']
+    const existingBoundaryEdge =
+      feature.properties['Boundary edge'] ||
+      feature.properties['Boundary Edge'] ||
+      feature.properties['Baseline Boundary edge'] ||
+      feature.properties['Baseline Boundary Edge']
+    const existingPosition =
+      feature.properties.Position ||
+      feature.properties.position ||
+      feature.properties['Baseline Position'] ||
+      feature.properties['Baseline position']
+    const hasExistingPosition =
+      typeof existingPosition === 'string'
+        ? existingPosition.trim() && existingPosition.trim() !== '-'
+        : !!existingPosition
+
+    const touchesBoundary = boundaryFeatures.some(function (boundaryFeature) {
+      return getPolygonOuterRings(feature.geometry).some(function (parcelRing) {
+        return getPolygonOuterRings(boundaryFeature.geometry).some(function (boundaryRing) {
+          return ringsTouch(parcelRing, boundaryRing)
+        })
+      })
+    })
+
+    const adjacentLabels = []
+
+    parcelFeatureCollection.features.forEach(function (otherFeature, otherIndex) {
+      if (otherIndex === index || !otherFeature || !otherFeature.geometry) {
+        return
+      }
+
+      const touchesParcel = getPolygonOuterRings(feature.geometry).some(function (parcelRing) {
+        return getPolygonOuterRings(otherFeature.geometry).some(function (otherRing) {
+          return ringsTouch(parcelRing, otherRing)
+        })
+      })
+
+      if (touchesParcel) {
+        adjacentLabels.push(getParcelReference(otherFeature, otherIndex))
+      }
+    })
+
+    if (
+      hedgerowFeatures.some(function (hedgerowFeature) {
+        return hedgerowFeature && hedgerowFeature.geometry
+          ? polygonTouchesLine(feature.geometry, hedgerowFeature.geometry)
+          : false
+      })
+    ) {
+      adjacentLabels.push('Hedgerow')
+    }
+
+    if (
+      watercourseFeatures.some(function (watercourseFeature) {
+        return watercourseFeature && watercourseFeature.geometry
+          ? polygonTouchesLine(feature.geometry, watercourseFeature.geometry)
+          : false
+      })
+    ) {
+      adjacentLabels.push('Watercourse')
+    }
+
+    const fallbackAdjacentTo = adjacentLabels.length
+      ? Array.from(new Set(adjacentLabels)).join(', ')
+      : 'No adjacent features identified'
+    const fallbackBoundaryEdge = touchesBoundary
+      ? getBoundaryEdgeDirection(feature.geometry, boundaryFeatures)
+      : 'No'
+    const fallbackPosition = getRelativePositionOfSite(feature.geometry, boundaryFeatures)
+
+    if (!existingAdjacentTo) {
+      feature.properties['Baseline Adjacent To'] = fallbackAdjacentTo
+      feature.properties['Adjacent To'] = fallbackAdjacentTo
+    }
+
+    if (!existingBoundaryEdge) {
+      feature.properties['Baseline Boundary edge'] = fallbackBoundaryEdge
+      feature.properties['Boundary edge'] = fallbackBoundaryEdge
+    }
+
+    if (!hasExistingPosition) {
+      feature.properties['Baseline Position'] = fallbackPosition
+      feature.properties.Position = fallbackPosition
+    }
+  })
 }
 
 function activateUploadedBaselineLayers(req) {
@@ -458,6 +885,7 @@ function registerOnSiteBaselineRoutes(router) {
 
           habitatParcels.push({
             parcelId: 'HP-' + (index + 1).toString().padStart(3, '0'),
+            featureIndex: index,
             areaHectares: parcelAreaHa,
             habitatLabel: feature.properties?.habitatType || null,
             distinctiveness: null,
@@ -476,6 +904,12 @@ function registerOnSiteBaselineRoutes(router) {
       }
 
       // Prepare map data from drawn geometries
+      annotateParcelAdjacency(drawnParcels, {
+        siteBoundary: boundaryFeatureCollection,
+        hedgerows: req.session.data['hedgerows'] || null,
+        watercourses: req.session.data['watercourses'] || null
+      })
+
       mapData = {
         siteBoundary: boundaryFeatureCollection,
         parcels: drawnParcels,
@@ -575,6 +1009,7 @@ function registerOnSiteBaselineRoutes(router) {
 
           habitatParcels.push({
             parcelId: parcelId,
+            featureIndex: i - 1,
             areaHectares: areaHa.toFixed(2),
             habitatLabel: habitat,
             distinctiveness: distinctiveness,
@@ -607,6 +1042,12 @@ function registerOnSiteBaselineRoutes(router) {
         : null
 
       // Prepare map data
+      annotateParcelAdjacency(parcelsLayer, {
+        siteBoundary: boundaryLayer,
+        hedgerows: hedgerowLayer || null,
+        watercourses: watercourseLayer || null
+      })
+
       mapData = {
         siteBoundary: boundaryLayer,
         parcels: parcelsLayer,
@@ -631,40 +1072,6 @@ function registerOnSiteBaselineRoutes(router) {
         'You have ' + parcelCount + ' habitat parcels to classify.'
     }
 
-    // Build table rows for GovUK table component
-    const tableRows = habitatParcels.map(function (parcel, index) {
-      const statusText = parcel.status || ''
-      let statusClass = ''
-      if (statusText === 'Incomplete') {
-        statusClass = 'govuk-tag--blue'
-      }
-
-      return [
-        { html: '<span class="habitat-ref-cell" data-feature-type="parcel" data-feature-index="' + index + '">' + parcel.parcelId + '</span>' },
-        { text: parcel.areaHectares },
-        { text: parcel.habitatLabel || '' },
-        { text: parcel.distinctiveness || '' },
-        { text: parcel.condition || '' },
-        { text: parcel.units ? parcel.units.toFixed(2) : '0.00' },
-        statusClass
-          ? {
-              html:
-                '<strong class="govuk-tag ' +
-                statusClass +
-                '">' +
-                statusText +
-                '</strong>'
-            }
-          : { text: statusText },
-        {
-          html:
-            '<a class="govuk-link" href="' +
-            parcel.actionUrl +
-            '">Edit</a>'
-        }
-      ]
-    })
-
     // Sum habitat parcel units and store in session for later use
     const baselineUnits = habitatParcels.reduce(function (sum, parcel) {
       const units = typeof parcel.units === 'number' ? parcel.units : 0;
@@ -677,6 +1084,216 @@ function registerOnSiteBaselineRoutes(router) {
       return sum + (isNaN(area) ? 0 : area)
     }, 0)
 
+    const collator = new Intl.Collator('en', {
+      numeric: true,
+      sensitivity: 'base'
+    })
+
+    function compareText(a, b) {
+      return collator.compare((a || '').toString(), (b || '').toString())
+    }
+
+    function buildSortUrl(
+      sortByParam,
+      sortOrderParam,
+      key,
+      currentSortBy,
+      currentSortOrder
+    ) {
+      const nextSortOrder =
+        currentSortBy === key && currentSortOrder === 'asc' ? 'desc' : 'asc'
+      const params = new URLSearchParams()
+
+      Object.keys(req.query || {}).forEach(function (paramKey) {
+        if (paramKey === sortByParam || paramKey === sortOrderParam) {
+          return
+        }
+
+        const value = req.query[paramKey]
+        if (value !== undefined && value !== null && value !== '') {
+          params.set(paramKey, value.toString())
+        }
+      })
+
+      params.set(sortByParam, key)
+      params.set(sortOrderParam, nextSortOrder)
+
+      return '/on-site-baseline/habitats-summary?' + params.toString()
+    }
+
+    function buildSortableHeadCell(
+      label,
+      key,
+      sortByParam,
+      sortOrderParam,
+      currentSortBy,
+      currentSortOrder
+    ) {
+      const isCurrent = currentSortBy === key
+      const directionText = currentSortOrder === 'asc' ? 'ascending' : 'descending'
+      const arrow = !isCurrent ? '' : currentSortOrder === 'asc' ? ' ▲' : ' ▼'
+
+      return {
+        html:
+          '<a class="govuk-link govuk-link--no-visited-state" href="' +
+          buildSortUrl(
+            sortByParam,
+            sortOrderParam,
+            key,
+            currentSortBy,
+            currentSortOrder
+          ) +
+          '">' +
+          label +
+          '</a>' +
+          arrow +
+          (isCurrent
+            ? '<span class="govuk-visually-hidden">, currently sorted ' +
+              directionText +
+              '</span>'
+            : ''),
+        attributes: {
+          'aria-sort': isCurrent ? directionText : 'none'
+        }
+      }
+    }
+
+    const areaSortKeys = [
+      'parcel-reference',
+      'area',
+      'habitat',
+      'distinctiveness',
+      'condition',
+      'units',
+      'status'
+    ]
+    const areasSortByRequested = (req.query.areasSortBy || '').toString().toLowerCase()
+    const areasSortBy = areaSortKeys.includes(areasSortByRequested)
+      ? areasSortByRequested
+      : 'parcel-reference'
+    const areasSortOrder = req.query.areasSortOrder === 'desc' ? 'desc' : 'asc'
+
+    const sortedHabitatParcels = habitatParcels.slice().sort(function (a, b) {
+      let compareValue = 0
+
+      if (areasSortBy === 'parcel-reference') {
+        compareValue = compareText(a.parcelId, b.parcelId)
+      } else if (areasSortBy === 'area') {
+        compareValue = (parseFloat(a.areaHectares) || 0) - (parseFloat(b.areaHectares) || 0)
+      } else if (areasSortBy === 'habitat') {
+        compareValue = compareText(a.habitatLabel, b.habitatLabel)
+      } else if (areasSortBy === 'distinctiveness') {
+        compareValue = compareText(a.distinctiveness, b.distinctiveness)
+      } else if (areasSortBy === 'condition') {
+        compareValue = compareText(a.condition, b.condition)
+      } else if (areasSortBy === 'units') {
+        compareValue = (typeof a.units === 'number' ? a.units : 0) - (typeof b.units === 'number' ? b.units : 0)
+      } else if (areasSortBy === 'status') {
+        compareValue = compareText(a.status, b.status)
+      }
+
+      return areasSortOrder === 'desc' ? -compareValue : compareValue
+    })
+
+    // Build table rows for GovUK table component
+    const tableRows = sortedHabitatParcels.map(function (parcel, index) {
+      const statusText = parcel.status || ''
+      let statusClass = ''
+      if (statusText === 'Incomplete') {
+        statusClass = 'govuk-tag--blue'
+      }
+
+      const featureIndex =
+        typeof parcel.featureIndex === 'number' ? parcel.featureIndex : index
+
+      return [
+        {
+          html:
+            '<a class="govuk-link habitat-ref-link habitat-ref-cell" data-feature-type="parcel" data-feature-index="' +
+            featureIndex +
+            '" href="' +
+            parcel.actionUrl +
+            '">' +
+            parcel.parcelId +
+            '</a>'
+        },
+        { text: parcel.habitatLabel || '' },
+         { text: parcel.areaHectares },
+        { text: parcel.distinctiveness || '' },
+        { text: parcel.condition || '' },
+        { text: parcel.units ? parcel.units.toFixed(2) : '0.00' },
+        statusClass
+          ? {
+              html:
+                '<strong class="govuk-tag ' +
+                statusClass +
+                '">' +
+                statusText +
+                '</strong>'
+            }
+          : { text: statusText }
+      ]
+    })
+
+    const areasHead = [
+      buildSortableHeadCell(
+        'Ref',
+        'parcel-reference',
+        'areasSortBy',
+        'areasSortOrder',
+        areasSortBy,
+        areasSortOrder
+      ),
+       buildSortableHeadCell(
+        'Habitat type',
+        'habitat',
+        'areasSortBy',
+        'areasSortOrder',
+        areasSortBy,
+        areasSortOrder
+      ),
+      buildSortableHeadCell(
+        'Area (ha)',
+        'area',
+        'areasSortBy',
+        'areasSortOrder',
+        areasSortBy,
+        areasSortOrder
+      ),
+      buildSortableHeadCell(
+        'Distinctiveness',
+        'distinctiveness',
+        'areasSortBy',
+        'areasSortOrder',
+        areasSortBy,
+        areasSortOrder
+      ),
+      buildSortableHeadCell(
+        'Condition',
+        'condition',
+        'areasSortBy',
+        'areasSortOrder',
+        areasSortBy,
+        areasSortOrder
+      ),
+      buildSortableHeadCell(
+        'Units',
+        'units',
+        'areasSortBy',
+        'areasSortOrder',
+        areasSortBy,
+        areasSortOrder
+      ),
+      buildSortableHeadCell(
+        'Status',
+        'status',
+        'areasSortBy',
+        'areasSortOrder',
+        areasSortBy,
+        areasSortOrder
+      )
+    ]
+
     const areasTableRowsWithTotals = tableRows.concat([
       [
         { html: '<strong>Total</strong>' },
@@ -685,7 +1302,6 @@ function registerOnSiteBaselineRoutes(router) {
         { text: '' },
         { text: '' },
         { html: '<strong>' + baselineUnits.toFixed(2) + '</strong>' },
-        { text: '' },
         { text: '' }
       ]
     ])
@@ -693,7 +1309,7 @@ function registerOnSiteBaselineRoutes(router) {
     // Build hedgerow table rows
     const hedgerows = mapData.hedgerows?.features || []
     let hedgerowTotalLengthM = 0
-    const hedgerowTableRows = hedgerows.map(function (feature, index) {
+    const hedgerowItems = hedgerows.map(function (feature, index) {
       // Use lengthM property if available, otherwise calculate from geometry
       let lengthM = feature.properties?.lengthM
       if (lengthM === undefined && feature.geometry) {
@@ -702,32 +1318,198 @@ function registerOnSiteBaselineRoutes(router) {
       lengthM = lengthM || 0
       hedgerowTotalLengthM += lengthM
       const lengthKm = lengthM / 1000
+      return {
+        featureIndex: index,
+        reference: 'H-' + (index + 1).toString().padStart(3, '0'),
+        lengthKm: lengthKm,
+        hedgerowType: feature.properties['Baseline Hedge Type'] || '',
+        distinctiveness: feature.properties['Baseline Distinctiveness'] || '',
+        condition: feature.properties['Baseline Condition'] || '',
+        units: 0,
+        status: 'Complete',
+        actionUrl: '/on-site-baseline/hedgerow/' + (index + 1) + '/details'
+      }
+    })
+
+    const hedgerowSortKeys = [
+      'reference',
+      'length',
+      'hedgerow-type',
+      'distinctiveness',
+      'condition',
+      'units',
+      'status'
+    ]
+    const hedgerowsSortByRequested =
+      (req.query.hedgerowsSortBy || '').toString().toLowerCase()
+    const hedgerowsSortBy = hedgerowSortKeys.includes(hedgerowsSortByRequested)
+      ? hedgerowsSortByRequested
+      : 'reference'
+    const hedgerowsSortOrder =
+      req.query.hedgerowsSortOrder === 'desc' ? 'desc' : 'asc'
+
+    const sortedHedgerowItems = hedgerowItems.slice().sort(function (a, b) {
+      let compareValue = 0
+
+      if (hedgerowsSortBy === 'reference') {
+        compareValue = compareText(a.reference, b.reference)
+      } else if (hedgerowsSortBy === 'length') {
+        compareValue = a.lengthKm - b.lengthKm
+      } else if (hedgerowsSortBy === 'hedgerow-type') {
+        compareValue = compareText(a.hedgerowType, b.hedgerowType)
+      } else if (hedgerowsSortBy === 'distinctiveness') {
+        compareValue = compareText(a.distinctiveness, b.distinctiveness)
+      } else if (hedgerowsSortBy === 'condition') {
+        compareValue = compareText(a.condition, b.condition)
+      } else if (hedgerowsSortBy === 'units') {
+        compareValue = a.units - b.units
+      } else if (hedgerowsSortBy === 'status') {
+        compareValue = compareText(a.status, b.status)
+      }
+
+      return hedgerowsSortOrder === 'desc' ? -compareValue : compareValue
+    })
+
+    const hedgerowTableRows = sortedHedgerowItems.map(function (item) {
       return [
-        { html: '<span class="habitat-ref-cell" data-feature-type="hedgerow" data-feature-index="' + index + '">H-' + (index + 1).toString().padStart(3, '0') + '</span>' },
-        { text: lengthKm.toFixed(2) },
-        { text: feature.properties["Baseline Hedge Type"] || '' },
-        { text: feature.properties["Baseline Distinctiveness"] || '' },
-        { text: feature.properties["Baseline Condition"] || '' },
-        { text: '0.00' },
-        { text: 'Complete' },
         {
+          attributes: {
+            style: 'width: 10%; white-space: nowrap;'
+          },
           html:
-            '<a class="govuk-link" href="/on-site-baseline/hedgerow/' +
-            (index + 1) +
-            '/details">Edit</a>'
-        }
+            '<a class="govuk-link habitat-ref-link habitat-ref-cell" data-feature-type="hedgerow" data-feature-index="' +
+            item.featureIndex +
+            '" href="' +
+            item.actionUrl +
+            '">' +
+            item.reference +
+            '</a>'
+        },
+        { text: item.hedgerowType },
+        { text: item.lengthKm.toFixed(2) },
+        { text: item.distinctiveness },
+        { text: item.condition },
+        { text: item.units.toFixed(2) },
+        { text: item.status }
       ]
     })
+
+    const hedgerowsHead = [
+      {
+        attributes: {
+          style: 'width: 10%; white-space: nowrap;'
+        },
+        html:
+          '<a class="govuk-link govuk-link--no-visited-state" href="' +
+          buildSortUrl(
+            'hedgerowsSortBy',
+            'hedgerowsSortOrder',
+            'reference',
+            hedgerowsSortBy,
+            hedgerowsSortOrder
+          ) +
+          '">Ref</a>' +
+          (hedgerowsSortBy === 'reference'
+            ? hedgerowsSortOrder === 'asc'
+              ? ' ▲'
+              : ' ▼'
+            : '') +
+          (hedgerowsSortBy === 'reference'
+            ? '<span class="govuk-visually-hidden">, currently sorted ' +
+              (hedgerowsSortOrder === 'asc' ? 'ascending' : 'descending') +
+              '</span>'
+            : ''),
+        attributes: {
+          style: 'width: 10%; white-space: nowrap;',
+          'aria-sort':
+            hedgerowsSortBy === 'reference'
+              ? hedgerowsSortOrder === 'asc'
+                ? 'ascending'
+                : 'descending'
+              : 'none'
+        }
+      },
+      buildSortableHeadCell(
+        'Hedgerow type',
+        'hedgerow-type',
+        'hedgerowsSortBy',
+        'hedgerowsSortOrder',
+        hedgerowsSortBy,
+        hedgerowsSortOrder
+      ),
+      {
+        html:
+          '<a class="govuk-link govuk-link--no-visited-state" href="' +
+          buildSortUrl(
+            'hedgerowsSortBy',
+            'hedgerowsSortOrder',
+            'length',
+            hedgerowsSortBy,
+            hedgerowsSortOrder
+          ) +
+          '">Length (km)</a>' +
+          (hedgerowsSortBy === 'length'
+            ? hedgerowsSortOrder === 'asc'
+              ? ' ▲'
+              : ' ▼'
+            : '') +
+          (hedgerowsSortBy === 'length'
+            ? '<span class="govuk-visually-hidden">, currently sorted ' +
+              (hedgerowsSortOrder === 'asc' ? 'ascending' : 'descending') +
+              '</span>'
+            : ''),
+        attributes: {
+          style: 'width: 12%; white-space: nowrap;',
+          'aria-sort':
+            hedgerowsSortBy === 'length'
+              ? hedgerowsSortOrder === 'asc'
+                ? 'ascending'
+                : 'descending'
+              : 'none'
+        }
+      },
+      buildSortableHeadCell(
+        'Distinctiveness',
+        'distinctiveness',
+        'hedgerowsSortBy',
+        'hedgerowsSortOrder',
+        hedgerowsSortBy,
+        hedgerowsSortOrder
+      ),
+      buildSortableHeadCell(
+        'Condition',
+        'condition',
+        'hedgerowsSortBy',
+        'hedgerowsSortOrder',
+        hedgerowsSortBy,
+        hedgerowsSortOrder
+      ),
+      buildSortableHeadCell(
+        'Units',
+        'units',
+        'hedgerowsSortBy',
+        'hedgerowsSortOrder',
+        hedgerowsSortBy,
+        hedgerowsSortOrder
+      ),
+      buildSortableHeadCell(
+        'Status',
+        'status',
+        'hedgerowsSortBy',
+        'hedgerowsSortOrder',
+        hedgerowsSortBy,
+        hedgerowsSortOrder
+      )
+    ]
 
     const hedgerowTableRowsWithTotals = hedgerowTableRows.concat([
       [
         { html: '<strong>Total</strong>' },
+        { text: '' },
         { html: '<strong>' + (hedgerowTotalLengthM / 1000).toFixed(2) + '</strong>' },
         { text: '' },
         { text: '' },
-        { text: '' },
         { html: '<strong>0.00</strong>' },
-        { text: '' },
         { text: '' }
       ]
     ])
@@ -735,7 +1517,7 @@ function registerOnSiteBaselineRoutes(router) {
     // Build watercourse table rows
     const watercourses = mapData.watercourses?.features || []
     let watercourseTotalLengthM = 0
-    const watercourseTableRows = watercourses.map(function (feature, index) {
+    const watercourseItems = watercourses.map(function (feature, index) {
       // Use lengthM property if available, otherwise calculate from geometry
       let lengthM = feature.properties?.lengthM
       if (lengthM === undefined && feature.geometry) {
@@ -745,35 +1527,182 @@ function registerOnSiteBaselineRoutes(router) {
       watercourseTotalLengthM += lengthM
       const lengthKm = lengthM / 1000
 
+      return {
+        featureIndex: index,
+        reference: 'W-' + (index + 1).toString().padStart(3, '0'),
+        lengthKm: lengthKm,
+        watercourseType: feature.properties['Baseline River Type'] || '',
+        distinctiveness: feature.properties['Baseline Distinctiveness'] || '',
+        condition:
+          feature.properties['Baseline Condition']?.replace(/^\d+\.\s*/, '') ||
+          '',
+        units: 0,
+        status: 'Complete',
+        actionUrl: '/on-site-baseline/watercourse/' + (index + 1) + '/details'
+      }
+    })
+
+    const watercoursesSortKeys = [
+      'reference',
+      'length',
+      'watercourse-type',
+      'distinctiveness',
+      'condition',
+      'units',
+      'status'
+    ]
+    const watercoursesSortByRequested =
+      (req.query.watercoursesSortBy || '').toString().toLowerCase()
+    const watercoursesSortBy = watercoursesSortKeys.includes(
+      watercoursesSortByRequested
+    )
+      ? watercoursesSortByRequested
+      : 'reference'
+    const watercoursesSortOrder =
+      req.query.watercoursesSortOrder === 'desc' ? 'desc' : 'asc'
+
+    const sortedWatercourseItems = watercourseItems.slice().sort(function (a, b) {
+      let compareValue = 0
+
+      if (watercoursesSortBy === 'reference') {
+        compareValue = compareText(a.reference, b.reference)
+      } else if (watercoursesSortBy === 'length') {
+        compareValue = a.lengthKm - b.lengthKm
+      } else if (watercoursesSortBy === 'watercourse-type') {
+        compareValue = compareText(a.watercourseType, b.watercourseType)
+      } else if (watercoursesSortBy === 'distinctiveness') {
+        compareValue = compareText(a.distinctiveness, b.distinctiveness)
+      } else if (watercoursesSortBy === 'condition') {
+        compareValue = compareText(a.condition, b.condition)
+      } else if (watercoursesSortBy === 'units') {
+        compareValue = a.units - b.units
+      } else if (watercoursesSortBy === 'status') {
+        compareValue = compareText(a.status, b.status)
+      }
+
+      return watercoursesSortOrder === 'desc' ? -compareValue : compareValue
+    })
+
+    const watercourseTableRows = sortedWatercourseItems.map(function (item) {
       return [
-        { html: '<span class="habitat-ref-cell" data-feature-type="watercourse" data-feature-index="' + index + '">W-' + (index + 1).toString().padStart(3, '0') + '</span>' },
-        { text: lengthKm.toFixed(2) },
-        { text: feature.properties["Baseline River Type"] || '' },
-        { text: feature.properties["Baseline Distinctiveness"] || '' },
-        { text: feature.properties["Baseline Condition"]?.replace(/^\d+\.\s*/, '') || '' },
-        { text: '0.00' },
-        { text: 'Complete' },
         {
           html:
-            '<a class="govuk-link" href="/on-site-baseline/watercourse/' +
-            (index + 1) +
-            '/details">Edit</a>'
-        }
+            '<a class="govuk-link habitat-ref-link habitat-ref-cell" data-feature-type="watercourse" data-feature-index="' +
+            item.featureIndex +
+            '" href="' +
+            item.actionUrl +
+            '">' +
+            item.reference +
+            '</a>'
+        },
+        { text: item.watercourseType },
+        { text: item.lengthKm.toFixed(2) },
+        { text: item.distinctiveness },
+        { text: item.condition },
+        { text: item.units.toFixed(2) },
+        { text: item.status }
       ]
     })
+
+    const watercoursesHead = [
+      buildSortableHeadCell(
+        'Ref',
+        'reference',
+        'watercoursesSortBy',
+        'watercoursesSortOrder',
+        watercoursesSortBy,
+        watercoursesSortOrder
+      ),
+      buildSortableHeadCell(
+        'Watercourse type',
+        'watercourse-type',
+        'watercoursesSortBy',
+        'watercoursesSortOrder',
+        watercoursesSortBy,
+        watercoursesSortOrder
+      ),
+      buildSortableHeadCell(
+        'Length (km)',
+        'length',
+        'watercoursesSortBy',
+        'watercoursesSortOrder',
+        watercoursesSortBy,
+        watercoursesSortOrder
+      ),
+      buildSortableHeadCell(
+        'Distinctiveness',
+        'distinctiveness',
+        'watercoursesSortBy',
+        'watercoursesSortOrder',
+        watercoursesSortBy,
+        watercoursesSortOrder
+      ),
+      buildSortableHeadCell(
+        'Condition',
+        'condition',
+        'watercoursesSortBy',
+        'watercoursesSortOrder',
+        watercoursesSortBy,
+        watercoursesSortOrder
+      ),
+      buildSortableHeadCell(
+        'Units',
+        'units',
+        'watercoursesSortBy',
+        'watercoursesSortOrder',
+        watercoursesSortBy,
+        watercoursesSortOrder
+      ),
+      buildSortableHeadCell(
+        'Status',
+        'status',
+        'watercoursesSortBy',
+        'watercoursesSortOrder',
+        watercoursesSortBy,
+        watercoursesSortOrder
+      )
+    ]
 
     const watercourseTableRowsWithTotals = watercourseTableRows.concat([
       [
         { html: '<strong>Total</strong>' },
+        { text: '' },
         { html: '<strong>' + (watercourseTotalLengthM / 1000).toFixed(2) + '</strong>' },
         { text: '' },
         { text: '' },
-        { text: '' },
         { html: '<strong>0.00</strong>' },
-        { text: '' },
         { text: '' }
       ]
     ])
+
+    const summaryData = [
+      {
+        unitType: 'Area habitats',
+        sizeValue: areaHabitatsSize,
+        sizeUnit: 'ha',
+        unitsValue: baselineUnits
+      },
+      {
+        unitType: 'Hedgerows',
+        sizeValue: hedgerowTotalLengthM / 1000,
+        sizeUnit: 'km',
+        unitsValue: 0
+      },
+      {
+        unitType: 'Water courses',
+        sizeValue: watercourseTotalLengthM / 1000,
+        sizeUnit: 'km',
+        unitsValue: 0
+      }
+    ]
+
+    const summaryRows = summaryData.map(function (row) {
+      return [
+        { text: row.unitType },
+        { text: row.sizeValue.toFixed(2) + row.sizeUnit },
+        { text: row.unitsValue.toFixed(2) }
+      ]
+    })
 
     res.render('on-site-baseline/habitats-summary', {
       baselineSummary: {
@@ -786,23 +1715,10 @@ function registerOnSiteBaselineRoutes(router) {
       },
       mapData: mapData,
       habitatParcels: habitatParcels,
-      summaryRows: [
-        [
-          { text: 'Area habitats' },
-          { text: areaHabitatsSize.toFixed(2) + ' ha' },
-          { text: baselineUnits.toFixed(2) }
-        ],
-        [
-          { text: 'Hedgerows' },
-          { text: (hedgerowTotalLengthM / 1000).toFixed(2) + ' km' },
-          { text: '0.00' }
-        ],
-        [
-          { text: 'Water courses' },
-          { text: (watercourseTotalLengthM / 1000).toFixed(2) + ' km' },
-          { text: '0.00' }
-        ]
-      ],
+      summaryRows: summaryRows,
+      areasHead: areasHead,
+      hedgerowsHead: hedgerowsHead,
+      watercoursesHead: watercoursesHead,
       tableRows: tableRows,
       areasTableRowsWithTotals: areasTableRowsWithTotals,
       hedgerowTableRows: hedgerowTableRows,
@@ -834,6 +1750,8 @@ function registerOnSiteBaselineRoutes(router) {
 
     let parcelsFeatureCollection = null
     let siteBoundaryFeatureCollection = null
+    let hedgerowsFeatureCollection = null
+    let watercoursesFeatureCollection = null
 
     if (isGeoPackageFlow) {
       const layers = req.session.data['geopackageLayers'] || []
@@ -856,6 +1774,25 @@ function registerOnSiteBaselineRoutes(router) {
       parcelsFeatureCollection = parcelsLayerInfo
         ? geometries[parcelsLayerInfo.name]
         : null
+
+      const hedgerowLayerInfo = layers.find(
+        (l) =>
+          l.name.toLowerCase().includes('hedgerow') ||
+          l.name.toLowerCase().includes('hedge')
+      )
+      const watercourseLayerInfo = layers.find(
+        (l) =>
+          l.name.toLowerCase().includes('watercourse') ||
+          l.name.toLowerCase().includes('river') ||
+          l.name.toLowerCase().includes('stream')
+      )
+
+      hedgerowsFeatureCollection = hedgerowLayerInfo
+        ? geometries[hedgerowLayerInfo.name]
+        : null
+      watercoursesFeatureCollection = watercourseLayerInfo
+        ? geometries[watercourseLayerInfo.name]
+        : null
     } else {
       const drawnBoundary = req.session.data['redLineBoundary']
       if (drawnBoundary && drawnBoundary.type === 'Feature' && drawnBoundary.geometry) {
@@ -866,6 +1803,8 @@ function registerOnSiteBaselineRoutes(router) {
       }
 
       parcelsFeatureCollection = req.session.data['habitatParcels'] || null
+      hedgerowsFeatureCollection = req.session.data['hedgerows'] || null
+      watercoursesFeatureCollection = req.session.data['watercourses'] || null
     }
 
     if (
@@ -899,13 +1838,42 @@ function registerOnSiteBaselineRoutes(router) {
     const habitatType = feature.properties?.['Baseline Habitat Type'] || ''
     const fullHabitatType =
       broadHabitat && habitatType ? broadHabitat + ' - ' + habitatType : ''
+    const distinctiveness = fullHabitatType
+      ? distinctivenessCategories[fullHabitatType] || '-'
+      : '-'
     const conditionRaw = feature.properties?.['Baseline Condition'] || ''
     const condition = conditionRaw ? conditionRaw.replace(/^\d+\.\s*/, '') : ''
+    const irreplaceableHabitat =
+      feature.properties?.['Irreplaceable Habitat'] ||
+      feature.properties?.['Baseline Irreplaceable Habitat'] ||
+      'No'
+    const requiredAction =
+      feature.properties?.['Required action to meeting trading rules'] ||
+      feature.properties?.['Required action to meet trading rules'] ||
+      '-'
+    const supportingEvidence = feature.properties?.Comments || ''
+    const totalHabitatUnits =
+      fullHabitatType && condition
+        ? getBaselineUnits(fullHabitatType, parseFloat(areaHa) || 0, condition)
+        : 0
 
     const habitatTypesByBroadHabitat = getHabitatTypesByBroadHabitat()
-    const allHabitatTypeOptions = Object.keys(distinctivenessCategories)
-      .sort()
-      .map((value) => ({ value: value, text: value }))
+    const habitatTypeItems =
+      broadHabitat && habitatTypesByBroadHabitat[broadHabitat]
+        ? [
+            { value: '', text: 'Select' },
+            ...habitatTypesByBroadHabitat[broadHabitat].map((value) => ({
+              value: value,
+              text: value
+            }))
+          ]
+        : [{ value: '', text: 'Select' }]
+    const broadHabitatItems = [
+      { value: '', text: 'Select' },
+      ...Object.keys(habitatTypesByBroadHabitat)
+        .sort()
+        .map((value) => ({ value: value, text: value }))
+    ]
 
     const conditionItems = [
       { value: '', text: 'Select' },
@@ -921,22 +1889,38 @@ function registerOnSiteBaselineRoutes(router) {
     const mapData = {
       siteBoundary: siteBoundaryFeatureCollection || null,
       parcels: parcelsFeatureCollection || null,
+      hedgerows: hedgerowsFeatureCollection || null,
+      watercourses: watercoursesFeatureCollection || null,
       parcel: {
         type: 'FeatureCollection',
         features: [feature]
       }
     }
 
+    annotateParcelAdjacency(parcelsFeatureCollection, {
+      siteBoundary: siteBoundaryFeatureCollection || null,
+      hedgerows: hedgerowsFeatureCollection || null,
+      watercourses: watercoursesFeatureCollection || null
+    })
+
     res.render('on-site-baseline/habitat-edit', {
       habitat: {
         ref: parcelRef,
         index: parcelIndex + 1,
         area_hectares: areaHa,
+        broad_habitat: broadHabitat,
         habitat_type: fullHabitatType,
-        condition: condition
+        distinctiveness: distinctiveness,
+        condition: condition,
+        irreplaceable_habitat: irreplaceableHabitat,
+        required_action: requiredAction,
+        total_units: totalHabitatUnits,
+        supporting_evidence: supportingEvidence
       },
-      broadHabitatGroups: Object.keys(habitatTypesByBroadHabitat).sort(),
-      habitatTypeItems: [{ value: '', text: 'Select' }, ...allHabitatTypeOptions],
+      habitatTypesByBroadHabitat: JSON.stringify(habitatTypesByBroadHabitat),
+      distinctivenessCategories: JSON.stringify(distinctivenessCategories),
+      broadHabitatItems: broadHabitatItems,
+      habitatTypeItems: habitatTypeItems,
       conditionItems: conditionItems,
       mapData: mapData
     })
@@ -946,8 +1930,11 @@ function registerOnSiteBaselineRoutes(router) {
   router.post('/on-site-baseline/parcel/:parcelId/habitat-type', function (req, res) {
     const parcelIdParam = req.params.parcelId
     const parcelIndex = parseInt(parcelIdParam, 10) - 1
+    const broadHabitatInput = (req.body.broad_habitat || '').trim()
     const habitatTypeInput = (req.body.habitat_type || '').trim()
     const conditionInput = (req.body.condition || '').trim()
+    const irreplaceableHabitatInput = (req.body.irreplaceable_habitat || '').trim()
+    const supportingEvidenceInput = (req.body.supporting_evidence || '').trim()
 
     const layersConfirmed = req.session.data['layersConfirmed']
     const hasGeoPackageData =
@@ -996,7 +1983,7 @@ function registerOnSiteBaselineRoutes(router) {
     const feature = parcelsFeatureCollection.features[parcelIndex]
     feature.properties = feature.properties || {}
 
-    let broadHabitat = ''
+    let broadHabitat = broadHabitatInput
     let habitatType = ''
     if (habitatTypeInput && habitatTypeInput.includes(' - ')) {
       const parts = habitatTypeInput.split(' - ', 2)
@@ -1009,6 +1996,10 @@ function registerOnSiteBaselineRoutes(router) {
     feature.properties['Baseline Broad Habitat Type'] = broadHabitat || null
     feature.properties['Baseline Habitat Type'] = habitatType || null
     feature.properties['Baseline Condition'] = conditionInput || null
+    feature.properties['Baseline Irreplaceable Habitat'] =
+      irreplaceableHabitatInput || null
+    feature.properties['Irreplaceable Habitat'] = irreplaceableHabitatInput || null
+    feature.properties['Comments'] = supportingEvidenceInput || ''
 
     const fullHabitat =
       broadHabitat && habitatType ? broadHabitat + ' - ' + habitatType : null
@@ -1026,11 +2017,29 @@ function registerOnSiteBaselineRoutes(router) {
   })
 
   router.get('/on-site-baseline/hedgerow/:hedgerowId/details', function (req, res) {
-    res.redirect('/on-site-habitat-baseline')
+    const hedgerowIndex = parseInt(req.params.hedgerowId, 10) - 1
+    if (!Number.isInteger(hedgerowIndex) || hedgerowIndex < 0) {
+      return res.redirect('/on-site-baseline/habitats-summary#hedgerows')
+    }
+
+    res.redirect(
+      '/on-site-baseline/habitats-summary?selected=hedgerow:' +
+        hedgerowIndex +
+        '#hedgerows'
+    )
   })
 
   router.get('/on-site-baseline/watercourse/:watercourseId/details', function (req, res) {
-    res.redirect('/on-site-habitat-baseline')
+    const watercourseIndex = parseInt(req.params.watercourseId, 10) - 1
+    if (!Number.isInteger(watercourseIndex) || watercourseIndex < 0) {
+      return res.redirect('/on-site-baseline/habitats-summary#watercourses')
+    }
+
+    res.redirect(
+      '/on-site-baseline/habitats-summary?selected=watercourse:' +
+        watercourseIndex +
+        '#watercourses'
+    )
   })
 }
 
