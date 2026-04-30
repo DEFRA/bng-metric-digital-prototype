@@ -19,14 +19,45 @@
 
     .map-preview-container .map-preview {
       width: 100%;
-      height: 500px;
+      height: 540px;
       border: 2px solid #b1b4b6;
     }
 
     @media (min-width: 641px) {
       .map-preview-container .map-preview {
-        height: 620px;
+        height: 660px;
       }
+    }
+
+    .map-preview-container .im-c-panel__heading {
+      padding-bottom: 8px;
+    }
+
+    .map-preview-container .im-c-panel__body {
+      padding: 8px 16px 16px;
+    }
+
+    .map-preview-container .im-c-panel__body > .govuk-body:first-child {
+      margin-top: 0;
+      margin-bottom: 12px;
+    }
+
+    .map-preview-container .im-c-panel__body .govuk-table {
+      width: 100%;
+      table-layout: auto;
+    }
+
+    .map-preview-container .im-c-panel__body .govuk-table__header {
+      width: 44%;
+      white-space: nowrap;
+      vertical-align: top;
+      padding-right: 12px;
+    }
+
+    .map-preview-container .im-c-panel__body .govuk-table__cell {
+      vertical-align: top;
+      padding-left: 12px;
+      overflow-wrap: anywhere;
     }
 
     .map-legend {
@@ -120,16 +151,6 @@
       stroke: #1d70b8 !important;
       stroke-width: 4 !important;
       stroke-linecap: butt;
-    }
-
-    /* Highlighted table row when feature is selected */
-    .habitat-row--highlighted {
-      background-color: #ffdd00 !important;
-    }
-
-    .habitat-row--highlighted th,
-    .habitat-row--highlighted td {
-      background-color: #ffdd00 !important;
     }
 
     /* Clickable reference links in tables */
@@ -234,16 +255,7 @@
     {% set areasTableHtml %}
       {{ govukTable({
         firstCellIsHeader: true,
-        head: [
-          { text: "Parcel reference" },
-          { text: "Area (ha)" },
-          { text: "Habitat" },
-          { text: "Distinctiveness" },
-          { text: "Condition" },
-          { text: "Units" },
-          { text: "Status" },
-          { text: "Action", classes: "govuk-visually-hidden" }
-        ],
+        head: areasHead,
         rows: tableRows
       }) }}
     {% endset %}
@@ -252,16 +264,7 @@
       {% if hedgerowTableRows and hedgerowTableRows.length > 0 %}
         {{ govukTable({
           firstCellIsHeader: true,
-          head: [
-            { text: "Reference" },
-            { text: "Length (km)" },
-            { text: "Hedgerow type" },
-            { text: "Distinctiveness" },
-            { text: "Condition" },
-            { text: "Units" },
-            { text: "Status" },
-            { text: "Action", classes: "govuk-visually-hidden" }
-          ],
+          head: hedgerowsHead,
           rows: hedgerowTableRows
         }) }}
       {% else %}
@@ -273,16 +276,7 @@
       {% if watercourseTableRows and watercourseTableRows.length > 0 %}
         {{ govukTable({
           firstCellIsHeader: true,
-          head: [
-            { text: "Reference" },
-            { text: "Length (km)" },
-            { text: "Watercourse type" },
-            { text: "Distinctiveness" },
-            { text: "Condition" },
-            { text: "Units" },
-            { text: "Status" },
-            { text: "Action", classes: "govuk-visually-hidden" }
-          ],
+          head: watercoursesHead,
           rows: watercourseTableRows
         }) }}
       {% else %}

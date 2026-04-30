@@ -1,6 +1,8 @@
 (function () {
   'use strict';
 
+  var HABITAT_DETAILS_PANEL_ID = 'habitatDetailsPanel';
+
   document.addEventListener('DOMContentLoaded', function () {
     initHabitatDetailsMap();
   });
@@ -45,6 +47,17 @@
       return;
     }
 
+    var panelDataEl = document.getElementById('selected-habitat-panel-data');
+    var panelData = {};
+
+    if (panelDataEl) {
+      try {
+        panelData = JSON.parse(panelDataEl.textContent);
+      } catch (error) {
+        console.warn('Failed to parse selected habitat panel data:', error);
+      }
+    }
+
     var mapData;
     try {
       mapData = JSON.parse(dataEl.textContent);
@@ -57,6 +70,8 @@
     var siteBoundary = mapData.siteBoundary || null;
     var allParcels = mapData.parcels || null;
     var selectedParcel = mapData.parcel || null;
+    var hedgerows = mapData.hedgerows || null;
+    var watercourses = mapData.watercourses || null;
 
     if (!hasFeatures(selectedParcel)) {
       showMapPlaceholder(mapContainer, 'No parcel geometry available');
@@ -81,12 +96,39 @@
 
     if (hasFeatures(allParcels)) {
       datasets.push({
-        id: 'all-parcels-im',
-        label: 'Other parcels',
+        id: 'habitat-parcels-im',
+        label: 'Habitat parcels',
         data: normalizeToWgs84(allParcels),
-        fill: 'rgba(107, 114, 128, 0.08)',
-        stroke: '#6b7280',
-        strokeWidth: 1.5,
+        fill: '#1d70b8',
+        stroke: '#1d70b8',
+        strokeWidth: 2,
+        opacity: 0.3,
+        showInLayers: true,
+        showInKey: true
+      });
+    }
+
+    if (hasFeatures(hedgerows)) {
+      datasets.push({
+        id: 'hedgerows-im',
+        label: 'Hedgerows',
+        data: normalizeToWgs84(hedgerows),
+        stroke: '#00703c',
+        strokeWidth: 3,
+        keySymbolShape: 'line',
+        showInLayers: true,
+        showInKey: true
+      });
+    }
+
+    if (hasFeatures(watercourses)) {
+      datasets.push({
+        id: 'watercourses-im',
+        label: 'Watercourses',
+        data: normalizeToWgs84(watercourses),
+        stroke: '#1d70b8',
+        strokeWidth: 3,
+        keySymbolShape: 'line',
         showInLayers: true,
         showInKey: true
       });
@@ -100,7 +142,7 @@
       stroke: '#ffdd00',
       strokeWidth: 4,
       showInLayers: true,
-      showInKey: true
+      showInKey: false
     });
 
     var mapBounds = getCombinedBounds(datasets);
@@ -112,7 +154,7 @@
           mapProvider: window.defra.maplibreProvider(),
           behaviour: 'inline',
           mapLabel: 'Habitat parcel map preview',
-          containerHeight: '500px',
+          containerHeight: '540px',
           bounds: mapBounds || [[-7.57, 49.96], [1.68, 58.64]],
           minZoom: 5,
           maxZoom: 20,
@@ -143,6 +185,10 @@
             tablet: { slot: 'right-top', showLabel: false },
             desktop: { slot: 'right-top', showLabel: false }
           });
+
+          showHabitatDetailsPanel(
+            buildSelectedHabitatDetails(selectedParcel.features[0], panelData)
+          );
         });
       }
     } catch (error) {
@@ -158,6 +204,168 @@
       Array.isArray(geoJson.features) &&
       geoJson.features.length > 0
     );
+  }
+
+  function buildSelectedHabitatDetails(feature, panelData) {
+    var properties = feature && feature.properties ? feature.properties : {};
+
+    return {
+      reference:
+        firstDefinedValue([panelData.reference, properties['Parcel Ref']]) || 'Habitat',
+      habitatType:
+        firstDefinedValue([
+          panelData.habitatType,
+          properties['Baseline Habitat Type'],
+          properties['Proposed Habitat Type'],
+          properties.habitatType
+        ]) || '-',
+      metricLabel: 'Area',
+      metricValue: firstDefinedValue([panelData.area]) || '-',
+      position:
+        firstDefinedValue([
+          properties.Position,
+          properties.position,
+          properties.positionType,
+          properties.position_type,
+          properties['Baseline Position'],
+          properties['Baseline position'],
+          properties['Proposed Position'],
+          properties['Proposed position']
+        ]) || '-',
+      adjacentTo:
+        firstDefinedValue([
+          properties['Adjacent To'],
+          properties['Adjacent to'],
+          properties.adjacentTo,
+          properties.adjacent_to,
+          properties.AdjacentTo,
+          properties['Adjent To'],
+          properties['Baseline Adjacent To'],
+          properties['Baseline Adjacent to'],
+          properties['Proposed Adjacent To'],
+          properties['Proposed Adjacent to']
+        ]) || '-',
+      boundaryEdge:
+        firstDefinedValue([
+          properties['Boundary edge'],
+          properties['Boundary Edge'],
+          properties['Boundary-edge'],
+          properties.boundaryEdge,
+          properties.boundary_edge,
+          properties.BoundaryEdge,
+          properties['On boundary edge'],
+          properties['Baseline Boundary edge'],
+          properties['Baseline Boundary Edge'],
+          properties['Proposed Boundary edge'],
+          properties['Proposed Boundary Edge']
+        ]) || '-'
+    };
+  }
+
+  function showHabitatDetailsPanel(details) {
+    var mapApp = window.habitatDetailsInteractiveMap;
+    if (
+      !mapApp ||
+      typeof mapApp.addPanel !== 'function' ||
+      typeof mapApp.showPanel !== 'function'
+    ) {
+      return;
+    }
+
+    mapApp.addPanel(HABITAT_DETAILS_PANEL_ID, {
+      label: escapeHtml('Habitat ' + (details.reference || '')),
+      mobile: {
+        slot: 'inset',
+        dismissable: false,
+        exclusive: false,
+        width: '340px'
+      },
+      tablet: {
+        slot: 'inset',
+        dismissable: false,
+        exclusive: false,
+        width: '380px'
+      },
+      desktop: {
+        slot: 'inset',
+        dismissable: false,
+        exclusive: false,
+        width: '420px'
+      },
+      html: buildHabitatDetailsPanelHtml(details)
+    });
+
+    mapApp.showPanel(HABITAT_DETAILS_PANEL_ID);
+  }
+
+  function buildHabitatDetailsPanelHtml(details) {
+    var safeHabitatType = escapeHtml(details.habitatType || '-');
+    var safeMetricLabel = escapeHtml(details.metricLabel || 'Area');
+    var safeMetricValue = escapeHtml(details.metricValue || '-');
+    var safePosition = escapeHtml(details.position || '-');
+    var safeAdjacentTo = escapeHtml(details.adjacentTo || '-');
+    var safeBoundaryEdge = escapeHtml(details.boundaryEdge || '-');
+
+    return (
+      '<p class="govuk-body govuk-!-margin-bottom-4">' +
+      safeHabitatType +
+      '</p>' +
+      '<table class="govuk-table govuk-!-margin-bottom-0">' +
+      '<tbody class="govuk-table__body">' +
+      '<tr class="govuk-table__row"><th scope="row" class="govuk-table__header">Position</th><td class="govuk-table__cell">' +
+      safePosition +
+      '</td></tr>' +
+      '<tr class="govuk-table__row"><th scope="row" class="govuk-table__header">' +
+      safeMetricLabel +
+      '</th><td class="govuk-table__cell">' +
+      safeMetricValue +
+      '</td></tr>' +
+      '<tr class="govuk-table__row"><th scope="row" class="govuk-table__header">Adjacent to</th><td class="govuk-table__cell">' +
+      safeAdjacentTo +
+      '</td></tr>' +
+      '<tr class="govuk-table__row"><th scope="row" class="govuk-table__header">Boundary edge</th><td class="govuk-table__cell">' +
+      safeBoundaryEdge +
+      '</td></tr>' +
+      '</tbody>' +
+      '</table>'
+    );
+  }
+
+  function firstDefinedValue(values) {
+    if (!Array.isArray(values)) {
+      return '';
+    }
+
+    for (var i = 0; i < values.length; i++) {
+      var value = values[i];
+      if (value === null || value === undefined) {
+        continue;
+      }
+
+      var text = getTrimmedText(String(value));
+      if (text) {
+        return text;
+      }
+    }
+
+    return '';
+  }
+
+  function getTrimmedText(value) {
+    if (typeof value !== 'string') {
+      return '';
+    }
+
+    return value.replace(/\s+/g, ' ').trim();
+  }
+
+  function escapeHtml(value) {
+    return String(value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
   }
 
   function ensureProj4BritishNationalGrid() {

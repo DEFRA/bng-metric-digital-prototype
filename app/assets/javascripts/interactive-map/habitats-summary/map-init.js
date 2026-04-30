@@ -225,7 +225,7 @@
           mapProvider: window.defra.maplibreProvider(),
           behaviour: 'inline',
           mapLabel: 'Interactive map preview',
-          containerHeight: '500px',
+          containerHeight: '540px',
           bounds: interactiveMapState.fullBounds,
           minZoom: 5,
           maxZoom: 20,
@@ -782,9 +782,9 @@
       : [];
 
     var metricLabel = parsed.featureType === 'parcel' ? 'Area' : 'Length';
-    var metricValue = getCellText(cells, 1) || '-';
+    var metricValue = getCellText(cells, 2) || '-';
 
-    var habitatType = getCellText(cells, 2);
+    var habitatType = getCellText(cells, 1);
     if (!habitatType) {
       if (parsed.featureType === 'parcel') {
         habitatType = firstDefinedValue([
@@ -874,19 +874,19 @@
         slot: 'inset',
         dismissable: true,
         exclusive: true,
-        width: '320px'
+        width: '340px'
       },
       tablet: {
         slot: 'inset',
         dismissable: true,
         exclusive: true,
-        width: '340px'
+        width: '380px'
       },
       desktop: {
         slot: 'inset',
         dismissable: true,
         exclusive: true,
-        width: '360px'
+        width: '420px'
       },
       html: buildHabitatDetailsPanelHtml(details)
     });
@@ -926,7 +926,7 @@
       '</th><td class="govuk-table__cell">' +
       safeMetricValue +
       '</td></tr>' +
-      '<tr class="govuk-table__row"><th scope="row" class="govuk-table__header">Adjacent To</th><td class="govuk-table__cell">' +
+      '<tr class="govuk-table__row"><th scope="row" class="govuk-table__header">Adjacent to</th><td class="govuk-table__cell">' +
       safeAdjacentTo +
       '</td></tr>' +
       '<tr class="govuk-table__row"><th scope="row" class="govuk-table__header">Boundary edge</th><td class="govuk-table__cell">' +
@@ -1033,26 +1033,11 @@
   }
 
   function setSelectedRow(linkElement, featureKey) {
-    if (
-      interactiveMapState.selectedLink &&
-      interactiveMapState.selectedLink !== linkElement
-    ) {
-      setRowHighlighted(interactiveMapState.selectedLink, false);
-    }
-
     interactiveMapState.selectedFeatureKey = featureKey || null;
     interactiveMapState.selectedLink = linkElement || null;
-
-    if (linkElement) {
-      setRowHighlighted(linkElement, true);
-    }
   }
 
   function clearSelectedRow() {
-    if (interactiveMapState.selectedLink) {
-      setRowHighlighted(interactiveMapState.selectedLink, false);
-    }
-
     interactiveMapState.selectedLink = null;
     interactiveMapState.selectedFeatureKey = null;
   }
@@ -1082,19 +1067,6 @@
     }
 
     zoomToFeature(feature);
-  }
-
-  function setRowHighlighted(linkElement, isHighlighted) {
-    if (!linkElement) {
-      return;
-    }
-
-    var row = linkElement.closest('tr');
-    if (!row) {
-      return;
-    }
-
-    row.classList.toggle('habitat-row--highlighted', !!isHighlighted);
   }
 
   function getTableLink(featureType, featureIndex) {
