@@ -277,6 +277,19 @@ function getBoundaryEdgeDirection(parcelGeometry, boundaryFeatures) {
   return direction ? 'Yes - ' + direction : 'Yes'
 }
 
+function capitalizeFirstLetter(value) {
+  if (typeof value !== 'string') {
+    return ''
+  }
+
+  const trimmed = value.trim()
+  if (!trimmed) {
+    return ''
+  }
+
+  return trimmed.charAt(0).toUpperCase() + trimmed.slice(1)
+}
+
 function getRelativePositionOfSite(parcelGeometry, boundaryFeatures) {
   const parcelBounds = getFeatureBoundingBox(parcelGeometry)
   if (!parcelBounds || !boundaryFeatures || !boundaryFeatures.length) {
@@ -329,11 +342,11 @@ function getRelativePositionOfSite(parcelGeometry, boundaryFeatures) {
   }
 
   if (vertical && horizontal) {
-    return vertical + '-' + horizontal + ' of site'
+    return capitalizeFirstLetter(vertical) + '-' + horizontal + ' of site'
   }
 
   if (vertical || horizontal) {
-    return (vertical || horizontal) + ' of site'
+    return capitalizeFirstLetter(vertical || horizontal) + ' of site'
   }
 
   return 'Centre of site'
@@ -1297,8 +1310,8 @@ function registerOnSiteBaselineRoutes(router) {
     const areasTableRowsWithTotals = tableRows.concat([
       [
         { html: '<strong>Total</strong>' },
-        { html: '<strong>' + areaHabitatsSize.toFixed(2) + '</strong>' },
         { text: '' },
+        { html: '<strong>' + areaHabitatsSize.toFixed(2) + '</strong>' },
         { text: '' },
         { text: '' },
         { html: '<strong>' + baselineUnits.toFixed(2) + '</strong>' },
@@ -1376,14 +1389,7 @@ function registerOnSiteBaselineRoutes(router) {
           attributes: {
             style: 'width: 10%; white-space: nowrap;'
           },
-          html:
-            '<a class="govuk-link habitat-ref-link habitat-ref-cell" data-feature-type="hedgerow" data-feature-index="' +
-            item.featureIndex +
-            '" href="' +
-            item.actionUrl +
-            '">' +
-            item.reference +
-            '</a>'
+          text: item.reference
         },
         { text: item.hedgerowType },
         { text: item.lengthKm.toFixed(2) },
@@ -1586,14 +1592,7 @@ function registerOnSiteBaselineRoutes(router) {
     const watercourseTableRows = sortedWatercourseItems.map(function (item) {
       return [
         {
-          html:
-            '<a class="govuk-link habitat-ref-link habitat-ref-cell" data-feature-type="watercourse" data-feature-index="' +
-            item.featureIndex +
-            '" href="' +
-            item.actionUrl +
-            '">' +
-            item.reference +
-            '</a>'
+          text: item.reference
         },
         { text: item.watercourseType },
         { text: item.lengthKm.toFixed(2) },

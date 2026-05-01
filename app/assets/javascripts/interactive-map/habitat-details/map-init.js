@@ -222,7 +222,7 @@
       metricLabel: 'Area',
       metricValue: firstDefinedValue([panelData.area]) || '-',
       position:
-        firstDefinedValue([
+        toSentenceCase(firstDefinedValue([
           properties.Position,
           properties.position,
           properties.positionType,
@@ -231,7 +231,7 @@
           properties['Baseline position'],
           properties['Proposed Position'],
           properties['Proposed position']
-        ]) || '-',
+        ]) || '-'),
       adjacentTo:
         firstDefinedValue([
           properties['Adjacent To'],
@@ -349,6 +349,15 @@
     }
 
     return '';
+  }
+
+  function toSentenceCase(value) {
+    var text = getTrimmedText(value || '');
+    if (!text) {
+      return '';
+    }
+
+    return text.charAt(0).toUpperCase() + text.slice(1);
   }
 
   function getTrimmedText(value) {
