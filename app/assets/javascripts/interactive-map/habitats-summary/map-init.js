@@ -806,6 +806,7 @@
     }
 
     return {
+      featureType: parsed.featureType,
       reference:
         (link && getTrimmedText(link.textContent)) ||
         firstDefinedValue([properties['Parcel Ref']]) ||
@@ -819,7 +820,7 @@
       habitatType: habitatType || '-',
       metricLabel: metricLabel,
       metricValue: metricValue,
-      position: firstDefinedValue([
+      position: toSentenceCase(firstDefinedValue([
         properties.Position,
         properties.position,
         properties.positionType,
@@ -828,7 +829,7 @@
         properties['Baseline position'],
         properties['Proposed Position'],
         properties['Proposed position']
-      ]) || '-',
+      ]) || '-'),
       adjacentTo: firstDefinedValue([
         properties['Adjacent To'],
         properties['Adjacent to'],
@@ -911,6 +912,7 @@
     var safeAdjacentTo = escapeHtml(details.adjacentTo || '-');
     var safeBoundaryEdge = escapeHtml(details.boundaryEdge || '-');
     var safeEditUrl = escapeAttribute(details.editUrl || '#');
+    var showEditButton = details.featureType === 'parcel' && safeEditUrl !== '#';
 
     return (
       '<p class="govuk-body govuk-!-margin-bottom-4">' +
@@ -934,9 +936,11 @@
       '</td></tr>' +
       '</tbody>' +
       '</table>' +
-      '<a class="govuk-button govuk-button--secondary" data-module="govuk-button" href="' +
-      safeEditUrl +
-      '">Edit detail</a>'
+      (showEditButton
+        ? '<a class="govuk-button govuk-button--secondary" data-module="govuk-button" href="' +
+          safeEditUrl +
+          '">Edit detail</a>'
+        : '')
     );
   }
 
@@ -974,6 +978,15 @@
     }
 
     return '';
+  }
+
+  function toSentenceCase(value) {
+    var text = getTrimmedText(value || '');
+    if (!text) {
+      return '';
+    }
+
+    return text.charAt(0).toUpperCase() + text.slice(1);
   }
 
   function getRowActionHref(row) {

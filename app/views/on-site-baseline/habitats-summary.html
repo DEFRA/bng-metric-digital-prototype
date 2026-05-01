@@ -256,7 +256,7 @@
       {{ govukTable({
         firstCellIsHeader: true,
         head: areasHead,
-        rows: tableRows
+        rows: areasTableRowsWithTotals
       }) }}
     {% endset %}
 
@@ -265,7 +265,7 @@
         {{ govukTable({
           firstCellIsHeader: true,
           head: hedgerowsHead,
-          rows: hedgerowTableRows
+          rows: hedgerowTableRowsWithTotals
         }) }}
       {% else %}
         <p class="govuk-body">No hedgerows available.</p>
@@ -277,7 +277,7 @@
         {{ govukTable({
           firstCellIsHeader: true,
           head: watercoursesHead,
-          rows: watercourseTableRows
+          rows: watercourseTableRowsWithTotals
         }) }}
       {% else %}
         <p class="govuk-body">No watercourses available.</p>
