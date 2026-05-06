@@ -13,6 +13,7 @@ const {
 
 //const { isWithinUK, getLPA, getNCA, getLNRS } = require('../lib/arcgis-queries')
 const { isWithinUK } = require('../lib/arcgis-queries')
+const { annotateParcelAdjacency } = require('./on-site-baseline')
 
 // Import metric calculation data
 const metricCalcs = require('../lib/metric-calcs')
@@ -104,10 +105,8 @@ function registerOnSitePostInterventionRoutes(router) {
 
   // Post-intervention start page - GET
   router.get('/on-site-post-intervention/post-intervention-start', function (req, res) {
-    res.render('on-site-post-intervention/post-intervention-start', {
-      baselineData: req.session.data['baselineData'] || {}
-    });
-  });
+    res.redirect('/on-site-post-intervention/upload-single-file')
+  })
 
   // Upload Single File Page - GET
   router.get('/on-site-post-intervention/upload-single-file', function (req, res) {
@@ -210,8 +209,14 @@ function registerOnSitePostInterventionRoutes(router) {
           }
         }
 
-        // Redirect to confirm page
-        res.redirect('/on-site-post-intervention/confirm-layers')
+        // Match baseline flow: skip confirm-layers and continue directly.
+        req.session.data['layersConfirmedPostIntervention'] = true
+        req.session.data['redLineBoundaryPostIntervention'] = null
+        req.session.data['habitatParcelsPostIntervention'] = null
+        req.session.data['hedgerowsPostIntervention'] = null
+        req.session.data['watercoursesPostIntervention'] = null
+
+        res.redirect('/on-site-post-intervention/habitats-summary')
       } catch (err) {
         console.error('GeoPackage parsing error:', err)
         return res.redirect(
@@ -223,6 +228,11 @@ function registerOnSitePostInterventionRoutes(router) {
 
   // Confirm Layers Page - GET
   router.get('/on-site-post-intervention/confirm-layers', function (req, res) {
+    // Confirm-layers is retained for compatibility, but the active flow skips it.
+    if (req.session.data['layersConfirmedPostIntervention']) {
+      return res.redirect('/on-site-post-intervention/habitats-summary')
+    }
+
     const layers = req.session.data['geopackageLayersPostIntervention'] || []
     const geometries = req.session.data['geopackageGeometriesPostIntervention'] || {}
     //const uploadedFiles = req.session.data['uploadedFiles'] || {}
@@ -1149,6 +1159,9 @@ function registerOnSitePostInterventionRoutes(router) {
       type: 'FeatureCollection',
       features: [habitatData.feature]
     }
+    annotateParcelAdjacency(parcelFeatureCollection, {
+      siteBoundary: siteBoundary || null
+    })
     const mapData = {
       siteBoundary: siteBoundary || null,
       parcels: allParcels || null,
@@ -1390,6 +1403,9 @@ function registerOnSitePostInterventionRoutes(router) {
       type: 'FeatureCollection',
       features: [habitatData.feature]
     }
+    annotateParcelAdjacency(parcelFeatureCollection, {
+      siteBoundary: siteBoundary || null
+    })
     const mapData = {
       siteBoundary: siteBoundary || null,
       parcels: allParcels || null,
@@ -1399,6 +1415,7 @@ function registerOnSitePostInterventionRoutes(router) {
     res.render('on-site-post-intervention/habitat-edit', {
       habitat: habitat,
       id: parcelRef,
+      projectName: req.session.data['projectName'] || 'On-site post-development',
       retention_category: habitatData.retentionCategory || '',
       habitatTypesByBroadHabitat: JSON.stringify(habitatTypesByBroadHabitat),
       habitatTypeItems: habitatTypeItems,

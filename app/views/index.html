@@ -25,9 +25,11 @@
     </div>
     -->
 
-    <a href="/government-gateway" class="govuk-button" data-module="govuk-button">
-      Start now
-    </a>
+    {{ govukButton({
+      text: "Start now",
+      href: "/government-gateway",
+      isStartButton: true
+    }) }}
 
   </div>
 </div>

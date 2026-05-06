@@ -2,6 +2,7 @@
   'use strict';
 
   var HABITAT_DETAILS_PANEL_ID = 'habitatDetailsPanel';
+  var cachedHabitatDetails = null;
 
   document.addEventListener('DOMContentLoaded', function () {
     initHabitatDetailsMap();
@@ -186,10 +187,32 @@
             desktop: { slot: 'right-top', showLabel: false }
           });
 
-          showHabitatDetailsPanel(
-            buildSelectedHabitatDetails(selectedParcel.features[0], panelData)
-          );
+          cachedHabitatDetails = buildSelectedHabitatDetails(selectedParcel.features[0], panelData);
+
+          showHabitatDetailsPanel(cachedHabitatDetails);
         });
+
+        window.habitatDetailsInteractiveMap.on('app:panelclosed', function (event) {
+          if (event && event.panelId && event.panelId !== HABITAT_DETAILS_PANEL_ID) {
+            if (cachedHabitatDetails) {
+              showHabitatDetailsPanel(cachedHabitatDetails);
+            }
+          }
+        });
+
+        var hideDetailsWhenOtherPanelOpens = function (event) {
+          if (
+            event &&
+            event.panelId &&
+            event.panelId !== HABITAT_DETAILS_PANEL_ID &&
+            typeof window.habitatDetailsInteractiveMap.hidePanel === 'function'
+          ) {
+            window.habitatDetailsInteractiveMap.hidePanel(HABITAT_DETAILS_PANEL_ID);
+          }
+        };
+
+        window.habitatDetailsInteractiveMap.on('app:panelopened', hideDetailsWhenOtherPanelOpens);
+        window.habitatDetailsInteractiveMap.on('app:panelopen', hideDetailsWhenOtherPanelOpens);
       }
     } catch (error) {
       console.error('Failed to initialize habitat details interactive map:', error);

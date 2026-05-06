@@ -23,6 +23,7 @@
       width: 100%;
       height: 540px;
       border: 2px solid #b1b4b6;
+      overflow: hidden;
     }
 
     @media (min-width: 641px) {
@@ -62,6 +63,19 @@
       overflow-wrap: anywhere;
     }
 
+    .map-preview-container .im-c-viewport__status {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      clip: rect(0 0 0 0);
+      clip-path: inset(50%);
+      border: 0;
+      white-space: nowrap;
+    }
+
     .habitat-details-card .govuk-summary-list {
       margin-bottom: 0;
     }
@@ -73,13 +87,21 @@
     .habitat-details-card .govuk-summary-list__value {
       width: 68%;
     }
+
+    .map-toggle-row {
+      margin-bottom: 15px;
+    }
+
+    .map-toggle-button {
+      margin-bottom: 0;
+    }
   </style>
 {% endblock %}
 
 {% block beforeContent %}
   {{ govukBackLink({
     text: "Back",
-    href: "/on-site-baseline/habitats-summary?selected=parcel:" + (habitat.index - 1)
+    href: habitat.return_to_summary_url
   }) }}
 {% endblock %}
 
@@ -90,7 +112,10 @@
     <h1 class="govuk-heading-l">{{ pageName }}</h1>
 
     {% if mapData and mapData.parcel and mapData.parcel.features and mapData.parcel.features.length > 0 %}
-    <div id="habitat-map-section" class="map-preview-container">
+    <div class="map-toggle-row">
+      <button id="toggle-habitat-map" type="button" class="govuk-button govuk-button--secondary map-toggle-button" data-module="govuk-button">Show map</button>
+    </div>
+    <div id="habitat-map-section" class="map-preview-container" style="display: none;">
       <div id="map-habitat-details" class="map-preview" role="img" aria-label="Map showing habitat parcel {{ habitat.ref }}"></div>
     </div>
     {% endif %}
@@ -111,6 +136,7 @@
 <div class="govuk-grid-row">
   <div class="govuk-grid-column-two-thirds">
     <form method="post" action="/on-site-baseline/parcel/{{ habitat.index }}/habitat-type">
+      <input type="hidden" name="return_source" value="{{ habitat.return_source }}">
       <h2 class="govuk-heading-m">Baseline details</h2>
 
       <div class="govuk-summary-card habitat-details-card govuk-!-margin-bottom-7">
@@ -135,20 +161,6 @@
             }) }}
           {% endset %}
 
-          {% set irreplaceableHabitatSelect %}
-            {{ govukSelect({
-              id: "irreplaceable_habitat",
-              name: "irreplaceable_habitat",
-              label: { text: "Irreplaceable habitat", classes: "govuk-visually-hidden" },
-              items: [
-                { value: "", text: "Select" },
-                { value: "Yes", text: "Yes" },
-                { value: "No", text: "No" }
-              ],
-              value: habitat.irreplaceable_habitat or "No"
-            }) }}
-          {% endset %}
-
           {% set conditionSelect %}
             {{ govukSelect({
               id: "condition",
@@ -165,7 +177,6 @@
               { key: { text: "Area" }, value: { text: habitat.area_hectares } },
               { key: { text: "Broad habitat" }, value: { html: broadHabitatSelect } },
               { key: { text: "Habitat type" }, value: { html: habitatTypeSelect } },
-              { key: { text: "Irreplaceable habitat" }, value: { html: irreplaceableHabitatSelect } },
               { key: { text: "Distinctiveness" }, value: { html: '<span id="distinctiveness-text">' ~ (habitat.distinctiveness or '-') ~ '</span>' } },
               { key: { text: "Required action to meeting trading rules" }, value: { text: habitat.required_action or '-' } },
               { key: { text: "Condition" }, value: { html: conditionSelect } }
@@ -199,7 +210,7 @@
 
       <div class="govuk-button-group">
         {{ govukButton({ text: "Save" }) }}
-        <a class="govuk-link" href="/on-site-baseline/habitats-summary?selected=parcel:{{ habitat.index - 1 }}">Cancel</a>
+        <a class="govuk-link" href="{{ habitat.return_to_summary_url }}">Cancel</a>
       </div>
     </form>
   </div>
@@ -214,11 +225,29 @@
   <script src="/public/javascripts/interactive-map/habitat-details/map-init.js"></script>
   <script>
     (function () {
+      var mapSection = document.getElementById('habitat-map-section');
+      var toggleButton = document.getElementById('toggle-habitat-map');
       var mappingEl = document.getElementById('habitat-types-by-broad');
       var distinctivenessEl = document.getElementById('distinctiveness-categories');
       var broadSelect = document.getElementById('broad_habitat');
       var typeSelect = document.getElementById('habitat_type');
       var distinctivenessText = document.getElementById('distinctiveness-text');
+
+      if (mapSection && toggleButton) {
+        toggleButton.addEventListener('click', function () {
+          var isHidden = mapSection.style.display === 'none';
+
+          if (isHidden) {
+            mapSection.style.display = '';
+            toggleButton.textContent = 'Hide map';
+            window.dispatchEvent(new Event('resize'));
+            return;
+          }
+
+          mapSection.style.display = 'none';
+          toggleButton.textContent = 'Show map';
+        });
+      }
 
       if (!mappingEl || !broadSelect || !typeSelect || !distinctivenessText) {
         return;

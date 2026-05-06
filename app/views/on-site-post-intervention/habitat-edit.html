@@ -22,14 +22,59 @@
 
     .map-preview-container .map-preview {
       width: 100%;
-      height: 400px;
+      height: 540px;
       border: 2px solid #b1b4b6;
+      overflow: hidden;
     }
 
     @media (min-width: 641px) {
       .map-preview-container .map-preview {
-        height: 500px;
+        height: 660px;
       }
+    }
+
+    .map-preview-container .im-c-panel__heading {
+      padding-bottom: 8px;
+    }
+
+    .map-preview-container .im-c-panel__body {
+      padding: 8px 16px 16px;
+    }
+
+    .map-preview-container .im-c-panel__body > .govuk-body:first-child {
+      margin-top: 0;
+      margin-bottom: 12px;
+    }
+
+    .map-preview-container .im-c-panel__body .govuk-table {
+      width: 100%;
+      table-layout: auto;
+    }
+
+    .map-preview-container .im-c-panel__body .govuk-table__header {
+      width: 44%;
+      white-space: nowrap;
+      vertical-align: top;
+      padding-right: 12px;
+    }
+
+    .map-preview-container .im-c-panel__body .govuk-table__cell {
+      vertical-align: top;
+      padding-left: 12px;
+      overflow-wrap: anywhere;
+    }
+
+    .map-preview-container .im-c-viewport__status {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      clip: rect(0 0 0 0);
+      clip-path: inset(50%);
+      border: 0;
+      white-space: nowrap;
     }
 
     .map-legend {
@@ -71,6 +116,14 @@
       background: rgba(255, 221, 0, 0.35);
       border: 2px solid #ffdd00;
     }
+
+    .map-toggle-row {
+      margin-bottom: 15px;
+    }
+
+    .map-toggle-button {
+      margin-bottom: 0;
+    }
   </style>
 {% endblock %}
 
@@ -84,35 +137,34 @@
 {% block content %}
 
   <div class="govuk-grid-row">
-    <div class="govuk-grid-column-two-thirds">
+    <div class="govuk-grid-column-full">
 
-      <span class="govuk-caption-l">Habitat {{ habitat.ref or id }}{% if proposedStatus %} – {{ proposedStatus }}{% endif %}</span>
-      <h1 class="govuk-heading-l">Edit post-intervention habitat</h1>
+      <span class="govuk-caption-l">{{ projectName or 'On-site post-development' }}</span>
+      <h1 class="govuk-heading-l">Parcel {{ habitat.ref or id }}</h1>
 
       {% if mapData and mapData.parcel and mapData.parcel.features and mapData.parcel.features.length > 0 %}
-      <div class="map-preview-container">
+      <div class="map-toggle-row">
+        <button id="toggle-habitat-map" type="button" class="govuk-button govuk-button--secondary map-toggle-button" data-module="govuk-button">Show map</button>
+      </div>
+      <div id="habitat-map-section" class="map-preview-container" style="display: none;">
         <div id="map-habitat-details" class="map-preview" role="img" aria-label="Map showing habitat parcel {{ habitat.ref or id }}"></div>
-        <div class="map-legend">
-          <div class="map-legend-item">
-            <div class="legend-swatch legend-swatch--boundary"></div>
-            <span class="govuk-body govuk-!-margin-bottom-0">Site boundary</span>
-          </div>
-          {% if mapData.parcels and mapData.parcels.features and mapData.parcels.features.length > 0 %}
-          <div class="map-legend-item">
-            <div class="legend-swatch legend-swatch--other-parcels"></div>
-            <span class="govuk-body govuk-!-margin-bottom-0">Other parcels</span>
-          </div>
-          {% endif %}
-          <div class="map-legend-item">
-            <div class="legend-swatch legend-swatch--selected-parcel"></div>
-            <span class="govuk-body govuk-!-margin-bottom-0">Selected parcel</span>
-          </div>
-        </div>
       </div>
       {% endif %}
       {% if mapData %}
       <script type="application/json" id="geometries-data">{{ mapData | dump | safe }}</script>
+      <script type="application/json" id="selected-habitat-panel-data">{{ {
+        reference: habitat.ref,
+        habitatType: habitat.habitat_type,
+        area: (habitat.area_hectares | round(4)) ~ 'ha'
+      } | dump | safe }}</script>
       {% endif %}
+    </div>
+  </div>
+
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-two-thirds">
+
+      <h2 class="govuk-heading-l">Post-intervention habitat</h2>
 
       {% if validationErrors and validationErrors.length > 0 %}
         {{ govukErrorSummary({
@@ -473,6 +525,25 @@
       }
       
       function init() {
+        var mapSection = document.getElementById('habitat-map-section')
+        var toggleButton = document.getElementById('toggle-habitat-map')
+
+        if (mapSection && toggleButton) {
+          toggleButton.addEventListener('click', function () {
+            var isHidden = mapSection.style.display === 'none'
+
+            if (isHidden) {
+              mapSection.style.display = ''
+              toggleButton.textContent = 'Hide map'
+              window.dispatchEvent(new Event('resize'))
+              return
+            }
+
+            mapSection.style.display = 'none'
+            toggleButton.textContent = 'Show map'
+          })
+        }
+
         var dataEl = document.getElementById('habitat-types-by-broad')
         var mapping = dataEl ? JSON.parse(dataEl.textContent) : {}
         var distinctivenessEl = document.getElementById('distinctiveness-categories')

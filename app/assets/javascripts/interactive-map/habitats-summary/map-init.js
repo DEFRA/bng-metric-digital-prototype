@@ -8,6 +8,8 @@
     interactPlugin: null,
     selectedLink: null,
     selectedFeatureKey: null,
+    preserveSelectionOnDetailsClose: false,
+    pendingSelectionClearTimer: null,
     lastInteractionSource: null,
     datasetsByType: {
       parcel: [],
@@ -285,6 +287,19 @@
           interactiveMapState.lastInteractionSource = 'map';
         });
 
+        var markDetailsAsTemporarilyHidden = function (event) {
+          if (event && event.panelId && event.panelId !== HABITAT_DETAILS_PANEL_ID) {
+            interactiveMapState.preserveSelectionOnDetailsClose = true;
+            if (interactiveMapState.pendingSelectionClearTimer) {
+              window.clearTimeout(interactiveMapState.pendingSelectionClearTimer);
+              interactiveMapState.pendingSelectionClearTimer = null;
+            }
+          }
+        };
+
+        window.habitatsSummaryInteractiveMap.on('app:panelopened', markDetailsAsTemporarilyHidden);
+        window.habitatsSummaryInteractiveMap.on('app:panelopen', markDetailsAsTemporarilyHidden);
+
         window.habitatsSummaryInteractiveMap.on(
           'interact:selectionchange',
           function (event) {
@@ -302,14 +317,40 @@
           if (event && event.panelId === HABITAT_DETAILS_PANEL_ID) {
             var featureKey = interactiveMapState.selectedFeatureKey;
             var parsed = featureKey ? parseFeatureKey(featureKey, null) : null;
-            clearSelectedRow();
-            if (parsed && interactiveMapState.interactPlugin) {
-              interactiveMapState.interactPlugin.unselectFeature({
-                featureId: featureKey,
-                layerId: getLayerIdForFeatureType(parsed.featureType),
-                idProperty: '__imFeatureKey'
-              });
+
+            if (interactiveMapState.pendingSelectionClearTimer) {
+              window.clearTimeout(interactiveMapState.pendingSelectionClearTimer);
+              interactiveMapState.pendingSelectionClearTimer = null;
             }
+
+            interactiveMapState.pendingSelectionClearTimer = window.setTimeout(function () {
+              interactiveMapState.pendingSelectionClearTimer = null;
+
+              if (interactiveMapState.preserveSelectionOnDetailsClose) {
+                return;
+              }
+
+              clearSelectedRow();
+              if (parsed && interactiveMapState.interactPlugin) {
+                interactiveMapState.interactPlugin.unselectFeature({
+                  featureId: featureKey,
+                  layerId: getLayerIdForFeatureType(parsed.featureType),
+                  idProperty: '__imFeatureKey'
+                });
+              }
+            }, 0);
+
+            return;
+          }
+
+          if (
+            event &&
+            event.panelId &&
+            event.panelId !== HABITAT_DETAILS_PANEL_ID &&
+            interactiveMapState.preserveSelectionOnDetailsClose
+          ) {
+            interactiveMapState.preserveSelectionOnDetailsClose = false;
+            restoreSelectedDetailsPanel();
           }
         });
       }
@@ -411,7 +452,9 @@
 
     window.setTimeout(function () {
       var link = getTableLink(parsed.featureType, parsed.featureIndex);
-      handleTableSelection(parsed.featureType, parsed.featureIndex, link || null);
+      handleTableSelection(parsed.featureType, parsed.featureIndex, link || null, {
+        skipScroll: true
+      });
     }, 100);
   }
 
@@ -691,7 +734,7 @@
     interactiveMapState.lastInteractionSource = null;
   }
 
-  function handleTableSelection(featureType, featureIndex, linkElement) {
+  function handleTableSelection(featureType, featureIndex, linkElement, options) {
     if (!featureType || !isFinite(featureIndex)) {
       return;
     }
@@ -725,7 +768,9 @@
     }
 
     zoomToFeatureByTypeAndIndex(featureType, featureIndex);
-    scrollToInteractiveMap();
+    if (!options || !options.skipScroll) {
+      scrollToInteractiveMap();
+    }
   }
 
   function configureHabitatHelpBanner(mapApp) {
@@ -855,8 +900,22 @@
         properties['Proposed Boundary edge'],
         properties['Proposed Boundary Edge']
       ]) || '-',
-      editUrl: row ? getRowActionHref(row) : '#'
+      editUrl:
+        parsed.featureType === 'parcel' && row
+          ? withQueryParam(getRowActionHref(row), 'returnSource', 'map')
+          : row
+            ? getRowActionHref(row)
+            : '#'
     };
+  }
+
+  function withQueryParam(url, key, value) {
+    if (!url || url === '#') {
+      return '#';
+    }
+
+    var separator = url.indexOf('?') >= 0 ? '&' : '?';
+    return url + separator + key + '=' + encodeURIComponent(value);
   }
 
   function showHabitatDetailsPanel(details) {
@@ -904,6 +963,22 @@
     mapApp.hidePanel(HABITAT_DETAILS_PANEL_ID);
   }
 
+  function restoreSelectedDetailsPanel() {
+    var featureKey = interactiveMapState.selectedFeatureKey;
+    var parsed = featureKey ? parseFeatureKey(featureKey, null) : null;
+
+    if (!parsed) {
+      return;
+    }
+
+    var link = getTableLink(parsed.featureType, parsed.featureIndex);
+    var details = getSelectionDetails(parsed, link || null);
+
+    if (details) {
+      showHabitatDetailsPanel(details);
+    }
+  }
+
   function buildHabitatDetailsPanelHtml(details) {
     var safeHabitatType = escapeHtml(details.habitatType || '-');
     var safeMetricLabel = escapeHtml(details.metricLabel || 'Area');
@@ -912,7 +987,7 @@
     var safeAdjacentTo = escapeHtml(details.adjacentTo || '-');
     var safeBoundaryEdge = escapeHtml(details.boundaryEdge || '-');
     var safeEditUrl = escapeAttribute(details.editUrl || '#');
-    var showEditButton = details.featureType === 'parcel' && safeEditUrl !== '#';
+    var showEditButton = safeEditUrl !== '#';
 
     return (
       '<p class="govuk-body govuk-!-margin-bottom-4">' +
@@ -939,7 +1014,7 @@
       (showEditButton
         ? '<a class="govuk-button govuk-button--secondary" data-module="govuk-button" href="' +
           safeEditUrl +
-          '">Edit detail</a>'
+          '">Add details</a>'
         : '')
     );
   }
@@ -1046,11 +1121,32 @@
   }
 
   function setSelectedRow(linkElement, featureKey) {
+    if (interactiveMapState.selectedLink) {
+      var previousRow = interactiveMapState.selectedLink.closest('tr');
+      if (previousRow) {
+        previousRow.classList.remove('habitat-row--highlighted');
+      }
+    }
+
     interactiveMapState.selectedFeatureKey = featureKey || null;
     interactiveMapState.selectedLink = linkElement || null;
+
+    if (interactiveMapState.selectedLink) {
+      var selectedRow = interactiveMapState.selectedLink.closest('tr');
+      if (selectedRow) {
+        selectedRow.classList.add('habitat-row--highlighted');
+      }
+    }
   }
 
   function clearSelectedRow() {
+    if (interactiveMapState.selectedLink) {
+      var selectedRow = interactiveMapState.selectedLink.closest('tr');
+      if (selectedRow) {
+        selectedRow.classList.remove('habitat-row--highlighted');
+      }
+    }
+
     interactiveMapState.selectedLink = null;
     interactiveMapState.selectedFeatureKey = null;
   }
@@ -1084,7 +1180,7 @@
 
   function getTableLink(featureType, featureIndex) {
     return document.querySelector(
-      '.habitat-ref-cell[data-feature-type="' +
+      '.habitat-ref-link[data-feature-type="' +
         featureType +
         '"][data-feature-index="' +
         featureIndex +

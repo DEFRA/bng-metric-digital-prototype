@@ -6,6 +6,59 @@
 
 {% set pageName = "On-site baseline habitats" %}
 
+{% macro sortableSummaryTable(head, rows, totalRow) %}
+  <table class="govuk-table" data-module="moj-sortable-table">
+    <thead class="govuk-table__head">
+      <tr class="govuk-table__row">
+        {% for item in head %}
+          <th
+            scope="col"
+            class="govuk-table__header{% if item.format %} govuk-table__header--{{ item.format }}{% endif %}{% if item.classes %} {{ item.classes }}{% endif %}"
+            {% if item.attributes and item.attributes['aria-sort'] %}aria-sort="{{ item.attributes['aria-sort'] }}"{% endif %}
+            {% if item.attributes and item.attributes.style %}style="{{ item.attributes.style }}"{% endif %}>
+            {{ item.html | safe if item.html else item.text }}
+          </th>
+        {% endfor %}
+      </tr>
+    </thead>
+    <tbody class="govuk-table__body">
+      {% for row in rows %}
+        <tr class="govuk-table__row">
+          {% for cell in row %}
+            {% if loop.first %}
+              <th
+                scope="row"
+                class="govuk-table__header{% if cell.classes %} {{ cell.classes }}{% endif %}"
+                {% if cell.attributes and cell.attributes.style %}style="{{ cell.attributes.style }}"{% endif %}>
+                {{ cell.html | safe if cell.html else cell.text }}
+              </th>
+            {% else %}
+              <td class="govuk-table__cell{% if cell.format %} govuk-table__cell--{{ cell.format }}{% endif %}{% if cell.classes %} {{ cell.classes }}{% endif %}">
+                {{ cell.html | safe if cell.html else cell.text }}
+              </td>
+            {% endif %}
+          {% endfor %}
+        </tr>
+      {% endfor %}
+    </tbody>
+    <tfoot>
+      <tr class="govuk-table__row">
+        {% for cell in totalRow %}
+          {% if loop.first %}
+            <th scope="row" class="govuk-table__header">
+              {{ cell.html | safe if cell.html else cell.text }}
+            </th>
+          {% else %}
+            <td class="govuk-table__cell{% if cell.format %} govuk-table__cell--{{ cell.format }}{% endif %}">
+              {{ cell.html | safe if cell.html else cell.text }}
+            </td>
+          {% endif %}
+        {% endfor %}
+      </tr>
+    </tfoot>
+  </table>
+{% endmacro %}
+
 {% block pageTitle %}{{ pageName }} – {{ serviceName }} – GOV.UK{% endblock %}
 
 {% block head %}
@@ -172,6 +225,11 @@
       text-decoration: none;
     }
 
+    .habitat-row--highlighted th,
+    .habitat-row--highlighted td {
+      background-color: #D2E2F1 !important;
+    }
+
     .map-toggle-row {
       margin-bottom: 45px;
     }
@@ -218,6 +276,7 @@
       height: 20px;
       flex-shrink: 0;
     }
+
   </style>
 {% endblock %}
 
@@ -253,20 +312,12 @@
     </div>
 
     {% set areasTableHtml %}
-      {{ govukTable({
-        firstCellIsHeader: true,
-        head: areasHead,
-        rows: areasTableRowsWithTotals
-      }) }}
+      {{ sortableSummaryTable(areasHead, tableRows, areasTotalRow) }}
     {% endset %}
 
     {% set hedgerowsTableHtml %}
       {% if hedgerowTableRows and hedgerowTableRows.length > 0 %}
-        {{ govukTable({
-          firstCellIsHeader: true,
-          head: hedgerowsHead,
-          rows: hedgerowTableRowsWithTotals
-        }) }}
+        {{ sortableSummaryTable(hedgerowsHead, hedgerowTableRows, hedgerowsTotalRow) }}
       {% else %}
         <p class="govuk-body">No hedgerows available.</p>
       {% endif %}
@@ -274,11 +325,7 @@
 
     {% set watercoursesTableHtml %}
       {% if watercourseTableRows and watercourseTableRows.length > 0 %}
-        {{ govukTable({
-          firstCellIsHeader: true,
-          head: watercoursesHead,
-          rows: watercourseTableRowsWithTotals
-        }) }}
+        {{ sortableSummaryTable(watercoursesHead, watercourseTableRows, watercoursesTotalRow) }}
       {% else %}
         <p class="govuk-body">No watercourses available.</p>
       {% endif %}
