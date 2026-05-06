@@ -5,7 +5,7 @@
 {% from "govuk/components/details/macro.njk" import govukDetails %}
 {% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
 
-{% set pageName = "Upload your post-intervention habitat data" %}
+{% set pageName = "Upload a GeoPackage (.gpkg) file" %}
 
 {% block pageTitle %}{{ pageName }} – {{ serviceName }} – GOV.UK{% endblock %}
 
@@ -29,24 +29,8 @@
     <h1 class="govuk-heading-l">{{ pageName }}</h1>
 
     <p class="govuk-body">
-      Upload a GIS file containing your site boundary and post-intervention habitat information.
+      Upload a GeoPackage (.gpkg) file containing a red line boundary and post-intervention habitat parcels.
     </p>
-
-    <p class="govuk-body">
-      We'll identify the layers in your file and look up location information automatically.
-    </p>
-
-    {{ govukDetails({
-      summaryText: "What layers should my file contain?",
-      html: '
-        <p class="govuk-body">Your file should include:</p>
-        <ul class="govuk-list govuk-list--bullet">
-          <li>A polygon for your site boundary (red line boundary)</li>
-          <li>Polygons for each habitat parcel within the site</li>
-        </ul>
-        <p class="govuk-body">We\'ll ask you to confirm which layer is which after uploading.</p>
-      '
-    }) }}
 
     <form method="post" action="/on-site-post-intervention/upload-single-file" enctype="multipart/form-data" novalidate>
 
@@ -54,20 +38,23 @@
         id: "fileUpload",
         name: "fileUpload",
         label: {
-          text: "Upload a file",
-          classes: "govuk-label--m"
-        },
-        hint: {
-          text: "GeoPackage (.gpkg)"
+          text: "Upload a file"
         },
         errorMessage: error if error else undefined,
+        javascript: true,
         attributes: {
           accept: ".gpkg"
         }
       }) }}
 
       {{ govukButton({
-        text: "Upload file"
+        text: "Continue"
+      }) }}
+
+      {{ govukButton({
+        text: "Cancel",
+        href: "/project/details",
+        classes: "govuk-button--secondary"
       }) }}
 
     </form>

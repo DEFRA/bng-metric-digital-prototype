@@ -1106,118 +1106,16 @@ function registerOnSiteBaselineRoutes(router) {
       return collator.compare((a || '').toString(), (b || '').toString())
     }
 
-    function buildSortUrl(
-      sortByParam,
-      sortOrderParam,
-      key,
-      currentSortBy,
-      currentSortOrder
-    ) {
-      const nextSortOrder =
-        currentSortBy === key && currentSortOrder === 'asc' ? 'desc' : 'asc'
-      const params = new URLSearchParams()
-
-      Object.keys(req.query || {}).forEach(function (paramKey) {
-        if (paramKey === sortByParam || paramKey === sortOrderParam) {
-          return
-        }
-
-        const value = req.query[paramKey]
-        if (value !== undefined && value !== null && value !== '') {
-          params.set(paramKey, value.toString())
-        }
-      })
-
-      params.set(sortByParam, key)
-      params.set(sortOrderParam, nextSortOrder)
-
-      return '/on-site-baseline/habitats-summary?' + params.toString()
-    }
-
-    function buildSortableHeadCell(
-      label,
-      key,
-      sortByParam,
-      sortOrderParam,
-      currentSortBy,
-      currentSortOrder
-    ) {
-      const isCurrent = currentSortBy === key
-      const directionText = currentSortOrder === 'asc' ? 'ascending' : 'descending'
-      const arrow = !isCurrent ? '' : currentSortOrder === 'asc' ? ' ▲' : ' ▼'
-
-      return {
-        html:
-          '<a class="govuk-link govuk-link--no-visited-state" href="' +
-          buildSortUrl(
-            sortByParam,
-            sortOrderParam,
-            key,
-            currentSortBy,
-            currentSortOrder
-          ) +
-          '">' +
-          label +
-          '</a>' +
-          arrow +
-          (isCurrent
-            ? '<span class="govuk-visually-hidden">, currently sorted ' +
-              directionText +
-              '</span>'
-            : ''),
-        attributes: {
-          'aria-sort': isCurrent ? directionText : 'none'
-        }
-      }
-    }
-
-    const areaSortKeys = [
-      'parcel-reference',
-      'area',
-      'habitat',
-      'distinctiveness',
-      'condition',
-      'units',
-      'status'
-    ]
-    const areasSortByRequested = (req.query.areasSortBy || '').toString().toLowerCase()
-    const areasSortBy = areaSortKeys.includes(areasSortByRequested)
-      ? areasSortByRequested
-      : 'parcel-reference'
-    const areasSortOrder = req.query.areasSortOrder === 'desc' ? 'desc' : 'asc'
-
-    const sortedHabitatParcels = habitatParcels.slice().sort(function (a, b) {
-      let compareValue = 0
-
-      if (areasSortBy === 'parcel-reference') {
-        compareValue = compareText(a.parcelId, b.parcelId)
-      } else if (areasSortBy === 'area') {
-        compareValue = (parseFloat(a.areaHectares) || 0) - (parseFloat(b.areaHectares) || 0)
-      } else if (areasSortBy === 'habitat') {
-        compareValue = compareText(a.habitatLabel, b.habitatLabel)
-      } else if (areasSortBy === 'distinctiveness') {
-        compareValue = compareText(a.distinctiveness, b.distinctiveness)
-      } else if (areasSortBy === 'condition') {
-        compareValue = compareText(a.condition, b.condition)
-      } else if (areasSortBy === 'units') {
-        compareValue = (typeof a.units === 'number' ? a.units : 0) - (typeof b.units === 'number' ? b.units : 0)
-      } else if (areasSortBy === 'status') {
-        compareValue = compareText(a.status, b.status)
-      }
-
-      return areasSortOrder === 'desc' ? -compareValue : compareValue
-    })
-
-    // Build table rows for GovUK table component
-    const tableRows = sortedHabitatParcels.map(function (parcel, index) {
-      const statusText = parcel.status || ''
-      let statusClass = ''
+    // Build table rows for Areas
+    const tableRows = habitatParcels.map(function (parcel, index) {
+      const statusText = parcel.status || '';
+      let statusClass = '';
       if (statusText === 'Incomplete') {
-        statusClass = 'govuk-tag--blue'
+        statusClass = 'govuk-tag--blue';
       }
 
       const featureIndex =
-        typeof parcel.featureIndex === 'number' ? parcel.featureIndex : index
+        typeof parcel.featureIndex === 'number' ? parcel.featureIndex : index;
 
       return [
         {
@@ -1231,10 +1129,13 @@ function registerOnSiteBaselineRoutes(router) {
             '</a>'
         },
         { text: parcel.habitatLabel || '' },
-         { text: parcel.areaHectares },
+        { text: parcel.areaHectares, format: 'numeric' },
         { text: parcel.distinctiveness || '' },
         { text: parcel.condition || '' },
-        { text: parcel.units ? parcel.units.toFixed(2) : '0.00' },
+        {
+          text: parcel.units ? parcel.units.toFixed(2) : '0.00',
+          format: 'numeric'
+        },
         statusClass
           ? {
               html:
@@ -1245,79 +1146,44 @@ function registerOnSiteBaselineRoutes(router) {
                 '</strong>'
             }
           : { text: statusText }
-      ]
-    })
+      ];
+    });
 
     const areasHead = [
-      buildSortableHeadCell(
-        'Ref',
-        'parcel-reference',
-        'areasSortBy',
-        'areasSortOrder',
-        areasSortBy,
-        areasSortOrder
-      ),
-       buildSortableHeadCell(
-        'Habitat type',
-        'habitat',
-        'areasSortBy',
-        'areasSortOrder',
-        areasSortBy,
-        areasSortOrder
-      ),
-      buildSortableHeadCell(
-        'Area (ha)',
-        'area',
-        'areasSortBy',
-        'areasSortOrder',
-        areasSortBy,
-        areasSortOrder
-      ),
-      buildSortableHeadCell(
-        'Distinctiveness',
-        'distinctiveness',
-        'areasSortBy',
-        'areasSortOrder',
-        areasSortBy,
-        areasSortOrder
-      ),
-      buildSortableHeadCell(
-        'Condition',
-        'condition',
-        'areasSortBy',
-        'areasSortOrder',
-        areasSortBy,
-        areasSortOrder
-      ),
-      buildSortableHeadCell(
-        'Units',
-        'units',
-        'areasSortBy',
-        'areasSortOrder',
-        areasSortBy,
-        areasSortOrder
-      ),
-      buildSortableHeadCell(
-        'Status',
-        'status',
-        'areasSortBy',
-        'areasSortOrder',
-        areasSortBy,
-        areasSortOrder
-      )
-    ]
+      {
+        text: 'Ref',
+        attributes: {
+          'aria-sort': 'none',
+          style: 'width: 14%; white-space: nowrap;'
+        }
+      },
+      { text: 'Habitat type', attributes: { 'aria-sort': 'none' } },
+      {
+        text: 'Area (ha)',
+        format: 'numeric',
+        attributes: { 'aria-sort': 'none' }
+      },
+      { text: 'Distinctiveness', attributes: { 'aria-sort': 'none' } },
+      { text: 'Condition', attributes: { 'aria-sort': 'none' } },
+      { text: 'Units', format: 'numeric', attributes: { 'aria-sort': 'none' } },
+      { text: 'Status', attributes: { 'aria-sort': 'none' } }
+    ];
 
-    const areasTableRowsWithTotals = tableRows.concat([
-      [
-        { html: '<strong>Total</strong>' },
-        { text: '' },
-        { html: '<strong>' + areaHabitatsSize.toFixed(2) + '</strong>' },
-        { text: '' },
-        { text: '' },
-        { html: '<strong>' + baselineUnits.toFixed(2) + '</strong>' },
-        { text: '' }
-      ]
-    ])
+    const areasTotalRow = [
+      { html: '<strong>Total</strong>' },
+      { text: '' },
+      {
+        html: '<strong>' + areaHabitatsSize.toFixed(2) + '</strong>',
+        format: 'numeric'
+      },
+      { text: '' },
+      { text: '' },
+      {
+        html: '<strong>' + baselineUnits.toFixed(2) + '</strong>',
+        format: 'numeric'
+      },
+      { text: '' }
+    ];
 
     // Build hedgerow table rows
     const hedgerows = mapData.hedgerows?.features || []
@@ -1344,181 +1210,50 @@ function registerOnSiteBaselineRoutes(router) {
       }
     })
 
-    const hedgerowSortKeys = [
-      'reference',
-      'length',
-      'hedgerow-type',
-      'distinctiveness',
-      'condition',
-      'units',
-      'status'
-    ]
-    const hedgerowsSortByRequested =
-      (req.query.hedgerowsSortBy || '').toString().toLowerCase()
-    const hedgerowsSortBy = hedgerowSortKeys.includes(hedgerowsSortByRequested)
-      ? hedgerowsSortByRequested
-      : 'reference'
-    const hedgerowsSortOrder =
-      req.query.hedgerowsSortOrder === 'desc' ? 'desc' : 'asc'
-
-    const sortedHedgerowItems = hedgerowItems.slice().sort(function (a, b) {
-      let compareValue = 0
-
-      if (hedgerowsSortBy === 'reference') {
-        compareValue = compareText(a.reference, b.reference)
-      } else if (hedgerowsSortBy === 'length') {
-        compareValue = a.lengthKm - b.lengthKm
-      } else if (hedgerowsSortBy === 'hedgerow-type') {
-        compareValue = compareText(a.hedgerowType, b.hedgerowType)
-      } else if (hedgerowsSortBy === 'distinctiveness') {
-        compareValue = compareText(a.distinctiveness, b.distinctiveness)
-      } else if (hedgerowsSortBy === 'condition') {
-        compareValue = compareText(a.condition, b.condition)
-      } else if (hedgerowsSortBy === 'units') {
-        compareValue = a.units - b.units
-      } else if (hedgerowsSortBy === 'status') {
-        compareValue = compareText(a.status, b.status)
-      }
-
-      return hedgerowsSortOrder === 'desc' ? -compareValue : compareValue
-    })
-
-    const hedgerowTableRows = sortedHedgerowItems.map(function (item) {
+    const hedgerowTableRows = hedgerowItems.map(function (item) {
       return [
-        {
-          attributes: {
-            style: 'width: 10%; white-space: nowrap;'
-          },
-          text: item.reference
-        },
+        { text: item.reference },
         { text: item.hedgerowType },
-        { text: item.lengthKm.toFixed(2) },
+        { text: item.lengthKm.toFixed(2), format: 'numeric' },
         { text: item.distinctiveness },
         { text: item.condition },
-        { text: item.units.toFixed(2) },
+        { text: item.units.toFixed(2), format: 'numeric' },
         { text: item.status }
-      ]
-    })
+      ];
+    });
 
     const hedgerowsHead = [
       {
+        text: 'Ref',
         attributes: {
-          style: 'width: 10%; white-space: nowrap;'
-        },
-        html:
-          '<a class="govuk-link govuk-link--no-visited-state" href="' +
-          buildSortUrl(
-            'hedgerowsSortBy',
-            'hedgerowsSortOrder',
-            'reference',
-            hedgerowsSortBy,
-            hedgerowsSortOrder
-          ) +
-          '">Ref</a>' +
-          (hedgerowsSortBy === 'reference'
-            ? hedgerowsSortOrder === 'asc'
-              ? ' ▲'
-              : ' ▼'
-            : '') +
-          (hedgerowsSortBy === 'reference'
-            ? '<span class="govuk-visually-hidden">, currently sorted ' +
-              (hedgerowsSortOrder === 'asc' ? 'ascending' : 'descending') +
-              '</span>'
-            : ''),
-        attributes: {
-          style: 'width: 10%; white-space: nowrap;',
-          'aria-sort':
-            hedgerowsSortBy === 'reference'
-              ? hedgerowsSortOrder === 'asc'
-                ? 'ascending'
-                : 'descending'
-              : 'none'
+          'aria-sort': 'none',
+          style: 'width: 14%; white-space: nowrap;'
         }
       },
-      buildSortableHeadCell(
-        'Hedgerow type',
-        'hedgerow-type',
-        'hedgerowsSortBy',
-        'hedgerowsSortOrder',
-        hedgerowsSortBy,
-        hedgerowsSortOrder
-      ),
+      { text: 'Hedgerow type', attributes: { 'aria-sort': 'none' } },
       {
-        html:
-          '<a class="govuk-link govuk-link--no-visited-state" href="' +
-          buildSortUrl(
-            'hedgerowsSortBy',
-            'hedgerowsSortOrder',
-            'length',
-            hedgerowsSortBy,
-            hedgerowsSortOrder
-          ) +
-          '">Length (km)</a>' +
-          (hedgerowsSortBy === 'length'
-            ? hedgerowsSortOrder === 'asc'
-              ? ' ▲'
-              : ' ▼'
-            : '') +
-          (hedgerowsSortBy === 'length'
-            ? '<span class="govuk-visually-hidden">, currently sorted ' +
-              (hedgerowsSortOrder === 'asc' ? 'ascending' : 'descending') +
-              '</span>'
-            : ''),
-        attributes: {
-          style: 'width: 12%; white-space: nowrap;',
-          'aria-sort':
-            hedgerowsSortBy === 'length'
-              ? hedgerowsSortOrder === 'asc'
-                ? 'ascending'
-                : 'descending'
-              : 'none'
-        }
+        text: 'Length (km)',
+        format: 'numeric',
+        attributes: { 'aria-sort': 'none' }
       },
-      buildSortableHeadCell(
-        'Distinctiveness',
-        'distinctiveness',
-        'hedgerowsSortBy',
-        'hedgerowsSortOrder',
-        hedgerowsSortBy,
-        hedgerowsSortOrder
-      ),
-      buildSortableHeadCell(
-        'Condition',
-        'condition',
-        'hedgerowsSortBy',
-        'hedgerowsSortOrder',
-        hedgerowsSortBy,
-        hedgerowsSortOrder
-      ),
-      buildSortableHeadCell(
-        'Units',
-        'units',
-        'hedgerowsSortBy',
-        'hedgerowsSortOrder',
-        hedgerowsSortBy,
-        hedgerowsSortOrder
-      ),
-      buildSortableHeadCell(
-        'Status',
-        'status',
-        'hedgerowsSortBy',
-        'hedgerowsSortOrder',
-        hedgerowsSortBy,
-        hedgerowsSortOrder
-      )
-    ]
+      { text: 'Distinctiveness', attributes: { 'aria-sort': 'none' } },
+      { text: 'Condition', attributes: { 'aria-sort': 'none' } },
+      { text: 'Units', format: 'numeric', attributes: { 'aria-sort': 'none' } },
+      { text: 'Status', attributes: { 'aria-sort': 'none' } }
+    ];
 
-    const hedgerowTableRowsWithTotals = hedgerowTableRows.concat([
-      [
-        { html: '<strong>Total</strong>' },
-        { text: '' },
-        { html: '<strong>' + (hedgerowTotalLengthM / 1000).toFixed(2) + '</strong>' },
-        { text: '' },
-        { text: '' },
-        { html: '<strong>0.00</strong>' },
-        { text: '' }
-      ]
-    ])
+    const hedgerowsTotalRow = [
+      { html: '<strong>Total</strong>' },
+      { text: '' },
+      {
+        html: '<strong>' + (hedgerowTotalLengthM / 1000).toFixed(2) + '</strong>',
+        format: 'numeric'
+      },
+      { text: '' },
+      { text: '' },
+      { html: '<strong>0.00</strong>', format: 'numeric' },
+      { text: '' }
+    ];
 
     // Build watercourse table rows
     const watercourses = mapData.watercourses?.features || []
@@ -1548,131 +1283,50 @@ function registerOnSiteBaselineRoutes(router) {
       }
     })
 
-    const watercoursesSortKeys = [
-      'reference',
-      'length',
-      'watercourse-type',
-      'distinctiveness',
-      'condition',
-      'units',
-      'status'
-    ]
-    const watercoursesSortByRequested =
-      (req.query.watercoursesSortBy || '').toString().toLowerCase()
-    const watercoursesSortBy = watercoursesSortKeys.includes(
-      watercoursesSortByRequested
-    )
-      ? watercoursesSortByRequested
-      : 'reference'
-    const watercoursesSortOrder =
-      req.query.watercoursesSortOrder === 'desc' ? 'desc' : 'asc'
-
-    const sortedWatercourseItems = watercourseItems.slice().sort(function (a, b) {
-      let compareValue = 0
-
-      if (watercoursesSortBy === 'reference') {
-        compareValue = compareText(a.reference, b.reference)
-      } else if (watercoursesSortBy === 'length') {
-        compareValue = a.lengthKm - b.lengthKm
-      } else if (watercoursesSortBy === 'watercourse-type') {
-        compareValue = compareText(a.watercourseType, b.watercourseType)
-      } else if (watercoursesSortBy === 'distinctiveness') {
-        compareValue = compareText(a.distinctiveness, b.distinctiveness)
-      } else if (watercoursesSortBy === 'condition') {
-        compareValue = compareText(a.condition, b.condition)
-      } else if (watercoursesSortBy === 'units') {
-        compareValue = a.units - b.units
-      } else if (watercoursesSortBy === 'status') {
-        compareValue = compareText(a.status, b.status)
-      }
-
-      return watercoursesSortOrder === 'desc' ? -compareValue : compareValue
-    })
-
-    const watercourseTableRows = sortedWatercourseItems.map(function (item) {
+    const watercourseTableRows = watercourseItems.map(function (item) {
       return [
-        {
-          text: item.reference
-        },
+        { text: item.reference },
         { text: item.watercourseType },
-        { text: item.lengthKm.toFixed(2) },
+        { text: item.lengthKm.toFixed(2), format: 'numeric' },
         { text: item.distinctiveness },
         { text: item.condition },
-        { text: item.units.toFixed(2) },
+        { text: item.units.toFixed(2), format: 'numeric' },
         { text: item.status }
-      ]
-    })
+      ];
+    });
 
     const watercoursesHead = [
-      buildSortableHeadCell(
-        'Ref',
-        'reference',
-        'watercoursesSortBy',
-        'watercoursesSortOrder',
-        watercoursesSortBy,
-        watercoursesSortOrder
-      ),
-      buildSortableHeadCell(
-        'Watercourse type',
-        'watercourse-type',
-        'watercoursesSortBy',
-        'watercoursesSortOrder',
-        watercoursesSortBy,
-        watercoursesSortOrder
-      ),
-      buildSortableHeadCell(
-        'Length (km)',
-        'length',
-        'watercoursesSortBy',
-        'watercoursesSortOrder',
-        watercoursesSortBy,
-        watercoursesSortOrder
-      ),
-      buildSortableHeadCell(
-        'Distinctiveness',
-        'distinctiveness',
-        'watercoursesSortBy',
-        'watercoursesSortOrder',
-        watercoursesSortBy,
-        watercoursesSortOrder
-      ),
-      buildSortableHeadCell(
-        'Condition',
-        'condition',
-        'watercoursesSortBy',
-        'watercoursesSortOrder',
-        watercoursesSortBy,
-        watercoursesSortOrder
-      ),
-      buildSortableHeadCell(
-        'Units',
-        'units',
-        'watercoursesSortBy',
-        'watercoursesSortOrder',
-        watercoursesSortBy,
-        watercoursesSortOrder
-      ),
-      buildSortableHeadCell(
-        'Status',
-        'status',
-        'watercoursesSortBy',
-        'watercoursesSortOrder',
-        watercoursesSortBy,
-        watercoursesSortOrder
-      )
-    ]
+      {
+        text: 'Ref',
+        attributes: {
+          'aria-sort': 'none',
+          style: 'width: 14%; white-space: nowrap;'
+        }
+      },
+      { text: 'Watercourse type', attributes: { 'aria-sort': 'none' } },
+      {
+        text: 'Length (km)',
+        format: 'numeric',
+        attributes: { 'aria-sort': 'none' }
+      },
+      { text: 'Distinctiveness', attributes: { 'aria-sort': 'none' } },
+      { text: 'Condition', attributes: { 'aria-sort': 'none' } },
+      { text: 'Units', format: 'numeric', attributes: { 'aria-sort': 'none' } },
+      { text: 'Status', attributes: { 'aria-sort': 'none' } }
+    ];
 
-    const watercourseTableRowsWithTotals = watercourseTableRows.concat([
-      [
-        { html: '<strong>Total</strong>' },
-        { text: '' },
-        { html: '<strong>' + (watercourseTotalLengthM / 1000).toFixed(2) + '</strong>' },
-        { text: '' },
-        { text: '' },
-        { html: '<strong>0.00</strong>' },
-        { text: '' }
-      ]
-    ])
+    const watercoursesTotalRow = [
+      { html: '<strong>Total</strong>' },
+      { text: '' },
+      {
+        html: '<strong>' + (watercourseTotalLengthM / 1000).toFixed(2) + '</strong>',
+        format: 'numeric'
+      },
+      { text: '' },
+      { text: '' },
+      { html: '<strong>0.00</strong>', format: 'numeric' },
+      { text: '' }
+    ];
 
     const summaryData = [
       {
@@ -1719,14 +1373,14 @@ function registerOnSiteBaselineRoutes(router) {
       hedgerowsHead: hedgerowsHead,
       watercoursesHead: watercoursesHead,
       tableRows: tableRows,
-      areasTableRowsWithTotals: areasTableRowsWithTotals,
+      areasTotalRow: areasTotalRow,
       hedgerowTableRows: hedgerowTableRows,
-      hedgerowTableRowsWithTotals: hedgerowTableRowsWithTotals,
+      hedgerowsTotalRow: hedgerowsTotalRow,
       watercourseTableRows: watercourseTableRows,
-      watercourseTableRowsWithTotals: watercourseTableRowsWithTotals,
+      watercoursesTotalRow: watercoursesTotalRow,
       actions: {
         startPostIntervention: {
-          url: '/on-site-post-intervention/post-intervention-start'
+          url: '/on-site-post-intervention/upload-single-file'
         }
       }
     })
@@ -1815,6 +1469,11 @@ function registerOnSiteBaselineRoutes(router) {
     }
 
     const parcelIndex = parseInt(parcelIdParam, 10) - 1
+    const returnSource = (req.query.returnSource || '').toString().toLowerCase()
+    const returnToSummaryUrl =
+      returnSource === 'map'
+        ? '/on-site-baseline/habitats-summary?selected=parcel:' + parcelIndex
+        : '/on-site-baseline/habitats-summary'
     const feature =
       Number.isInteger(parcelIndex) &&
       parcelIndex >= 0 &&
@@ -1842,10 +1501,6 @@ function registerOnSiteBaselineRoutes(router) {
       : '-'
     const conditionRaw = feature.properties?.['Baseline Condition'] || ''
     const condition = conditionRaw ? conditionRaw.replace(/^\d+\.\s*/, '') : ''
-    const irreplaceableHabitat =
-      feature.properties?.['Irreplaceable Habitat'] ||
-      feature.properties?.['Baseline Irreplaceable Habitat'] ||
-      'No'
     const requiredAction =
       feature.properties?.['Required action to meeting trading rules'] ||
       feature.properties?.['Required action to meet trading rules'] ||
@@ -1906,12 +1561,13 @@ function registerOnSiteBaselineRoutes(router) {
       habitat: {
         ref: parcelRef,
         index: parcelIndex + 1,
+        return_source: returnSource,
+        return_to_summary_url: returnToSummaryUrl,
         area_hectares: areaHa,
         broad_habitat: broadHabitat,
         habitat_type: fullHabitatType,
         distinctiveness: distinctiveness,
         condition: condition,
-        irreplaceable_habitat: irreplaceableHabitat,
         required_action: requiredAction,
         total_units: totalHabitatUnits,
         supporting_evidence: supportingEvidence
@@ -1932,7 +1588,7 @@ function registerOnSiteBaselineRoutes(router) {
     const broadHabitatInput = (req.body.broad_habitat || '').trim()
     const habitatTypeInput = (req.body.habitat_type || '').trim()
     const conditionInput = (req.body.condition || '').trim()
-    const irreplaceableHabitatInput = (req.body.irreplaceable_habitat || '').trim()
+    const returnSourceInput = (req.body.return_source || '').trim().toLowerCase()
     const supportingEvidenceInput = (req.body.supporting_evidence || '').trim()
 
     const layersConfirmed = req.session.data['layersConfirmed']
@@ -1995,9 +1651,6 @@ function registerOnSiteBaselineRoutes(router) {
     feature.properties['Baseline Broad Habitat Type'] = broadHabitat || null
     feature.properties['Baseline Habitat Type'] = habitatType || null
     feature.properties['Baseline Condition'] = conditionInput || null
-    feature.properties['Baseline Irreplaceable Habitat'] =
-      irreplaceableHabitatInput || null
-    feature.properties['Irreplaceable Habitat'] = irreplaceableHabitatInput || null
     feature.properties['Comments'] = supportingEvidenceInput || ''
 
     const fullHabitat =
@@ -2012,7 +1665,11 @@ function registerOnSiteBaselineRoutes(router) {
 
     updateSession()
 
-    res.redirect('/on-site-baseline/habitats-summary?selected=parcel:' + parcelIndex)
+    if (returnSourceInput === 'map') {
+      return res.redirect('/on-site-baseline/habitats-summary?selected=parcel:' + parcelIndex)
+    }
+
+    res.redirect('/on-site-baseline/habitats-summary')
   })
 
   router.get('/on-site-baseline/hedgerow/:hedgerowId/details', function (req, res) {
@@ -2042,4 +1699,4 @@ function registerOnSiteBaselineRoutes(router) {
   })
 }
 
-module.exports = { registerOnSiteBaselineRoutes }
+module.exports = { registerOnSiteBaselineRoutes, annotateParcelAdjacency }
