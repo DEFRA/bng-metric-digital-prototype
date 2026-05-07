@@ -776,6 +776,7 @@ function registerOnSitePostInterventionRoutes(router) {
         { text: feature.properties["Baseline Hedge Type"] || '' },
         { text: feature.properties["Baseline Distinctiveness"] || '' },
         { text: feature.properties["Baseline Condition"] || '' },
+        { text: '0.00', format: 'numeric' },
         { text: 'Complete' },
         {
           html:

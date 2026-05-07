@@ -1157,16 +1157,32 @@ function registerOnSiteBaselineRoutes(router) {
           style: 'width: 14%; white-space: nowrap;'
         }
       },
-      { text: 'Habitat type', attributes: { 'aria-sort': 'none' } },
+      {
+        text: 'Habitat type',
+        attributes: { 'aria-sort': 'none', style: 'white-space: nowrap;' }
+      },
       {
         text: 'Area (ha)',
         format: 'numeric',
-        attributes: { 'aria-sort': 'none' }
+        attributes: { 'aria-sort': 'none', style: 'white-space: nowrap;' }
       },
-      { text: 'Distinctiveness', attributes: { 'aria-sort': 'none' } },
-      { text: 'Condition', attributes: { 'aria-sort': 'none' } },
-      { text: 'Units', format: 'numeric', attributes: { 'aria-sort': 'none' } },
-      { text: 'Status', attributes: { 'aria-sort': 'none' } }
+      {
+        text: 'Distinctiveness',
+        attributes: { 'aria-sort': 'none', style: 'white-space: nowrap;' }
+      },
+      {
+        text: 'Condition',
+        attributes: { 'aria-sort': 'none', style: 'white-space: nowrap;' }
+      },
+      {
+        text: 'Units',
+        format: 'numeric',
+        attributes: { 'aria-sort': 'none', style: 'white-space: nowrap;' }
+      },
+      {
+        text: 'Status',
+        attributes: { 'aria-sort': 'none', style: 'white-space: nowrap;' }
+      }
     ];
 
     const areasTotalRow = [
@@ -1230,16 +1246,32 @@ function registerOnSiteBaselineRoutes(router) {
           style: 'width: 14%; white-space: nowrap;'
         }
       },
-      { text: 'Hedgerow type', attributes: { 'aria-sort': 'none' } },
+      {
+        text: 'Hedgerow type',
+        attributes: { 'aria-sort': 'none', style: 'white-space: nowrap;' }
+      },
       {
         text: 'Length (km)',
         format: 'numeric',
-        attributes: { 'aria-sort': 'none' }
+        attributes: { 'aria-sort': 'none', style: 'white-space: nowrap;' }
       },
-      { text: 'Distinctiveness', attributes: { 'aria-sort': 'none' } },
-      { text: 'Condition', attributes: { 'aria-sort': 'none' } },
-      { text: 'Units', format: 'numeric', attributes: { 'aria-sort': 'none' } },
-      { text: 'Status', attributes: { 'aria-sort': 'none' } }
+      {
+        text: 'Distinctiveness',
+        attributes: { 'aria-sort': 'none', style: 'white-space: nowrap;' }
+      },
+      {
+        text: 'Condition',
+        attributes: { 'aria-sort': 'none', style: 'white-space: nowrap;' }
+      },
+      {
+        text: 'Units',
+        format: 'numeric',
+        attributes: { 'aria-sort': 'none', style: 'white-space: nowrap;' }
+      },
+      {
+        text: 'Status',
+        attributes: { 'aria-sort': 'none', style: 'white-space: nowrap;' }
+      }
     ];
 
     const hedgerowsTotalRow = [
@@ -1303,16 +1335,32 @@ function registerOnSiteBaselineRoutes(router) {
           style: 'width: 14%; white-space: nowrap;'
         }
       },
-      { text: 'Watercourse type', attributes: { 'aria-sort': 'none' } },
+      {
+        text: 'Watercourse type',
+        attributes: { 'aria-sort': 'none', style: 'white-space: nowrap;' }
+      },
       {
         text: 'Length (km)',
         format: 'numeric',
-        attributes: { 'aria-sort': 'none' }
+        attributes: { 'aria-sort': 'none', style: 'white-space: nowrap;' }
       },
-      { text: 'Distinctiveness', attributes: { 'aria-sort': 'none' } },
-      { text: 'Condition', attributes: { 'aria-sort': 'none' } },
-      { text: 'Units', format: 'numeric', attributes: { 'aria-sort': 'none' } },
-      { text: 'Status', attributes: { 'aria-sort': 'none' } }
+      {
+        text: 'Distinctiveness',
+        attributes: { 'aria-sort': 'none', style: 'white-space: nowrap;' }
+      },
+      {
+        text: 'Condition',
+        attributes: { 'aria-sort': 'none', style: 'white-space: nowrap;' }
+      },
+      {
+        text: 'Units',
+        format: 'numeric',
+        attributes: { 'aria-sort': 'none', style: 'white-space: nowrap;' }
+      },
+      {
+        text: 'Status',
+        attributes: { 'aria-sort': 'none', style: 'white-space: nowrap;' }
+      }
     ];
 
     const watercoursesTotalRow = [

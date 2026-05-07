@@ -6,6 +6,44 @@
 
 {% set pageName = "Post-intervention habitats" %}
 
+{% macro sortableSummaryTable(head, rows) %}
+  <table class="govuk-table" data-module="moj-sortable-table">
+    <thead class="govuk-table__head">
+      <tr class="govuk-table__row">
+        {% for item in head %}
+          <th
+            scope="col"
+            class="govuk-table__header{% if item.format %} govuk-table__header--{{ item.format }}{% endif %}{% if item.classes %} {{ item.classes }}{% endif %}"
+            {% if item.attributes and item.attributes['aria-sort'] %}aria-sort="{{ item.attributes['aria-sort'] }}"{% endif %}
+            {% if item.attributes and item.attributes.style %}style="{{ item.attributes.style }}"{% endif %}>
+            {{ item.html | safe if item.html else item.text }}
+          </th>
+        {% endfor %}
+      </tr>
+    </thead>
+    <tbody class="govuk-table__body">
+      {% for row in rows %}
+        <tr class="govuk-table__row{% if row._highlighted %} habitat-row--highlighted{% endif %}">
+          {% for cell in row %}
+            {% if loop.first %}
+              <th
+                scope="row"
+                class="govuk-table__header{% if cell.classes %} {{ cell.classes }}{% endif %}"
+                {% if cell.attributes and cell.attributes.style %}style="{{ cell.attributes.style }}"{% endif %}>
+                {{ cell.html | safe if cell.html else cell.text }}
+              </th>
+            {% else %}
+              <td class="govuk-table__cell{% if cell.format %} govuk-table__cell--{{ cell.format }}{% endif %}{% if cell.classes %} {{ cell.classes }}{% endif %}">
+                {{ cell.html | safe if cell.html else cell.text }}
+              </td>
+            {% endif %}
+          {% endfor %}
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endmacro %}
+
 {% block pageTitle %}{{ pageName }} – {{ serviceName }} – GOV.UK{% endblock %}
 
 {% block head %}
@@ -230,23 +268,10 @@
       flex-shrink: 0;
     }
 
-    .post-intervention-edit-table .govuk-table__header:last-child,
-    .post-intervention-edit-table .govuk-table__cell:last-child {
-      width: 90px;
-      text-align: right;
-      white-space: nowrap;
-    }
-
-    .post-intervention-edit-table {
+    .govuk-grid-column-full [data-module="moj-sortable-table"] {
       width: 100%;
-      table-layout: fixed;
     }
 
-    .post-intervention-edit-table .govuk-table__header,
-    .post-intervention-edit-table .govuk-table__cell {
-      overflow-wrap: anywhere;
-      word-break: break-word;
-    }
   </style>
 {% endblock %}
 
@@ -275,62 +300,50 @@
     </div>
 
     <h2 class="govuk-heading-m">Habitat parcels</h2>
-    {{ govukTable({
-      classes: "post-intervention-edit-table",
-      firstCellIsHeader: true,
-      head: [
-        { text: "Parcel reference" },
-        { text: "Area (hectares)" },
-        { text: "Proposed Habitat" },
-        { text: "Proposed Distinctiveness" },
-        { text: "Proposed Condition" },
-        { text: "Retention category" },
-        { text: "Units" },
-        { text: "Status" },
-        { text: "Action", classes: "govuk-visually-hidden" }
-      ],
-      rows: tableRows
-    }) }}
+    {% set parcelHead = [
+      { text: "Ref", attributes: { 'aria-sort': 'none', style: 'width: 10%; white-space: nowrap;' } },
+      { text: "Area (ha)", format: 'numeric', attributes: { 'aria-sort': 'none', style: 'white-space: nowrap;' } },
+      { text: "Proposed habitat", attributes: { 'aria-sort': 'none', style: 'white-space: wrap;' } },
+      { text: "Proposed distinctiveness", attributes: { 'aria-sort': 'none', style: 'white-space: wrap;' } },
+      { text: "Proposed condition", attributes: { 'aria-sort': 'none', style: 'white-space: wrap;' } },
+      { text: "Retention category", attributes: { 'aria-sort': 'none', style: 'white-space: wrap;' } },
+      { text: "Units", format: 'numeric', attributes: { 'aria-sort': 'none', style: 'white-space: nowrap;' } },
+      { text: "Status", attributes: { 'aria-sort': 'none', style: 'white-space: nowrap;' } },
+      { text: "Action", attributes: { 'aria-sort': 'none', style: 'width: 70px; white-space: nowrap;' } }
+    ] %}
+    {{ sortableSummaryTable(parcelHead, tableRows) }}
 
     {% if hedgerowTableRows and hedgerowTableRows.length > 0 %}
     <h2 class="govuk-heading-m">Hedgerows</h2>
 
-    {{ govukTable({
-      classes: "post-intervention-edit-table",
-      firstCellIsHeader: true,
-      head: [
-        { text: "Reference" },
-        { text: "Length (metres)" },
-        { text: "Hedgerow type" },
-        { text: "Distinctiveness" },
-        { text: "Condition" },
-        { text: "Units" },
-        { text: "Status" },
-        { text: "Action", classes: "govuk-visually-hidden" }
-      ],
-      rows: hedgerowTableRows
-    }) }}
+    {% set hedgerowHead = [
+      { text: "Ref", attributes: { 'aria-sort': 'none', style: 'width: 10%; white-space: nowrap;' } },
+      { text: "Length (m)", format: 'numeric', attributes: { 'aria-sort': 'none', style: 'white-space: nowrap;' } },
+      { text: "Hedgerow type", attributes: { 'aria-sort': 'none', style: 'white-space: nowrap;' } },
+      { text: "Distinctiveness", attributes: { 'aria-sort': 'none', style: 'white-space: nowrap;' } },
+      { text: "Condition", attributes: { 'aria-sort': 'none', style: 'white-space: nowrap;' } },
+      { text: "Units", format: 'numeric', attributes: { 'aria-sort': 'none', style: 'white-space: nowrap;' } },
+      { text: "Status", attributes: { 'aria-sort': 'none', style: 'white-space: nowrap;' } },
+      { text: "Action",  attributes: { 'aria-sort': 'none', style: 'width: 70px; white-space: nowrap;' } }
+    ] %}
+    {{ sortableSummaryTable(hedgerowHead, hedgerowTableRows) }}
     {% endif %}
 
     {% if watercourseTableRows and watercourseTableRows.length > 0 %}
     <h2 class="govuk-heading-m">Watercourses</h2>
 
-    {{ govukTable({
-      classes: "post-intervention-edit-table",
-      firstCellIsHeader: true,
-      head: [
-        { text: "Reference" },
-        { text: "Length (metres)" },
-        { text: "Watercourse type" },
-        { text: "Distinctiveness" },
-        { text: "Condition" },
-        { text: "Encroachment into Watercourse" },
-        { text: "Encroachment into riparian zone" },
-        { text: "Status" },
-        { text: "Action", classes: "govuk-visually-hidden" }
-      ],
-      rows: watercourseTableRows
-    }) }}
+    {% set watercourseHead = [
+      { text: "Ref", attributes: { 'aria-sort': 'none', style: 'width: 10%; white-space: nowrap;' } },
+      { text: "Length (m)", format: 'numeric', attributes: { 'aria-sort': 'none', style: 'white-space: nowrap;' } },
+      { text: "Watercourse type", attributes: { 'aria-sort': 'none', style: 'white-space: wrap;' } },
+      { text: "Distinctiveness", attributes: { 'aria-sort': 'none', style: 'white-space: nowrap;' } },
+      { text: "Condition", attributes: { 'aria-sort': 'none', style: 'white-space: nowrap;' } },
+      { text: "Encroachment into watercourse", attributes: { 'aria-sort': 'none', style: 'white-space: wrap;' } },
+      { text: "Encroachment into riparian zone", attributes: { 'aria-sort': 'none', style: 'white-space: wrap;' } },
+      { text: "Status", attributes: { 'aria-sort': 'none', style: 'white-space: nowrap;' } },
+      { text: "Action", attributes: { 'aria-sort': 'none', style: 'width: 70px; white-space: nowrap;' } }
+    ] %}
+    {{ sortableSummaryTable(watercourseHead, watercourseTableRows) }}
     {% endif %}
 
     {{ govukButton({
