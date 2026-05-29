@@ -1,0 +1,550 @@
+{% extends "layouts/main.html" %}
+
+{% block pageTitle %}
+  Trading rules
+{% endblock %}
+
+{% block content %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>BNG Trading Rules Utility</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    margin: 0;
+    padding: 20px;
+    background: #f5f7fa;
+    color: #1f2937;
+  }
+  h1 {
+    margin: 0 0 4px 0;
+    font-size: 22px;
+    color: #0f172a;
+  }
+  .sub {
+    color: #6b7280;
+    font-size: 13px;
+    margin-bottom: 16px;
+  }
+  .controls {
+    display: flex;
+    width: fit-content;
+    gap: 16px;
+    align-items: center;
+    flex-wrap: wrap;
+    background: #fff;
+    padding: 12px 16px;
+    border-radius: 8px;
+    margin-bottom: 8px;
+    border: 1px solid #e5e7eb;
+  }
+  /* Hide rules-table rows for High and Very High when MVS is active */
+  body.mvs .rules-table tr[data-dist="Very High"],
+  body.mvs .rules-table tr[data-dist="High"] {
+    display: none;
+  }
+  .controls .filter-label { font-size: 13px; color: #374151; font-weight: 600; }
+  .controls .radio-label {
+    font-size: 13px;
+    color: #374151;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    cursor: pointer;
+  }
+  table {
+    width: auto;
+    border-collapse: separate;
+    border-spacing: 0;
+    background: #fff;
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+    font-size: 13px;
+  }
+  thead th {
+    background: #1f2937;
+    color: #fff;
+    text-align: left;
+    padding: 4px 8px;
+    font-weight: 600;
+    white-space: nowrap;
+    line-height: 1.2;
+  }
+  /* Thick black separator above any row where the Distinctiveness value
+     changes within the current unit filter. The selected row's red box is
+     drawn via inset box-shadow (below), so it coexists with this border
+     even when the selected row is the first of a new distinctiveness band. */
+  tbody tr.dist-break td {
+    border-top: 12px solid #000;
+  }
+  thead th:first-child { border-top-left-radius: 8px; }
+  thead th:last-child { border-top-right-radius: 8px; }
+  tbody td {
+    padding: 1px 8px;
+    border-top: 1px solid #f1f5f9;
+    vertical-align: middle;
+    white-space: nowrap;
+    line-height: 1.3;
+  }
+  tbody tr:hover { background: #f8fafc; }
+  /* Only the Habitat Type cell takes the green highlight, and only when the
+     row is actually an allowed trade (selected rows with no self-match —
+     Watercourse / Culvert, Area Very Low — stay unshaded). */
+  tbody tr.match td.habitat-cell {
+    background: #dcfce7;
+  }
+  tbody tr.match:hover td.habitat-cell {
+    background: #bbf7d0;
+  }
+  /* Selected row's red box uses inset box-shadow rather than border, so the
+     dist-break's 12px black border-top still draws on top of (above) it
+     when the selected row sits directly under a separator. */
+  tbody tr.selected td {
+    font-weight: 700;
+    box-shadow: inset 0 2px 0 #dc2626, inset 0 -2px 0 #dc2626;
+  }
+  tbody tr.selected td:first-child {
+    box-shadow: inset 0 2px 0 #dc2626, inset 0 -2px 0 #dc2626, inset 2px 0 0 #dc2626;
+  }
+  /* The rightmost visible cell gets the right edge. On Area it's broad-cell;
+     when Broad is hidden (Hedgerow / Watercourse) it's dist-cell. */
+  tbody tr.selected td.broad-cell {
+    box-shadow: inset 0 2px 0 #dc2626, inset 0 -2px 0 #dc2626, inset -2px 0 0 #dc2626;
+  }
+  body.hide-broad tbody tr.selected td.dist-cell {
+    box-shadow: inset 0 2px 0 #dc2626, inset 0 -2px 0 #dc2626, inset -2px 0 0 #dc2626;
+  }
+  .trade-cell { text-align: center; }
+  .trade-yes { color: #15803d; font-weight: 700; }
+  .trade-no  { color: #b91c1c; font-weight: 700; }
+  .match-count {
+    display: inline-block;
+    background: #1f2937;
+    color: #fff;
+    padding: 1px 7px;
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: 600;
+    margin-left: 8px;
+    vertical-align: middle;
+  }
+  tbody tr.hidden { display: none; }
+  .radio-cell { text-align: center; padding-left: 4px !important; padding-right: 4px !important; }
+  /* When body has .hide-broad, hide the 5th column on the main table (Broad Habitat) */
+  body.hide-broad table#habitatTable th:nth-child(5),
+  body.hide-broad table#habitatTable td:nth-child(5) { display: none; }
+  /* Rules tables (shown above the main grid, one per unit) */
+  .rules-wrap { margin-bottom: 12px; }
+  .rules-table { display: none; }
+  .rules-table.active { display: table; }
+  .rules-table {
+    border-collapse: separate;
+    border-spacing: 0;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 13px;
+    width: auto;
+  }
+  .rules-table caption {
+    text-align: left;
+    font-weight: 700;
+    font-size: 18px;
+    color: #0f172a;
+    padding: 4px 0 8px 0;
+    caption-side: top;
+  }
+  .section-heading {
+    font-weight: 700;
+    font-size: 18px;
+    color: #0f172a;
+    margin: 4px 0 8px 0;
+  }
+  .rules-table th, .rules-table td {
+    padding: 4px 10px;
+    border-top: 1px solid #f1f5f9;
+    text-align: left;
+    vertical-align: middle;
+  }
+  .rules-table thead th {
+    background: #1f2937;
+    color: #fff;
+    border-top: 0;
+  }
+  .rules-table thead th:first-child { border-top-left-radius: 8px; }
+  .rules-table thead th:last-child  { border-top-right-radius: 8px; }
+  .rules-table td.active-rule {
+    background: #dcfce7;
+    font-weight: 700;
+  }
+  .rules-table tr.active-row td {
+    border-top: 2px solid #dc2626;
+    border-bottom: 2px solid #dc2626;
+    font-weight: 700;
+  }
+  .rules-table tr.active-row td:first-child {
+    border-left: 2px solid #dc2626;
+  }
+  .rules-table tr.active-row td:last-child {
+    border-right: 2px solid #dc2626;
+  }
+  .dist-cell { color: #000; }
+  /* Yellow highlight on the column that triggered the match */
+  tbody tr.match-via-dist td.dist-cell {
+    background: #fef08a;
+  }
+  tbody tr.match-via-broad td.broad-cell {
+    background: #fef08a;
+  }
+  .stats { font-size: 12px; color: #6b7280; margin-top: 8px; }
+</style>
+</head>
+<body>
+  <h1>BNG Trading Rules Widget</h1>
+  <div style="font-size: 12px; font-weight: 400; color: #6b7280; margin-bottom: 16px;">v3 (29/05/2026) &mdash; Report any issues to Steve Phillips</div>
+
+  <div class="controls">
+    <label class="radio-label"><input type="radio" name="unitFilter" value="Area" checked> Areas</label>
+    <label class="radio-label"><input type="radio" name="unitFilter" value="Hedgerow"> Hedgerows</label>
+    <label class="radio-label"><input type="radio" name="unitFilter" value="Watercourse"> Watercourses</label>
+  </div>
+
+  <div class="controls">
+    <span class="filter-label">Distinctiveness</span>
+    <label class="radio-label"><input type="radio" name="scoreFilter" value="All" checked> All</label>
+    <label class="radio-label"><input type="radio" name="scoreFilter" value="MVS"> MVS</label>
+  </div>
+
+  <div class="rules-wrap">
+    <table class="rules-table" data-unit="Area">
+      <caption>Area Trading Rules</caption>
+      <thead><tr><th>Baseline Distinctiveness</th><th>Trading Rule</th></tr></thead>
+      <tbody>
+        <tr data-dist="Very High"><td class="dist">Very High (8)</td><td class="rule">Like-for-Like (Bespoke Compensation)</td></tr>
+        <tr data-dist="High"><td class="dist">High (6)</td><td class="rule">Like-for-like</td></tr>
+        <tr data-dist="Medium"><td class="dist">Medium (4)</td><td class="rule">Area &gt; distinctiveness <strong>OR</strong> (same broad habitat and distinctiveness)</td></tr>
+        <tr data-dist="Low"><td class="dist">Low (2)</td><td class="rule">Area &gt;= distinctiveness</td></tr>
+        <tr data-dist="Very Low"><td class="dist">Very Low (0)</td><td class="rule">No Unit Value - Trading Rules not applicable</td></tr>
+      </tbody>
+    </table>
+    <table class="rules-table" data-unit="Hedgerow">
+      <caption>Hedgerow Trading Rules</caption>
+      <thead><tr><th>Baseline Distinctiveness</th><th>Trading Rule</th></tr></thead>
+      <tbody>
+        <tr data-dist="Very High"><td class="dist">Very High (8)</td><td class="rule">Like-for-like</td></tr>
+        <tr data-dist="High"><td class="dist">High (6)</td><td class="rule">Like-for-like <strong>OR</strong> hedgerow <strong>&gt;</strong>  distinctiveness </td></tr>
+        <tr data-dist="Medium"><td class="dist">Medium (4)</td><td class="rule">Hedgerows <strong>&gt;=</strong> Distinctiveness </td></tr>
+        <tr data-dist="Low"><td class="dist">Low (2)</td><td class="rule">Hedgerows <strong>&gt;=</strong> Distinctiveness </td></tr>
+        <tr data-dist="Very Low"><td class="dist">Very Low (1)</td><td class="rule">Hedgerows <strong>&gt;=</strong> Distinctiveness </td></tr>
+      </tbody>
+    </table>
+    <table class="rules-table" data-unit="Watercourse">
+      <caption>Watercourse Trading Rules</caption>
+      <thead><tr><th>Baseline Distinctiveness</th><th>Trading Rule</th></tr></thead>
+      <tbody>
+        <tr data-dist="Very High"><td class="dist">Very High (8)</td><td class="rule">Like-for-Like (Bespoke Compensation )</td></tr>
+        <tr data-dist="High"><td class="dist">High (6)</td><td class="rule">Like-for-like</td></tr>
+        <tr data-dist="Medium"><td class="dist">Medium (4)</td><td class="rule">Like-for-like</td></tr>
+        <tr data-dist="Low"><td class="dist">Low (2)</td><td class="rule">Watercourses <strong>&gt;</strong> Distinctiveness </td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="section-heading" id="habitatsHeading">Area Habitats</div>
+
+  <table id="habitatTable">
+    <thead>
+      <tr>
+        <th class="radio-cell"></th>
+        <th></th>
+        <th>Habitat Type</th>
+        <th>Distinctiveness</th>
+        <th>Broad Habitat</th>
+      </tr>
+    </thead>
+    <tbody id="tbody"></tbody>
+  </table>
+  <div class="stats" id="stats"></div>
+
+<script>
+const HABITATS = [{"unit": "Area", "habitat": "Arable field margins cultivated annually", "broad": "Cropland", "distinctiveness": "Medium"}, {"unit": "Area", "habitat": "Arable field margins game bird mix", "broad": "Cropland", "distinctiveness": "Medium"}, {"unit": "Area", "habitat": "Arable field margins pollen and nectar", "broad": "Cropland", "distinctiveness": "Medium"}, {"unit": "Area", "habitat": "Arable field margins tussocky", "broad": "Cropland", "distinctiveness": "Medium"}, {"unit": "Area", "habitat": "Cereal crops", "broad": "Cropland", "distinctiveness": "Low"}, {"unit": "Area", "habitat": "Winter stubble", "broad": "Cropland", "distinctiveness": "Low"}, {"unit": "Area", "habitat": "Horticulture", "broad": "Cropland", "distinctiveness": "Low"}, {"unit": "Area", "habitat": "Intensive orchards", "broad": "Cropland", "distinctiveness": "Low"}, {"unit": "Area", "habitat": "Non-cereal crops", "broad": "Cropland", "distinctiveness": "Low"}, {"unit": "Area", "habitat": "Temporary grass and clover leys", "broad": "Cropland", "distinctiveness": "Low"}, {"unit": "Area", "habitat": "Traditional orchards", "broad": "Grassland", "distinctiveness": "High"}, {"unit": "Area", "habitat": "Bracken", "broad": "Grassland", "distinctiveness": "Low"}, {"unit": "Area", "habitat": "Floodplain wetland mosaic and CFGM", "broad": "Grassland", "distinctiveness": "High"}, {"unit": "Area", "habitat": "Lowland calcareous grassland", "broad": "Grassland", "distinctiveness": "High"}, {"unit": "Area", "habitat": "Lowland dry acid grassland", "broad": "Grassland", "distinctiveness": "Very High"}, {"unit": "Area", "habitat": "Lowland meadows", "broad": "Grassland", "distinctiveness": "Very High"}, {"unit": "Area", "habitat": "Modified grassland", "broad": "Grassland", "distinctiveness": "Low"}, {"unit": "Area", "habitat": "Other lowland acid grassland", "broad": "Grassland", "distinctiveness": "Medium"}, {"unit": "Area", "habitat": "Other neutral grassland", "broad": "Grassland", "distinctiveness": "Medium"}, {"unit": "Area", "habitat": "Tall herb communities (H6430)", "broad": "Grassland", "distinctiveness": "High"}, {"unit": "Area", "habitat": "Upland acid grassland", "broad": "Grassland", "distinctiveness": "Medium"}, {"unit": "Area", "habitat": "Upland calcareous grassland", "broad": "Grassland", "distinctiveness": "High"}, {"unit": "Area", "habitat": "Upland hay meadows", "broad": "Grassland", "distinctiveness": "Very High"}, {"unit": "Area", "habitat": "Blackthorn scrub", "broad": "Heathland and shrub", "distinctiveness": "Medium"}, {"unit": "Area", "habitat": "Bramble scrub", "broad": "Heathland and shrub", "distinctiveness": "Medium"}, {"unit": "Area", "habitat": "Gorse scrub", "broad": "Heathland and shrub", "distinctiveness": "Medium"}, {"unit": "Area", "habitat": "Hawthorn scrub", "broad": "Heathland and shrub", "distinctiveness": "Medium"}, {"unit": "Area", "habitat": "Hazel scrub", "broad": "Heathland and shrub", "distinctiveness": "Medium"}, {"unit": "Area", "habitat": "Lowland heathland", "broad": "Heathland and shrub", "distinctiveness": "High"}, {"unit": "Area", "habitat": "Mixed scrub", "broad": "Heathland and shrub", "distinctiveness": "Medium"}, {"unit": "Area", "habitat": "Mountain heaths and willow scrub", "broad": "Heathland and shrub", "distinctiveness": "Very High"}, {"unit": "Area", "habitat": "Rhododendron scrub", "broad": "Heathland and shrub", "distinctiveness": "Low"}, {"unit": "Area", "habitat": "Dunes with sea buckthorn (H2160)", "broad": "Heathland and shrub", "distinctiveness": "High"}, {"unit": "Area", "habitat": "Other sea buckthorn scrub", "broad": "Heathland and shrub", "distinctiveness": "Low"}, {"unit": "Area", "habitat": "Willow scrub", "broad": "Heathland and shrub", "distinctiveness": "Medium"}, {"unit": "Area", "habitat": "Upland heathland", "broad": "Heathland and shrub", "distinctiveness": "High"}, {"unit": "Area", "habitat": "Aquifer fed naturally fluctuating water bodies", "broad": "Lakes", "distinctiveness": "Very High"}, {"unit": "Area", "habitat": "Ornamental lake or pond", "broad": "Lakes", "distinctiveness": "Low"}, {"unit": "Area", "habitat": "High alkalinity lakes", "broad": "Lakes", "distinctiveness": "High"}, {"unit": "Area", "habitat": "Low alkalinity lakes", "broad": "Lakes", "distinctiveness": "High"}, {"unit": "Area", "habitat": "Marl lakes", "broad": "Lakes", "distinctiveness": "High"}, {"unit": "Area", "habitat": "Moderate alkalinity lakes", "broad": "Lakes", "distinctiveness": "High"}, {"unit": "Area", "habitat": "Peat lakes", "broad": "Lakes", "distinctiveness": "High"}, {"unit": "Area", "habitat": "Ponds (priority habitat)", "broad": "Lakes", "distinctiveness": "High"}, {"unit": "Area", "habitat": "Ponds (non-priority habitat)", "broad": "Lakes", "distinctiveness": "Medium"}, {"unit": "Area", "habitat": "Reservoirs", "broad": "Lakes", "distinctiveness": "Medium"}, {"unit": "Area", "habitat": "Temporary lakes ponds and pools (H3170)", "broad": "Lakes", "distinctiveness": "High"}, {"unit": "Area", "habitat": "Calaminarian grasslands", "broad": "Sparsely vegetated land", "distinctiveness": "Very High"}, {"unit": "Area", "habitat": "Coastal sand dunes", "broad": "Sparsely vegetated land", "distinctiveness": "High"}, {"unit": "Area", "habitat": "Coastal vegetated shingle", "broad": "Sparsely vegetated land", "distinctiveness": "High"}, {"unit": "Area", "habitat": "Ruderal/Ephemeral", "broad": "Sparsely vegetated land", "distinctiveness": "Low"}, {"unit": "Area", "habitat": "Tall forbs", "broad": "Sparsely vegetated land", "distinctiveness": "Low"}, {"unit": "Area", "habitat": "Inland rock outcrop and scree habitats", "broad": "Sparsely vegetated land", "distinctiveness": "High"}, {"unit": "Area", "habitat": "Limestone pavement", "broad": "Sparsely vegetated land", "distinctiveness": "Very High"}, {"unit": "Area", "habitat": "Maritime cliff and slopes", "broad": "Sparsely vegetated land", "distinctiveness": "High"}, {"unit": "Area", "habitat": "Other inland rock and scree", "broad": "Sparsely vegetated land", "distinctiveness": "Medium"}, {"unit": "Area", "habitat": "Allotments", "broad": "Urban", "distinctiveness": "Low"}, {"unit": "Area", "habitat": "Artificial unvegetated, unsealed surface", "broad": "Urban", "distinctiveness": "Very Low"}, {"unit": "Area", "habitat": "Bioswale", "broad": "Urban", "distinctiveness": "Low"}, {"unit": "Area", "habitat": "Intensive green roof", "broad": "Urban", "distinctiveness": "Low"}, {"unit": "Area", "habitat": "Built linear features", "broad": "Urban", "distinctiveness": "Very Low"}, {"unit": "Area", "habitat": "Cemeteries and churchyards", "broad": "Urban", "distinctiveness": "Medium"}, {"unit": "Area", "habitat": "Developed land; sealed surface", "broad": "Urban", "distinctiveness": "Very Low"}, {"unit": "Area", "habitat": "Other green roof", "broad": "Urban", "distinctiveness": "Low"}, {"unit": "Area", "habitat": "Facade-bound green wall", "broad": "Urban", "distinctiveness": "Low"}, {"unit": "Area", "habitat": "Ground based green wall", "broad": "Urban", "distinctiveness": "Low"}, {"unit": "Area", "habitat": "Ground level planters", "broad": "Urban", "distinctiveness": "Low"}, {"unit": "Area", "habitat": "Biodiverse green roof", "broad": "Urban", "distinctiveness": "Medium"}, {"unit": "Area", "habitat": "Introduced shrub", "broad": "Urban", "distinctiveness": "Low"}, {"unit": "Area", "habitat": "Open mosaic habitats on previously developed land", "broad": "Urban", "distinctiveness": "High"}, {"unit": "Area", "habitat": "Rain garden", "broad": "Urban", "distinctiveness": "Low"}, {"unit": "Area", "habitat": "Actively worked sand pit quarry or open cast mine", "broad": "Urban", "distinctiveness": "Low"}, {"unit": "Area", "habitat": "Sustainable drainage system", "broad": "Urban", "distinctiveness": "Low"}, {"unit": "Area", "habitat": "Unvegetated garden", "broad": "Urban", "distinctiveness": "Very Low"}, {"unit": "Area", "habitat": "Vacant or derelict land", "broad": "Urban", "distinctiveness": "Low"}, {"unit": "Area", "habitat": "Bare ground", "broad": "Urban", "distinctiveness": "Low"}, {"unit": "Area", "habitat": "Vegetated garden", "broad": "Urban", "distinctiveness": "Low"}, {"unit": "Area", "habitat": "Urban tree", "broad": "Individual trees", "distinctiveness": "Medium"}, {"unit": "Area", "habitat": "Rural tree", "broad": "Individual trees", "distinctiveness": "Medium"}, {"unit": "Area", "habitat": "Blanket bog", "broad": "Wetland", "distinctiveness": "Very High"}, {"unit": "Area", "habitat": "Depressions on peat substrates (H7150)", "broad": "Wetland", "distinctiveness": "Very High"}, {"unit": "Area", "habitat": "Fens (upland and lowland)", "broad": "Wetland", "distinctiveness": "Very High"}, {"unit": "Area", "habitat": "Lowland raised bog", "broad": "Wetland", "distinctiveness": "Very High"}, {"unit": "Area", "habitat": "Oceanic valley mire[1] (D2.1)", "broad": "Wetland", "distinctiveness": "Very High"}, {"unit": "Area", "habitat": "Purple moor grass and rush pastures", "broad": "Wetland", "distinctiveness": "Very High"}, {"unit": "Area", "habitat": "Reedbeds", "broad": "Wetland", "distinctiveness": "High"}, {"unit": "Area", "habitat": "Transition mires and quaking bogs (H7140)", "broad": "Wetland", "distinctiveness": "Very High"}, {"unit": "Area", "habitat": "Felled", "broad": "Woodland and forest", "distinctiveness": "High"}, {"unit": "Area", "habitat": "Lowland beech and yew woodland", "broad": "Woodland and forest", "distinctiveness": "High"}, {"unit": "Area", "habitat": "Lowland mixed deciduous woodland", "broad": "Woodland and forest", "distinctiveness": "High"}, {"unit": "Area", "habitat": "Native pine woodlands", "broad": "Woodland and forest", "distinctiveness": "High"}, {"unit": "Area", "habitat": "Other coniferous woodland", "broad": "Woodland and forest", "distinctiveness": "Low"}, {"unit": "Area", "habitat": "Other Scot's pine woodland", "broad": "Woodland and forest", "distinctiveness": "Medium"}, {"unit": "Area", "habitat": "Other woodland; broadleaved", "broad": "Woodland and forest", "distinctiveness": "Medium"}, {"unit": "Area", "habitat": "Other woodland; mixed", "broad": "Woodland and forest", "distinctiveness": "Medium"}, {"unit": "Area", "habitat": "Upland birchwoods", "broad": "Woodland and forest", "distinctiveness": "High"}, {"unit": "Area", "habitat": "Upland mixed ashwoods", "broad": "Woodland and forest", "distinctiveness": "High"}, {"unit": "Area", "habitat": "Upland oakwood", "broad": "Woodland and forest", "distinctiveness": "High"}, {"unit": "Area", "habitat": "Wet woodland", "broad": "Woodland and forest", "distinctiveness": "High"}, {"unit": "Area", "habitat": "Wood-pasture and parkland", "broad": "Woodland and forest", "distinctiveness": "Very High"}, {"unit": "Area", "habitat": "Coastal lagoons", "broad": "Coastal lagoons", "distinctiveness": "High"}, {"unit": "Area", "habitat": "High energy littoral rock", "broad": "Rocky shore", "distinctiveness": "High"}, {"unit": "Area", "habitat": "High energy littoral rock - on peat, clay or chalk", "broad": "Rocky shore", "distinctiveness": "Very High"}, {"unit": "Area", "habitat": "Moderate energy littoral rock", "broad": "Rocky shore", "distinctiveness": "High"}, {"unit": "Area", "habitat": "Moderate energy littoral rock - on peat, clay or chalk", "broad": "Rocky shore", "distinctiveness": "Very High"}, {"unit": "Area", "habitat": "Low energy littoral rock", "broad": "Rocky shore", "distinctiveness": "High"}, {"unit": "Area", "habitat": "Low energy littoral rock - on peat, clay or chalk", "broad": "Rocky shore", "distinctiveness": "Very High"}, {"unit": "Area", "habitat": "Features of littoral rock", "broad": "Rocky shore", "distinctiveness": "High"}, {"unit": "Area", "habitat": "Features of littoral rock - on peat, clay or chalk", "broad": "Rocky shore", "distinctiveness": "Very High"}, {"unit": "Area", "habitat": "Saltmarshes and saline reedbeds", "broad": "Coastal saltmarsh", "distinctiveness": "High"}, {"unit": "Area", "habitat": "Artificial saltmarshes and saline reedbeds", "broad": "Coastal saltmarsh", "distinctiveness": "Low"}, {"unit": "Area", "habitat": "Littoral coarse sediment", "broad": "Intertidal sediment", "distinctiveness": "Medium"}, {"unit": "Area", "habitat": "Littoral mud", "broad": "Intertidal sediment", "distinctiveness": "High"}, {"unit": "Area", "habitat": "Littoral mixed sediments", "broad": "Intertidal sediment", "distinctiveness": "High"}, {"unit": "Area", "habitat": "Littoral seagrass", "broad": "Intertidal sediment", "distinctiveness": "High"}, {"unit": "Area", "habitat": "Littoral seagrass on peat, clay or chalk", "broad": "Intertidal sediment", "distinctiveness": "Very High"}, {"unit": "Area", "habitat": "Littoral biogenic reefs - Mussels", "broad": "Intertidal sediment", "distinctiveness": "High"}, {"unit": "Area", "habitat": "Littoral biogenic reefs - Sabellaria", "broad": "Intertidal sediment", "distinctiveness": "High"}, {"unit": "Area", "habitat": "Features of littoral sediment", "broad": "Intertidal sediment", "distinctiveness": "High"}, {"unit": "Area", "habitat": "Artificial littoral coarse sediment", "broad": "Intertidal sediment", "distinctiveness": "Low"}, {"unit": "Area", "habitat": "Artificial littoral mud", "broad": "Intertidal sediment", "distinctiveness": "Low"}, {"unit": "Area", "habitat": "Artificial littoral sand", "broad": "Intertidal sediment", "distinctiveness": "Low"}, {"unit": "Area", "habitat": "Artificial littoral muddy sand", "broad": "Intertidal sediment", "distinctiveness": "Low"}, {"unit": "Area", "habitat": "Artificial littoral mixed sediments", "broad": "Intertidal sediment", "distinctiveness": "Low"}, {"unit": "Area", "habitat": "Artificial littoral seagrass", "broad": "Intertidal sediment", "distinctiveness": "Low"}, {"unit": "Area", "habitat": "Artificial littoral biogenic reefs", "broad": "Intertidal sediment", "distinctiveness": "Low"}, {"unit": "Area", "habitat": "Littoral sand", "broad": "Intertidal sediment", "distinctiveness": "Medium"}, {"unit": "Area", "habitat": "Littoral muddy sand", "broad": "Intertidal sediment", "distinctiveness": "High"}, {"unit": "Area", "habitat": "Artificial hard structures", "broad": "Intertidal hard structures", "distinctiveness": "Low"}, {"unit": "Area", "habitat": "Artificial features of hard structures", "broad": "Intertidal hard structures", "distinctiveness": "Medium"}, {"unit": "Area", "habitat": "Artificial hard structures with integrated greening of grey infrastructure (IGGI)", "broad": "Intertidal hard structures", "distinctiveness": "Very Low"}, {"unit": "Area", "habitat": "Watercourse footprint", "broad": "Watercourse footprint", "distinctiveness": "Very Low"}, {"unit": "Hedgerow", "habitat": "Species-rich native hedgerow with trees - associated with bank or ditch", "broad": "n/a", "distinctiveness": "Very High"}, {"unit": "Hedgerow", "habitat": "Species-rich native hedgerow with trees", "broad": "n/a", "distinctiveness": "High"}, {"unit": "Hedgerow", "habitat": "Species-rich native hedgerow - associated with bank or ditch", "broad": "n/a", "distinctiveness": "High"}, {"unit": "Hedgerow", "habitat": "Native hedgerow with trees - associated with bank or ditch", "broad": "n/a", "distinctiveness": "High"}, {"unit": "Hedgerow", "habitat": "Species-rich native hedgerow", "broad": "n/a", "distinctiveness": "Medium"}, {"unit": "Hedgerow", "habitat": "Native hedgerow - associated with bank or ditch", "broad": "n/a", "distinctiveness": "Medium"}, {"unit": "Hedgerow", "habitat": "Native hedgerow with trees", "broad": "n/a", "distinctiveness": "Medium"}, {"unit": "Hedgerow", "habitat": "Ecologically valuable line of trees", "broad": "n/a", "distinctiveness": "Medium"}, {"unit": "Hedgerow", "habitat": "Ecologically valuable line of trees - associated with bank or ditch", "broad": "n/a", "distinctiveness": "Medium"}, {"unit": "Hedgerow", "habitat": "Native hedgerow", "broad": "n/a", "distinctiveness": "Low"}, {"unit": "Hedgerow", "habitat": "Line of trees", "broad": "n/a", "distinctiveness": "Low"}, {"unit": "Hedgerow", "habitat": "Line of trees - associated with bank or ditch", "broad": "n/a", "distinctiveness": "Low"}, {"unit": "Hedgerow", "habitat": "Non-native and ornamental hedgerow", "broad": "n/a", "distinctiveness": "Very Low"}, {"unit": "Watercourse", "habitat": "Priority habitat", "broad": "n/a", "distinctiveness": "Very High"}, {"unit": "Watercourse", "habitat": "Other rivers and streams", "broad": "n/a", "distinctiveness": "High"}, {"unit": "Watercourse", "habitat": "Ditches", "broad": "n/a", "distinctiveness": "Medium"}, {"unit": "Watercourse", "habitat": "Canals", "broad": "n/a", "distinctiveness": "Medium"}, {"unit": "Watercourse", "habitat": "Culvert", "broad": "n/a", "distinctiveness": "Low"}];
+
+// Distinctiveness scores. Very Low is unit-dependent per the Confluence spec:
+// Hedgerows score 1, Areas score 0. Watercourses have no Very Low entries.
+const DIST_SCORE_BASE = { "Very High": 8, "High": 6, "Medium": 4, "Low": 2 };
+function score(unit, dist) {
+  if (dist === "Very Low") return unit === "Hedgerow" ? 1 : 0;
+  return DIST_SCORE_BASE[dist];
+}
+// Back-compat shim for any code that still indexes a flat map.
+const DIST_SCORE = { ...DIST_SCORE_BASE, "Very Low": 0 };
+
+// Drop any exact-duplicate (Unit + Habitat) entries that may slip into the
+// source spreadsheet. Keeps the first occurrence.
+(function dedupe() {
+  const seen = new Set();
+  const unique = HABITATS.filter(h => {
+    const k = h.unit + "|" + h.habitat;
+    if (seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  });
+  HABITATS.length = 0;
+  HABITATS.push(...unique);
+})();
+
+// Default sort applied at load time:
+//   1. Distinctiveness score, descending (highest first)
+//   2. Broad Habitat, ascending (only meaningful for Area; Hedgerow and
+//      Watercourse rows all have "n/a")
+//   3. Habitat Type, ascending
+(function defaultSort() {
+  HABITATS.sort((a, b) => {
+    const ds = score(b.unit, b.distinctiveness) - score(a.unit, a.distinctiveness);
+    if (ds !== 0) return ds;
+    const broadA = a.broad === "n/a" ? "" : a.broad;
+    const broadB = b.broad === "n/a" ? "" : b.broad;
+    const bs = broadA.localeCompare(broadB);
+    if (bs !== 0) return bs;
+    return a.habitat.localeCompare(b.habitat);
+  });
+})();
+
+function isMatch(baseline, candidate) {
+  const reasons = matchReasons(baseline, candidate);
+  return reasons.same || reasons.dist || reasons.broad;
+}
+
+function matchReasons(baseline, candidate) {
+  const bU = baseline.unit, bD = baseline.distinctiveness, bH = baseline.habitat, bB = baseline.broad;
+  const cU = candidate.unit, cD = candidate.distinctiveness, cH = candidate.habitat, cB = candidate.broad;
+  const reasons = { same: false, dist: false, broad: false };
+  if (bU !== cU) return reasons;
+  const bScore = score(bU, bD), cScore = score(cU, cD);
+  // Score-0 habitats (Area Very Low) have no unit value: they can't be a
+  // post-intervention option (candidate excluded) AND when selected as the
+  // baseline no rule applies (zero matches across the board).
+  if (bScore === 0 || cScore === 0) return reasons;
+  // MVS filter: when active, exclude any High / Very High habitat from
+  // matching on either side of the relationship.
+  if (excludedByScoreFilter(bD) || excludedByScoreFilter(cD)) return reasons;
+
+  if (bU === "Area") {
+    if (bD === "Very High" || bD === "High") {
+      reasons.same = (cH === bH);
+    } else if (bD === "Medium") {
+      // Higher distinctiveness OR same broad habitat with equal-or-higher distinctiveness
+      reasons.dist  = (cScore > bScore);
+      reasons.broad = !!(cB && cB === bB && cScore >= bScore);
+    } else { // Low / Very Low
+      reasons.dist = (cScore >= bScore);
+    }
+  } else if (bU === "Hedgerow") {
+    if (bD === "Very High") {
+      reasons.same = (cH === bH);
+    } else if (bD === "High") {
+      reasons.same = (cH === bH);
+      reasons.dist = (cScore > bScore);
+    } else {
+      reasons.dist = (cScore >= bScore);
+    }
+  } else if (bU === "Watercourse") {
+    if (bD === "Very High" || bD === "High" || bD === "Medium") {
+      reasons.same = (cH === bH);
+    } else if (bD === "Low") {
+      reasons.dist = (cScore > bScore);
+    }
+  }
+  return reasons;
+}
+
+function ruleText(b) {
+  const u = b.unit, d = b.distinctiveness;
+  if (u === "Area" && (d === "Very High" || d === "High")) return "Same area habitat type" + (d === "Very High" ? " (Bespoke Compensation option)" : "");
+  if (u === "Area" && d === "Medium") return "Any area habitat with higher distinctiveness, OR same broad habitat with equal or higher distinctiveness";
+  if (u === "Area") return "Any area habitat with equal or higher distinctiveness";
+  if (u === "Hedgerow" && d === "Very High") return "Same hedgerow habitat type";
+  if (u === "Hedgerow" && d === "High") return "Like-for-like or better (same habitat or higher distinctiveness)";
+  if (u === "Hedgerow") return "Any hedgerow habitat with equal or higher distinctiveness";
+  if (u === "Watercourse" && (d === "Very High" || d === "High" || d === "Medium")) return "Same watercourse habitat type" + (d === "Very High" ? " (Bespoke Compensation option)" : "");
+  if (u === "Watercourse" && d === "Low") return "Any watercourse habitat with higher distinctiveness";
+  return "";
+}
+
+const tbody = document.getElementById("tbody");
+const stats = document.getElementById("stats");
+let selectedIndex = -1;
+function currentUnit() {
+  const checked = document.querySelector('input[name="unitFilter"]:checked');
+  return checked ? checked.value : "Area";
+}
+function currentScoreFilter() {
+  const checked = document.querySelector('input[name="scoreFilter"]:checked');
+  return checked ? checked.value : "All";
+}
+function excludedByScoreFilter(dist) {
+  return currentScoreFilter() === "MVS" && (dist === "High" || dist === "Very High");
+}
+
+function render() {
+  tbody.innerHTML = "";
+  HABITATS.forEach((h, i) => {
+    const tr = document.createElement("tr");
+    tr.dataset.idx = i;
+    tr.innerHTML =
+      '<td class="radio-cell"><input type="radio" name="hab" value="' + i + '"></td>' +
+      '<td class="trade-cell"></td>' +
+      '<td class="habitat-cell"><span class="habitat-name">' + h.habitat + '</span></td>' +
+      '<td class="dist-cell">' + h.distinctiveness + ' (' + score(h.unit, h.distinctiveness) + ')</td>' +
+      '<td class="broad-cell">' + (h.broad === "n/a" ? "" : h.broad) + '</td>';
+    tbody.appendChild(tr);
+  });
+  tbody.addEventListener("change", e => {
+    if (e.target.name === "hab") {
+      selectedIndex = parseInt(e.target.value, 10);
+      applyHighlight();
+    }
+  });
+  tbody.addEventListener("click", e => {
+    const tr = e.target.closest("tr");
+    if (!tr) return;
+    const radio = tr.querySelector('input[type="radio"]');
+    if (radio && e.target !== radio) {
+      radio.checked = true;
+      selectedIndex = parseInt(radio.value, 10);
+      applyHighlight();
+    }
+  });
+  applyFilters();
+}
+
+function clearRuleInfo() {
+  document.querySelectorAll(".match-count").forEach(n => n.remove());
+}
+
+const TICK = '✔';
+
+function applyHighlight() {
+  const rows = tbody.querySelectorAll("tr");
+  clearRuleInfo();
+  if (selectedIndex < 0) {
+    rows.forEach(r => {
+      r.classList.remove("match", "selected", "match-via-dist", "match-via-broad");
+      const tc = r.querySelector(".trade-cell");
+      if (tc) tc.innerHTML = "";
+    });
+    highlightActiveRule(null);
+    return;
+  }
+  const baseline = HABITATS[selectedIndex];
+  let matchCount = 0;
+  rows.forEach(r => {
+    const idx = parseInt(r.dataset.idx, 10);
+    const cand = HABITATS[idx];
+    r.classList.remove("match", "selected", "match-via-dist", "match-via-broad");
+    const tc = r.querySelector(".trade-cell");
+    const reasons = matchReasons(baseline, cand);
+    const allowed = reasons.same || reasons.dist || reasons.broad;
+    if (idx === selectedIndex) r.classList.add("selected");
+    if (allowed) {
+      // .match applies to every allowed row (including the selected baseline
+      // when the rule permits self-match) so the green Habitat Type cell
+      // shading correctly skips selected-but-not-allowed rows like Culvert.
+      r.classList.add("match");
+      if (reasons.dist)  r.classList.add("match-via-dist");
+      if (reasons.broad) r.classList.add("match-via-broad");
+      matchCount++;
+    }
+    if (tc) {
+      tc.innerHTML = allowed
+        ? '<span class="trade-yes">' + TICK + '</span>'
+        : '';
+    }
+  });
+  highlightActiveRule(baseline);
+  const pillText = matchCount + ' option' + (matchCount === 1 ? '' : 's');
+  const mainGridPillText = matchCount === 1 ? 'Like for Like' : pillText;
+  const activeCell = document.querySelector(".rules-table.active td.active-rule");
+  if (activeCell) {
+    const pill = document.createElement("span");
+    pill.className = "match-count";
+    pill.textContent = pillText;
+    activeCell.appendChild(pill);
+  }
+  const selectedHab = tbody.querySelector("tr.selected td.habitat-cell");
+  if (selectedHab) {
+    const pill = document.createElement("span");
+    pill.className = "match-count";
+    pill.textContent = mainGridPillText;
+    selectedHab.appendChild(pill);
+  }
+}
+
+function applyFilters() {
+  const uf = currentUnit();
+  const sf = currentScoreFilter();
+  document.body.classList.toggle("hide-broad", uf !== "Area");
+  document.body.classList.toggle("mvs", sf === "MVS");
+  document.querySelectorAll(".rules-table").forEach(t => {
+    t.classList.toggle("active", t.dataset.unit === uf);
+  });
+  document.getElementById("habitatsHeading").textContent = uf + " Habitats";
+  let shown = 0;
+  let totalForUnit = 0;
+  let prevDist = null;
+  tbody.querySelectorAll("tr").forEach(r => {
+    const idx = parseInt(r.dataset.idx, 10);
+    const h = HABITATS[idx];
+    r.classList.remove("dist-break");
+    const passesUnit  = h.unit === uf;
+    const passesScore = !excludedByScoreFilter(h.distinctiveness);
+    if (passesUnit && passesScore) {
+      totalForUnit++;
+      r.classList.remove("hidden");
+      shown++;
+      // Mark a thick separator when the distinctiveness changes between
+      // adjacent visible rows (but not on the very first one).
+      if (prevDist !== null && h.distinctiveness !== prevDist) {
+        r.classList.add("dist-break");
+      }
+      prevDist = h.distinctiveness;
+    } else {
+      r.classList.add("hidden");
+    }
+  });
+  stats.textContent = totalForUnit + " habitats";
+}
+
+function highlightActiveRule(baseline) {
+  document.querySelectorAll(".rules-table td.active-rule").forEach(c => c.classList.remove("active-rule"));
+  document.querySelectorAll(".rules-table tr.active-row").forEach(r => r.classList.remove("active-row"));
+  if (!baseline) return;
+  const table = document.querySelector('.rules-table[data-unit="' + baseline.unit + '"]');
+  if (!table) return;
+  const row = table.querySelector('tr[data-dist="' + baseline.distinctiveness + '"]');
+  if (!row) return;
+  row.classList.add("active-row");
+  const ruleCell = row.querySelector("td.rule");
+  if (ruleCell) ruleCell.classList.add("active-rule");
+}
+
+document.querySelectorAll('input[name="unitFilter"], input[name="scoreFilter"]').forEach(r => {
+  r.addEventListener("change", () => {
+    // Clear any baseline selection when either filter changes, since the
+    // selected habitat may no longer be visible / valid.
+    selectedIndex = -1;
+    tbody.querySelectorAll('input[name="hab"]').forEach(x => x.checked = false);
+    applyHighlight();
+    applyFilters();
+  });
+});
+
+render();
+</script>
+</body>
+</html>
+
+{% endblock %}

@@ -50,6 +50,10 @@ registerOnSiteBaselineRoutes(router)
 registerOnSitePostInterventionRoutes(router)
 registerTestRoutes(router)
 
+router.get('/TradingRules', function (req, res) {
+  res.render('TradingRules');
+});
+
 // Import metric calculation functions for API endpoint
 const metricCalcs = require('./lib/metric-calcs')
 //const getRetentionUnits = metricCalcs.getRetentionUnits
