@@ -1,0 +1,36 @@
+{% extends "layouts/main.html" %}
+
+{% set pageName="Generate test GeoPackage — result" %}
+
+{% block content %}
+
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+
+    {% if success %}
+      <h1 class="govuk-heading-xl">GeoPackage generated</h1>
+    {% else %}
+      <h1 class="govuk-heading-xl">Workbook didn't produce a usable site</h1>
+      {{ govukWarningText({
+        text: "The workbook parsed but the total habitat area was below the generator's minimum. The workbook may be empty, malformed, or in an older format.",
+        iconFallbackText: "Warning"
+      }) }}
+    {% endif %}
+
+    {% if messages and messages.length %}
+      <h2 class="govuk-heading-m">Generator output</h2>
+      <pre class="govuk-body" style="white-space: pre-wrap; background: #f3f2f1; padding: 1rem; border-left: 4px solid #b1b4b6;">
+{%- for m in messages -%}
+{{ m.message }}
+{% endfor -%}
+      </pre>
+    {% endif %}
+
+    <p class="govuk-body">
+      <a class="govuk-link" href="/test-data/gen-gpkg">Back to the form</a>
+    </p>
+
+  </div>
+</div>
+
+{% endblock %}
