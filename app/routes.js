@@ -38,6 +38,15 @@ const { registerOnSiteBaselineRoutes } = require('./routes/on-site-baseline')
 const { registerOnSitePostInterventionRoutes } = require('./routes/on-site-post-intervention')
 const { registerProjectRoutes } = require('./routes/project')
 const { registerTestRoutes } = require('./routes/test')
+const { registerGenGpkgRoutes } = require('./routes/gen-gpkg')
+
+// Expose env-derived flags to every template render. Used by the landing
+// page to hide the test-data link in production.
+router.use(function (req, res, next) {
+  res.locals.showTestDataLink = process.env.NODE_ENV !== 'production'
+  res.locals.showTools = process.env.SHOW_TOOLS === 'true'
+  next()
+})
 
 // Register all route modules
 registerOsApiRoutes(router)
@@ -49,6 +58,7 @@ registerProjectRoutes(router)
 registerOnSiteBaselineRoutes(router)
 registerOnSitePostInterventionRoutes(router)
 registerTestRoutes(router)
+registerGenGpkgRoutes(router)
 
 router.get('/TradingRules', function (req, res) {
   res.render('TradingRules');

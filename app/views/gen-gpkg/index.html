@@ -1,0 +1,134 @@
+{% extends "layouts/main.html" %}
+
+{% set pageName="Generate test GeoPackage" %}
+
+{% block content %}
+
+{% if error %}
+  {{ govukErrorSummary({
+    titleText: "Could not generate GeoPackage",
+    errorList: [{ text: error }]
+  }) }}
+{% endif %}
+
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+
+    <h1 class="govuk-heading-xl">Generate test GeoPackage</h1>
+
+    <p class="govuk-body">
+      Build a BNG-shaped GeoPackage to upload back into this service. Synthetic mode randomises everything; workbook mode reads a filled-in Statutory Biodiversity Metric workbook and produces a matching baseline + post-intervention pair.
+    </p>
+
+    {% set syntheticBlock %}
+      <div class="govuk-form-group">
+        <label class="govuk-label" for="numParcels">Habitat parcels</label>
+        <div class="govuk-hint">How many habitat parcels to partition the Red Line Boundary into. 1–500.</div>
+        <input class="govuk-input govuk-input--width-5" id="numParcels" name="numParcels" type="number" step="1" min="1" max="500" value="50">
+      </div>
+
+      <div class="govuk-form-group">
+        <label class="govuk-label" for="count">Number of files</label>
+        <div class="govuk-hint">Generate several distinct fixtures at once. Bundled as a .zip when more than one.</div>
+        <input class="govuk-input govuk-input--width-5" id="count" name="count" type="number" step="1" min="1" max="50" value="1">
+      </div>
+
+      {{ govukCheckboxes({
+        name: "bad",
+        fieldset: { legend: { text: "Apply every composable geometric flaw", classes: "govuk-fieldset__legend--s" } },
+        hint: { text: "Equivalent to --bad on the CLI. Mutually exclusive with individual flaw selection below." },
+        items: [
+          { value: "on", text: "Yes, generate a multi-flaw bad fixture" }
+        ]
+      }) }}
+
+      {{ govukCheckboxes({
+        name: "flaw",
+        fieldset: { legend: { text: "Geometric flaws", classes: "govuk-fieldset__legend--s" } },
+        hint: { text: "Each picks one invalid shape. Combinable, except where a flaw is marked standalone." },
+        items: flawGroups.geometric
+      }) }}
+
+      {{ govukCheckboxes({
+        name: "flaw",
+        fieldset: { legend: { text: "Empty-layer flaws", classes: "govuk-fieldset__legend--s" } },
+        hint: { text: "Structurally valid file with one feature layer present but empty. Not combinable with geometric flaws." },
+        items: flawGroups.empty
+      }) }}
+
+      {{ govukCheckboxes({
+        name: "flaw",
+        fieldset: { legend: { text: "Attribute-override flaws", classes: "govuk-fieldset__legend--s" } },
+        hint: { text: "File is geometrically valid; specific column values are pinned so a single attribute validator fires. Not combinable with geometric flaws." },
+        items: flawGroups.attribute
+      }) }}
+    {% endset %}
+
+    {% set workbookBlock %}
+      <div class="govuk-form-group">
+        <label class="govuk-label" for="workbook">Workbook file</label>
+        <div class="govuk-hint">Filled-in Statutory Biodiversity Metric v4 workbook (.xlsx or .xlsm). Max 25 MB.</div>
+        <input class="govuk-file-upload" id="workbook" name="workbook" type="file" accept=".xlsx,.xlsm">
+      </div>
+
+      {{ govukRadios({
+        name: "mode",
+        fieldset: { legend: { text: "Which gpkgs to produce?", classes: "govuk-fieldset__legend--s" } },
+        items: [
+          { value: "both", text: "Both — baseline and post-intervention (default)", checked: true },
+          { value: "baseline", text: "Baseline only" },
+          { value: "post-intervention", text: "Post-intervention only" }
+        ]
+      }) }}
+
+      {{ govukCheckboxes({
+        name: "strict",
+        fieldset: { legend: { text: "Strict habitat parsing", classes: "govuk-fieldset__legend--s" } },
+        hint: { text: "Reject any row whose habitat type can't be mapped. Off by default — the generator skips unmapped rows and warns." },
+        items: [
+          { value: "on", text: "Reject unmappable rows instead of skipping them" }
+        ]
+      }) }}
+    {% endset %}
+
+    <form action="/test-data/gen-gpkg" method="post" enctype="multipart/form-data" novalidate>
+      <input type="hidden" name="_csrf" value="{{ csrfToken }}">
+
+      {{ govukRadios({
+        name: "source",
+        fieldset: { legend: { text: "What kind of GeoPackage?", classes: "govuk-fieldset__legend--m" } },
+        items: [
+          {
+            value: "synthetic",
+            text: "Synthetic — random geometry and attributes",
+            checked: true,
+            conditional: { html: syntheticBlock }
+          },
+          {
+            value: "workbook",
+            text: "From a metric workbook (.xlsx / .xlsm)",
+            conditional: { html: workbookBlock }
+          }
+        ]
+      }) }}
+
+      <h2 class="govuk-heading-m govuk-!-margin-top-6">Location</h2>
+      <p class="govuk-hint">British National Grid easting and northing for the Red Line Boundary centre. Defaults to Maidenhead.</p>
+
+      <div class="govuk-form-group">
+        <label class="govuk-label" for="centreEasting">Easting</label>
+        <input class="govuk-input govuk-input--width-10" id="centreEasting" name="centreEasting" type="number" step="1" value="530000">
+      </div>
+
+      <div class="govuk-form-group">
+        <label class="govuk-label" for="centreNorthing">Northing</label>
+        <input class="govuk-input govuk-input--width-10" id="centreNorthing" name="centreNorthing" type="number" step="1" value="180000">
+      </div>
+
+      {{ govukButton({ text: "Generate", isStartButton: true }) }}
+    </form>
+
+  </div>
+</div>
+
+{% endblock %}

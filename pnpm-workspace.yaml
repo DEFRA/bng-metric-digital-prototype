@@ -1,0 +1,5 @@
+allowBuilds:
+  '@bng/lib': true
+  '@parcel/watcher': true
+  better-sqlite3: true
+  core-js: true

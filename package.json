@@ -4,8 +4,12 @@
   "description": "bng-metric-digital-prototype. GOV.UK Prototype Kit with CDP Platform running capabilities",
   "author": "Defra DDTS",
   "license": "(OGL-UK-3, MIT) see licenses in /LICENSES",
+  "engines": {
+    "node": ">=24.14.1"
+  },
+  "packageManager": "pnpm@11.5.1",
   "scripts": {
-    "dev": "govuk-prototype-kit dev",
+    "dev": "PORT=3010 SHOW_TOOLS=true govuk-prototype-kit dev",
     "serve": "govuk-prototype-kit serve",
     "start": "govuk-prototype-kit start",
     "likec4": "npx likec4 start",
@@ -15,12 +19,15 @@
     "test": "cucumber-js features/"
   },
   "dependencies": {
+    "@bng/lib": "github:DEFRA/bng-metric-harness#main&path:packages/bng-lib",
     "@cucumber/cucumber": "12.7.0",
     "@defra/interactive-map": "0.0.1-alpha",
     "@govuk-prototype-kit/common-templates": "2.0.1",
     "@ministryofjustice/frontend": "8.0.1",
+    "archiver": "^7.0.0",
     "better-sqlite3": "12.6.0",
     "dotenv": "^17.2.3",
+    "xlsx": "^0.18.5",
     "govuk-frontend": "5.13.0",
     "govuk-prototype-kit": "13.18.1",
     "lru-cache": "11.2.5",
