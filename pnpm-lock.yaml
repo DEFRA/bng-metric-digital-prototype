@@ -10,7 +10,7 @@ importers:
     dependencies:
       '@bng/lib':
         specifier: github:DEFRA/bng-metric-harness#main&path:packages/bng-lib
-        version: https://codeload.github.com/DEFRA/bng-metric-harness/tar.gz/9e34584d20cf5861ee22069fef9bb597d6ab8643#path:packages/bng-lib(better-sqlite3@12.6.0)(xlsx@0.18.5)
+        version: https://codeload.github.com/DEFRA/bng-metric-harness/tar.gz/5fb33937455bc19a4047555ab510fd4ffcb17582#path:packages/bng-lib(better-sqlite3@12.6.0)(xlsx@0.18.5)
       '@cucumber/cucumber':
         specifier: 12.7.0
         version: 12.7.0
@@ -95,8 +95,8 @@ packages:
     resolution: {integrity: sha512-qehxGkRj55h/ff8EMaJ+cYhyaKlHIxqYDn682wQD7RNp9UujOQsHog2uS0r2vzr4pW+sXf90NeeayjcNaX3fFg==}
     engines: {node: '>=6.9.0'}
 
-  '@bng/lib@https://codeload.github.com/DEFRA/bng-metric-harness/tar.gz/9e34584d20cf5861ee22069fef9bb597d6ab8643#path:packages/bng-lib':
-    resolution: {gitHosted: true, integrity: sha512-N2CFEtEPAbufq6YJTqrB+uBCo22U+me+d8ePmRPfLt0rRs5INk0fGgHFEcS79dlwWbdUEYTjwgM91rQOJmUyDA==, tarball: https://codeload.github.com/DEFRA/bng-metric-harness/tar.gz/9e34584d20cf5861ee22069fef9bb597d6ab8643}
+  '@bng/lib@https://codeload.github.com/DEFRA/bng-metric-harness/tar.gz/5fb33937455bc19a4047555ab510fd4ffcb17582#path:packages/bng-lib':
+    resolution: {gitHosted: true, integrity: sha512-wuwF9bmrsR2xXwi2JsPbvWWcYA9XMIOxmtavQZv2crv3W28Hw+ZrFULQIwboDTtjqA8TyZvRH5Zhd0PzuaUx+w==, tarball: https://codeload.github.com/DEFRA/bng-metric-harness/tar.gz/5fb33937455bc19a4047555ab510fd4ffcb17582}
     version: 0.0.0
     engines: {node: '>=22.11'}
     peerDependencies:
@@ -3041,7 +3041,7 @@ snapshots:
 
   '@babel/helper-validator-identifier@7.29.7': {}
 
-  '@bng/lib@https://codeload.github.com/DEFRA/bng-metric-harness/tar.gz/9e34584d20cf5861ee22069fef9bb597d6ab8643#path:packages/bng-lib(better-sqlite3@12.6.0)(xlsx@0.18.5)':
+  '@bng/lib@https://codeload.github.com/DEFRA/bng-metric-harness/tar.gz/5fb33937455bc19a4047555ab510fd4ffcb17582#path:packages/bng-lib(better-sqlite3@12.6.0)(xlsx@0.18.5)':
     dependencies:
       better-sqlite3: 12.6.0
       xlsx: 0.18.5
