@@ -9,7 +9,7 @@
   },
   "packageManager": "pnpm@11.5.1",
   "scripts": {
-    "dev": "PORT=3010 SHOW_TOOLS=true govuk-prototype-kit dev",
+    "dev": "node -e \"process.env.PORT='3010'; process.env.SHOW_TOOLS='true'; const child = require('node:child_process').spawn('govuk-prototype-kit', ['dev'], { stdio: 'inherit', shell: true }); child.on('exit', code => process.exit(code));\"",
     "serve": "govuk-prototype-kit serve",
     "start": "govuk-prototype-kit start",
     "likec4": "npx likec4 start",
@@ -40,5 +40,10 @@
   },
   "devDependencies": {
     "prettier": "3.6.2"
+  },
+  "pnpm": {
+    "ignoredBuiltDependencies": [
+      "@vaadin/vaadin-usage-statistics"
+    ]
   }
 }
