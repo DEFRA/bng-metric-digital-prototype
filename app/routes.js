@@ -61,6 +61,11 @@ registerTestRoutes(router)
 registerGenGpkgRoutes(router)
 
 router.get('/TradingRules', function (req, res) {
+  if (req.query.v !== '8') {
+    res.redirect('/TradingRules?v=8');
+    return;
+  }
+
   res.render('TradingRules');
 });
 
