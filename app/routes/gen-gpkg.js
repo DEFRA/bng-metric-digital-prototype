@@ -1,5 +1,5 @@
 /**
- * Test-data GeoPackage generator. Wraps @bng/lib's buffer API in a
+ * Test-data GeoPackage generator. Wraps bng-library's buffer API in a
  * simple form so testers can produce fixtures from a browser instead of
  * dropping to a shell.
  *
@@ -32,7 +32,7 @@ const MAX_PARCELS = 500
 let genPromise = null
 function getGenerator () {
   if (!genPromise) {
-    genPromise = import('@bng/lib')
+    genPromise = import('bng-library')
   }
   return genPromise
 }
