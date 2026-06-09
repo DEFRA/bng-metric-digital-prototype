@@ -8,38 +8,33 @@ LABEL uk.gov.defra.ffc.parent-image=defradigital/node-development:${PARENT_VERSI
 ARG PORT
 ENV PORT=${PORT}
 
-USER root
-RUN corepack enable
-USER node
-
-COPY --chown=node:node package.json pnpm-lock.yaml ./
-RUN pnpm install --frozen-lockfile
+COPY --chown=node:node package.json package-lock.json ./
+RUN npm ci
 COPY --chown=node:node ./app ./app
 
-CMD [ "pnpm", "run", "dev" ]
+CMD [ "npm", "run", "dev" ]
 
 FROM defradigital/node:${PARENT_VERSION} AS production
 ARG PARENT_VERSION
 LABEL uk.gov.defra.ffc.parent-image=defradigital/node:${PARENT_VERSION}
 
 # curl: CDP platform healthcheck requirement.
-# git: required by pnpm to fetch the @bng/lib GitHub dependency.
+# git: required by npm to fetch the bng-library GitHub dependency.
 USER root
 RUN apk add --no-cache curl git
-RUN corepack enable
 USER node
 
 # CDP takes care of https in the nginx layer, so we don't need to force https in the app
 ENV USE_HTTPS=false
 ENV NODE_ENV=production
 
-COPY --from=development /home/node/package.json /home/node/pnpm-lock.yaml ./
+COPY --from=development /home/node/package.json /home/node/package-lock.json ./
 COPY --from=development /home/node/app ./app/
 
-RUN pnpm install --prod --frozen-lockfile
+RUN npm ci --omit=dev
 
 ARG PORT
 ENV PORT=${PORT}
 EXPOSE ${PORT}
 
-CMD [ "pnpm", "start" ]
+CMD [ "npm", "start" ]

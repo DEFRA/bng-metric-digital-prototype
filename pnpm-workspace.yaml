@@ -1,6 +1,0 @@
-allowBuilds:
-  '@bng/lib': true
-  '@parcel/watcher': true
-  '@vaadin/vaadin-usage-statistics': false
-  better-sqlite3: true
-  core-js: true

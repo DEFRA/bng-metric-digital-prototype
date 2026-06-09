@@ -7,7 +7,6 @@
   "engines": {
     "node": ">=24.14.1"
   },
-  "packageManager": "pnpm@11.5.1",
   "scripts": {
     "dev": "node -e \"process.env.PORT='3010'; process.env.SHOW_TOOLS='true'; const child = require('node:child_process').spawn('govuk-prototype-kit', ['dev'], { stdio: 'inherit', shell: true }); child.on('exit', code => process.exit(code));\"",
     "serve": "govuk-prototype-kit serve",
@@ -19,7 +18,7 @@
     "test": "cucumber-js features/"
   },
   "dependencies": {
-    "@bng/lib": "github:DEFRA/bng-metric-harness#main&path:packages/bng-lib",
+    "bng-library": "github:DEFRA/bng-library#e08fb922fa3dcdd1b778fbd08ebc71bf52aed63d",
     "@cucumber/cucumber": "12.7.0",
     "@defra/interactive-map": "0.0.1-alpha",
     "@govuk-prototype-kit/common-templates": "2.0.1",
@@ -40,10 +39,5 @@
   },
   "devDependencies": {
     "prettier": "3.6.2"
-  },
-  "pnpm": {
-    "ignoredBuiltDependencies": [
-      "@vaadin/vaadin-usage-statistics"
-    ]
   }
 }
