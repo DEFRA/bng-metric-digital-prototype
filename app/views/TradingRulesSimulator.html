@@ -1,0 +1,1425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trading Rules Simulator (v0.1 DRAFT 09 Jun 2026)</title>
+<style>
+:root{
+  --ink:#1a1f2c; --muted:#6b7280; --line:#d8dce3; --line2:#e6e7eb;
+  --blue:#eef3fb; --blue2:#dbe5f4; --navy:#1e3a8a;
+  --green:#c8e6c9; --greenborder:#7cb083; --darkgreen:#1b5e20;
+  --grey:#e6e7eb; --yellow:#fff7c2; --red:#fde0e0; --redink:#b91c1c;
+  --bg:#f4f6f9; --card:#ffffff;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  color:var(--ink);background:var(--bg);font-size:13px;line-height:1.4}
+header.sticky{position:sticky;top:0;z-index:50;background:var(--card);
+  border-bottom:2px solid var(--line);padding:12px 18px;box-shadow:0 2px 8px rgba(0,0,0,.06)}
+h1.title{font-size:22px;margin:0 0 8px;letter-spacing:.3px}
+.bars{display:flex;flex-wrap:wrap;gap:18px;align-items:center;margin-bottom:10px}
+.bar{display:flex;gap:6px;align-items:center}
+.bar .lbl{font-weight:600;color:var(--muted);margin-right:4px;font-size:12px}
+.radio{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.radio button{border:0;background:var(--card);padding:5px 12px;cursor:pointer;font-size:12.5px;color:var(--ink)}
+.radio button+button{border-left:1px solid var(--line)}
+.radio button.active{background:var(--navy);color:#fff;font-weight:600}
+table.summary{border-collapse:collapse;font-size:12px;margin-left:auto}
+table.summary th,table.summary td{border:1px solid var(--line);padding:2px 7px;text-align:right;white-space:nowrap}
+table.summary th{background:var(--blue);font-weight:600}
+table.summary td.type{text-align:left;font-weight:600}
+table.summary td.units{background:var(--yellow)}
+.gain-good{color:var(--darkgreen);font-weight:700}
+.gain-bad{color:var(--redink);font-weight:700}
+.tr-pass{color:var(--darkgreen);font-weight:700}
+.tr-fail{color:var(--redink);font-weight:700}
+.valid-banner{text-align:right;font-size:22px;font-weight:800;letter-spacing:1px;
+  color:var(--darkgreen);padding:0;display:none;white-space:nowrap}
+.head-top{display:flex;justify-content:space-between;align-items:flex-start;gap:18px}
+.dev-strap{color:var(--redink);font-style:italic;font-size:13px;margin:2px 0 0}
+.valid-banner.invalid{color:var(--redink)}
+.valid-banner.show{display:block}
+main{padding:18px;max-width:1500px;margin:0 auto}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:22px;
+  box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.card-head{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:12px}
+.card-title{font-size:28px;font-weight:700;margin:0}
+.sub-title{font-size:22px;font-weight:700;margin:18px 0 2px}
+.strap{font-style:italic;color:var(--muted);font-size:12px;margin:0 0 8px}
+.head-ctrl{display:flex;gap:8px;align-items:center}
+.head-ctrl input[type=number]{width:54px;padding:4px;border:1px solid var(--line);border-radius:5px;font-size:13px}
+button.act{border:1px solid var(--navy);background:var(--navy);color:#fff;border-radius:6px;padding:6px 12px;
+  cursor:pointer;font-size:12.5px;font-weight:600}
+button.act.alt{background:#fff;color:var(--navy)}
+button.act:hover{opacity:.9}
+.tbl-wrap{overflow-x:auto}
+table.grid{border-collapse:collapse;width:auto;font-size:12px}
+table.grid th,table.grid td{border:1px solid var(--line2);padding:2px 6px;text-align:left;vertical-align:middle;white-space:nowrap}
+table.grid th{background:var(--blue);font-weight:600;font-size:11.5px;white-space:nowrap}
+td.num{text-align:right;white-space:nowrap}
+table.grid td.calc{font-size:10.5px;color:var(--muted);max-width:230px;white-space:normal}
+.broadcol{color:#9aa1ad;font-size:11px}
+.units-cell{background:var(--yellow);text-align:right;font-weight:600}
+.units-green{background:var(--green)!important}
+.flag-red{background:var(--red)!important}
+.parent-row td{background:var(--blue);font-weight:600}
+.fc-row td{border-bottom:3px solid #000}
+.pill{display:inline-block;padding:2px 9px;border-radius:11px;font-size:10.5px;font-weight:700;white-space:nowrap}
+.pill-baseline{background:var(--blue2);border:1px solid var(--line)}
+.pill-retained{background:var(--grey);border:1px solid var(--line)}
+.pill-enhanced{background:var(--green);border:1px solid var(--line)}
+.pill-fc{background:#fff;border:1.5px solid var(--ink)}
+.pct{color:var(--navy);font-weight:700;margin-right:4px}
+.usuf{color:var(--muted);font-size:10.5px;margin-left:3px}
+.size-in{width:74px;padding:3px;border:1px solid var(--line);border-radius:4px;font-size:12px;text-align:right}
+.flowbox .kv{display:flex;justify-content:space-between;gap:10px;padding:1px 0;font-size:11.5px}
+.flowbox .kv.flow{padding-left:10px;color:var(--ink)}
+.flowbox .sub{font-size:11px;color:var(--muted);margin-top:4px;font-weight:600}
+.flowbox hr{border:0;border-top:1px solid var(--line);margin:6px 0}
+.flowbox .flowline{padding:2px 0;font-size:11.5px}
+.trade-cell{font-size:12px;color:#3a6ea5;white-space:nowrap}
+.trade-cell div{padding:1px 0}
+.avail-head{font-size:11.5px;margin-bottom:6px}
+.avail-num{font-size:18px;font-weight:800;color:var(--navy)}
+.flowbox .kv.flow span i{color:var(--muted)}
+select.hab,select.cond{font-size:12.5px;padding:3px 5px;border:1px solid var(--line);border-radius:5px;
+  max-width:240px;background:#fff}
+select.hab.sel-green{background:var(--green);border-color:var(--greenborder)}
+select.hab optgroup{font-size:17px;font-weight:700;background:var(--blue);padding:5px 6px}
+select.hab option{font-size:12.5px;line-height:1.2;padding:0 8px;background:#fff;color:var(--ink);font-weight:400}
+select.hab option.sentinel{font-style:italic;color:var(--muted)}
+.enh-clear{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;
+  background:var(--ink);color:#fff;border:0;cursor:pointer;font-size:12px;line-height:1;margin-left:5px;padding:0}
+.enh-clear:hover{background:#000}
+.enh-clear.hidden{display:none}
+.qhelp{display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;border-radius:50%;
+  border:1px solid var(--muted);color:var(--muted);font-size:10px;cursor:help;margin-left:4px;position:relative}
+.qhelp .pop{display:none;position:absolute;left:18px;top:-4px;z-index:80;background:#fff;border:1px solid var(--line);
+  border-radius:6px;padding:8px 10px;box-shadow:0 4px 14px rgba(0,0,0,.15);width:260px;font-size:11.5px;
+  white-space:normal;color:var(--ink);text-align:left}
+.qhelp:hover .pop{display:block}
+.qhelp .pop b{font-weight:700}
+.muted-italic{font-style:italic;color:var(--muted)}
+.mismatch{background:var(--red);border:1px solid var(--redink);color:var(--redink);padding:7px 10px;border-radius:6px;
+  font-size:12px;font-weight:600;margin:8px 0;display:none}
+.mismatch.show{display:block}
+.pill-summary{display:flex;flex-direction:column;align-items:flex-start;gap:5px;margin-top:10px}
+.pill-summary .line{display:flex;align-items:center;gap:8px;font-size:12px}
+.band{padding:6px 10px;border-radius:6px 6px 0 0;margin-top:14px}
+.band h4{margin:0;font-size:22px;font-weight:700}
+.band .rule{font-size:16px;font-weight:500}
+.band-vhigh{background:#e1d5f0}.band-high{background:#d6e6c7}.band-medium{background:#fdeecb}
+.band-low{background:#d8eef6}.band-vlow{background:#eceef1}
+.flowbox{background:var(--blue);border:1px solid var(--line);border-radius:6px;padding:10px 12px;font-size:11.5px;margin:0}
+.yy{color:var(--darkgreen);font-weight:700}.nn{color:#9aa1ad}
+.detail-wrap{display:flex;gap:16px;flex-wrap:nowrap;align-items:flex-start}
+.detail-wrap .tbl-wrap{flex:0 1 auto;min-width:0;overflow-x:auto}
+.detail-wrap table.grid{width:auto}
+.detail-wrap .side{flex:0 0 340px;width:340px}
+@media (max-width:1100px){.detail-wrap{flex-wrap:wrap}.detail-wrap .side{flex:1 1 100%;width:auto}}
+/* Header summary: Units (Change) / Net Gain % / Trading Rules cell styling */
+table.summary th.th-uc, table.summary td.uc-cell{border-right:3px solid #000}
+table.summary td.uc-cell{background:var(--yellow);font-weight:400;color:var(--ink)}
+table.summary td.ng-good{background:#1b7f3b;color:#fff;font-weight:700;font-size:14px}
+table.summary td.ng-bad{background:#c0392b;color:#fff;font-weight:700;font-size:14px}
+table.summary td.tr-pass-cell{background:#1b7f3b;color:#fff;font-weight:700;font-size:14px;text-align:center}
+table.summary td.tr-fail-cell{background:#c0392b;color:#fff;font-weight:700;font-size:14px;text-align:center}
+/* stack the two radio bars vertically; created totals row; stronger mismatch banner */
+.bars{align-items:flex-start}
+.radio-bars{display:flex;flex-direction:column;gap:8px;align-items:flex-start}
+.totals-row td{background:#eef1f5;font-weight:700;border-top:2px solid var(--ink)}
+.mismatch{background:var(--redink);color:#fff;border:1px solid var(--redink)}
+/* R/E grid tweaks: grey bin button, grey size % pill, left-opening calc tooltip */
+.enh-clear{background:#9aa1ad}
+.enh-clear:hover{background:#6b7280}
+.pct-pill{display:inline-block;background:var(--grey);color:var(--ink);border-radius:9px;padding:0 6px;font-size:10px;font-weight:700;margin-right:4px}
+.qhelp.qleft .pop{left:auto;right:18px}
+/* baseline parent row: thick top border; narrow habitat column */
+table.grid tr.parent-row td{border-top:3px solid #000}
+table.grid td.hab-cell{max-width:190px;white-space:normal;word-break:break-word}
+select.hab{max-width:175px}
+/* dropdown font sizes to grid-normal; grey "?" icon; failed-trading-rules flag */
+select.hab,select.cond{font-size:12px}
+select.hab option,select.cond option{font-size:12px}
+select.hab optgroup{font-size:12px;font-weight:700}
+.qhelp{background:#9aa1ad;color:#fff;border-color:#9aa1ad}
+.fail-bg{background:#fde0e0!important}
+.fail-tag{color:var(--redink);font-weight:700;font-style:italic;font-size:10.5px}
+/* keep habitat dropdown + clear button inside the cell (no overflow into next column) */
+.enh-wrap{display:flex;align-items:center;gap:4px;max-width:100%}
+.enh-wrap select.hab{flex:1 1 auto;min-width:0;max-width:none}
+.enh-wrap .enh-clear{flex:0 0 auto}
+/* enhanced/created habitat cell sizes to dropdown content (avoid collapsed-name truncation) */
+table.grid td.hab-cell-enh{white-space:nowrap;vertical-align:middle;max-width:none}
+.enh-wrap{display:inline-flex;align-items:center;gap:4px;max-width:none}
+.enh-wrap select.hab{flex:0 0 auto;min-width:0;max-width:260px}
+/* faint "Post" marker in the ID column of child rows */
+.post-id{color:#b8bdc6;font-style:italic;font-size:11px}
+/* For Creation net (Retained + Enhanced - Baseline) */
+.net-loss{background:#fdecec}
+.net-gain{background:#e7f6e7}
+/* R/E pill recolour, band lozenge, invalid dropdown, New Habitat Units border, retained grey */
+.pill-enhanced{background:var(--grey)}
+.pill-fc{background:var(--grey);border:1px solid var(--line)}
+.pill-band{background:var(--green);border:1px solid var(--line)}
+select.hab.sel-invalid{background:var(--red);border-color:var(--redink)}
+.nh-col{border-right:2px solid #000}
+.rt-grey{color:#9aa1ad}
+/* Size column black left border; white-bg bold gain/loss on units columns */
+.size-col{border-left:2px solid #000}
+.u-gain{background:#fff;color:var(--darkgreen);font-weight:700}
+.u-loss{background:#fff;color:var(--redink);font-weight:700}
+/* black grid header row; habitat dropdowns sized to content (width set by JS) */
+table.grid th{background:#000;color:#fff}
+select.hab{max-width:none}
+.enh-wrap select.hab{max-width:none}
+/* "Rules" pill (was the "?" trade-rule trigger) */
+.qhelp.rules-pill{width:auto;height:auto;border-radius:10px;padding:1px 7px;background:#000;color:#fff;font-size:10px;font-weight:700;border:0;margin-left:4px}
+/* size inputs left-justified (width set by JS); wider Rules tooltip with bold labels only; new-habitat enhancement highlight */
+.size-in{text-align:left}
+.qhelp .pop{font-weight:400;width:440px}
+.pill-enhanced-green{background:var(--green)!important}
+select.hab.newhab-text{background:#e8f5e9;color:#000;border-color:#bcd9bd}
+/* controls stacked beneath card title; baseline card shrinks to its grid; smaller band rule text */
+.card-head{flex-direction:column;align-items:flex-start}
+.card-fit{width:fit-content;max-width:100%}
+.band .rule{font-size:12.5px;font-weight:400}
+/* created dropdown lighter green; bigger card spacing+darker border; offsets subheading; consistent trading grid columns */
+select.hab.cr-lite{background:#e8f5e9!important;border-color:#bcd9bd!important}
+.card{margin-bottom:44px;border:1px solid #8a909c}
+.offsets-sub{font-weight:600;text-decoration:underline;margin-top:6px;font-size:11.5px}
+.trd{table-layout:fixed}
+.trd th,.trd td{white-space:normal;overflow:hidden;vertical-align:top}
+.cr-id{display:none}
+select.hab option.grp-top{border-top:1px solid #b9bfca}
+select.hab option.baseopt{font-weight:700}
+.cell-null{background:#eef0f3}
+.trd-broad{color:#000}
+.trd-hab{font-weight:700}
+.totals-row td{border-top:2px solid #000!important}
+.trd td.has-pop{overflow:visible}
+.pop-grid{border-collapse:collapse;width:100%;font-size:11px;margin:0}
+.pop-grid th,.pop-grid td{border:1px solid var(--line);padding:2px 6px;text-align:left;white-space:nowrap}
+.pop-grid th{background:var(--blue);font-weight:700}
+.pop-grid td.num,.pop-grid th:last-child{text-align:right}
+.u-bg{background:var(--yellow)}
+.band{margin-top:28px}
+.info-btn{display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;border-radius:50%;background:#9aa1ad;color:#fff;border:0;font-size:10px;cursor:pointer;margin-left:5px;padding:0;vertical-align:middle}
+.info-btn:hover{background:#6b7280}
+.trd td.unum{white-space:nowrap;text-align:right}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;align-items:flex-start;justify-content:center}
+.modal-overlay.show{display:flex}
+.modal-box{background:#fff;border-radius:10px;padding:18px 22px;margin-top:8vh;max-width:92vw;max-height:84vh;overflow:auto;box-shadow:0 10px 40px rgba(0,0,0,.35);position:relative}
+.modal-title{margin:0 18px 12px 0;font-size:16px}
+.modal-close{position:absolute;top:8px;right:10px;border:0;background:#000;color:#fff;width:24px;height:24px;border-radius:50%;cursor:pointer;font-size:14px;line-height:1}
+.modal-box .pop-grid{width:auto;min-width:380px}
+.modal-overlay{background:rgba(0,0,0,0)}
+.modal-overlay.show{display:block}
+.modal-box{margin:0;max-height:80vh}
+button.rules-pill{display:inline-block;border:0;border-radius:10px;padding:2px 8px;background:#000;color:#fff;font-size:10px;font-weight:700;cursor:pointer;margin-left:4px;vertical-align:middle}
+button.rules-pill:hover{background:#333}
+.rule-modal{width:380px;max-width:80vw;font-size:12.5px}
+.rule-modal p{margin:6px 0}
+.rule-sep{border:0;border-top:1px solid var(--line);margin:8px 0}
+
+.ver{font-size:12px;color:var(--muted);font-weight:400;letter-spacing:0}
+.bars{margin-top:14px}
+.pass-pill{background:var(--darkgreen);color:#fff;font-weight:700;padding:1px 9px;border-radius:10px;display:inline-block}
+.fail-pill{background:var(--redink);color:#fff;font-weight:700;padding:1px 9px;border-radius:10px;display:inline-block}
+.rules-pass{background:var(--darkgreen);color:#fff;font-weight:700;text-align:center}
+.rules-fail{background:var(--redink);color:#fff;font-weight:700;text-align:center}
+.band{display:flex;align-items:center;gap:12px}
+.trd td.num{text-align:right}
+.trd td.trade-cell{text-align:center}
+.trd td.rules-col{text-align:center}
+.created-head{margin-top:34px;margin-bottom:16px}
+button.act.act-green{background:var(--darkgreen);border-color:var(--darkgreen);color:#fff}
+button.act.act-red{background:var(--redink);border-color:var(--redink);color:#fff}
+.net-unchanged{color:#000;font-weight:400}
+table.grid td.units-cell{text-align:right}
+
+</style>
+</head>
+<body>
+<header class="sticky">
+  <div class="head-top">
+    <div class="head-title">
+      <h1 class="title">Trading Rules Simulator <span class="ver">(v0.1 DRAFT  09 Jun 2026)</span></h1>
+      <div class="dev-strap">UNDER DEVELOPMENT - logic and figures may not be accurate. Report any issues to Steve Phillips</div>
+    </div>
+    <div class="valid-banner" id="validBanner"></div>
+  </div>
+  <div class="bars">
+    <div class="radio-bars">
+    <div class="bar"><span class="lbl">Unit type</span>
+      <div class="radio">
+        <button data-type-btn="area">Area</button>
+        <button data-type-btn="hedgerow">Hedgerows</button>
+        <button data-type-btn="watercourse">Watercourses</button>
+      </div>
+    </div>
+    <div class="bar"><span class="lbl">Distinctiveness levels</span>
+      <div class="radio">
+        <button data-filter-btn="All">All</button>
+        <button data-filter-btn="MVS">MVS</button>
+      </div>
+    </div>
+    </div>
+    <table class="summary">
+      <thead><tr><th>Unit type</th><th>Size (Baseline)</th><th>Size (Post)</th><th>Units (Baseline)</th><th>Units (Post)</th><th class="th-uc">Units (Change)</th><th>Net Gain %</th><th>Trading Rules</th></tr></thead>
+      <tbody id="summaryBody"></tbody>
+    </table>
+  </div>
+</header>
+<main>
+  <div id="baselineMount"></div>
+  <div id="postMount"></div>
+  <div id="tradingMount"></div>
+</main>
+<script>window.DATA={"habitats":[{"unit":"Area","broad":"Cropland","name":"Arable field margins cultivated annually","dist":"Medium","condMode":"Condition Assessment N/A","diffEnh":"Low","diffCre":"Low","conds":["Condition Assessment N/A"]},{"unit":"Area","broad":"Cropland","name":"Arable field margins game bird mix","dist":"Medium","condMode":"Condition Assessment N/A","diffEnh":"Low","diffCre":"Low","conds":["Condition Assessment N/A"]},{"unit":"Area","broad":"Cropland","name":"Arable field margins pollen and nectar","dist":"Medium","condMode":"Condition Assessment N/A","diffEnh":"Low","diffCre":"Low","conds":["Condition Assessment N/A"]},{"unit":"Area","broad":"Cropland","name":"Arable field margins tussocky","dist":"Medium","condMode":"Condition Assessment N/A","diffEnh":"Low","diffCre":"Low","conds":["Condition Assessment N/A"]},{"unit":"Area","broad":"Cropland","name":"Cereal crops","dist":"Low","condMode":"Condition Assessment N/A","diffEnh":"Low","diffCre":"Low","conds":["Condition Assessment N/A"]},{"unit":"Area","broad":"Cropland","name":"Winter stubble","dist":"Low","condMode":"Condition Assessment N/A","diffEnh":"Low","diffCre":"Low","conds":["Condition Assessment N/A"]},{"unit":"Area","broad":"Cropland","name":"Horticulture","dist":"Low","condMode":"Condition Assessment N/A","diffEnh":"Low","diffCre":"Low","conds":["Condition Assessment N/A"]},{"unit":"Area","broad":"Cropland","name":"Intensive orchards","dist":"Low","condMode":"Condition Assessment N/A","diffEnh":"Low","diffCre":"Low","conds":["Condition Assessment N/A"]},{"unit":"Area","broad":"Cropland","name":"Non-cereal crops","dist":"Low","condMode":"Condition Assessment N/A","diffEnh":"Low","diffCre":"Low","conds":["Condition Assessment N/A"]},{"unit":"Area","broad":"Cropland","name":"Temporary grass and clover leys","dist":"Low","condMode":"Condition Assessment N/A","diffEnh":"Low","diffCre":"Low","conds":["Condition Assessment N/A"]},{"unit":"Area","broad":"Grassland","name":"Traditional orchards","dist":"High","condMode":"Assessed","diffEnh":"Medium","diffCre":"Low","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Grassland","name":"Bracken","dist":"Low","condMode":"Condition Assessment N/A","diffEnh":"Low","diffCre":"Low","conds":["Condition Assessment N/A"]},{"unit":"Area","broad":"Grassland","name":"Floodplain wetland mosaic and CFGM","dist":"High","condMode":"Assessed","diffEnh":"Medium","diffCre":"High","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Grassland","name":"Lowland calcareous grassland","dist":"High","condMode":"Assessed","diffEnh":"High","diffCre":"High","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Grassland","name":"Lowland dry acid grassland","dist":"V.High","condMode":"Assessed","diffEnh":"High","diffCre":"High","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Grassland","name":"Lowland meadows","dist":"V.High","condMode":"Assessed","diffEnh":"Medium","diffCre":"High","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Grassland","name":"Modified grassland","dist":"Low","condMode":"Assessed","diffEnh":"Low","diffCre":"Low","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Grassland","name":"Other lowland acid grassland","dist":"Medium","condMode":"Assessed","diffEnh":"Low","diffCre":"Low","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Grassland","name":"Other neutral grassland","dist":"Medium","condMode":"Assessed","diffEnh":"Low","diffCre":"Low","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Grassland","name":"Tall herb communities (H6430)","dist":"High","condMode":"Assessed","diffEnh":"High","diffCre":"High","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Grassland","name":"Upland acid grassland","dist":"Medium","condMode":"Assessed","diffEnh":"Low","diffCre":"Low","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Grassland","name":"Upland calcareous grassland","dist":"High","condMode":"Assessed","diffEnh":"High","diffCre":"High","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Grassland","name":"Upland hay meadows","dist":"V.High","condMode":"Assessed","diffEnh":"Medium","diffCre":"High","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Heathland and shrub","name":"Blackthorn scrub","dist":"Medium","condMode":"Assessed","diffEnh":"Low","diffCre":"Low","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Heathland and shrub","name":"Bramble scrub","dist":"Medium","condMode":"Condition Assessment N/A","diffEnh":"Low","diffCre":"Low","conds":["Condition Assessment N/A"]},{"unit":"Area","broad":"Heathland and shrub","name":"Gorse scrub","dist":"Medium","condMode":"Assessed","diffEnh":"Low","diffCre":"Low","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Heathland and shrub","name":"Hawthorn scrub","dist":"Medium","condMode":"Assessed","diffEnh":"Low","diffCre":"Low","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Heathland and shrub","name":"Hazel scrub","dist":"Medium","condMode":"Assessed","diffEnh":"Low","diffCre":"Medium","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Heathland and shrub","name":"Lowland heathland","dist":"High","condMode":"Assessed","diffEnh":"Medium","diffCre":"High","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Heathland and shrub","name":"Mixed scrub","dist":"Medium","condMode":"Assessed","diffEnh":"Low","diffCre":"Low","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Heathland and shrub","name":"Mountain heaths and willow scrub","dist":"V.High","condMode":"Assessed","diffEnh":"High","diffCre":"High","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Heathland and shrub","name":"Rhododendron scrub","dist":"Low","condMode":"Condition Assessment N/A","diffEnh":"Low","diffCre":"Low","conds":["Condition Assessment N/A"]},{"unit":"Area","broad":"Heathland and shrub","name":"Dunes with sea buckthorn (H2160)","dist":"High","condMode":"Assessed","diffEnh":"Low","diffCre":"Medium","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Heathland and shrub","name":"Other sea buckthorn scrub","dist":"Low","condMode":"Condition Assessment N/A","diffEnh":"Low","diffCre":"Low","conds":["Condition Assessment N/A"]},{"unit":"Area","broad":"Heathland and shrub","name":"Willow scrub","dist":"Medium","condMode":"Assessed","diffEnh":"Low","diffCre":"Medium","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Heathland and shrub","name":"Upland heathland","dist":"High","condMode":"Assessed","diffEnh":"Medium","diffCre":"Medium","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Lakes","name":"Aquifer fed naturally fluctuating water bodies","dist":"V.High","condMode":"Assessed","diffEnh":"High","diffCre":"Very High","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Lakes","name":"Ornamental lake or pond","dist":"Low","condMode":"Assessed","diffEnh":"High","diffCre":"Low","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Lakes","name":"High alkalinity lakes","dist":"High","condMode":"Assessed","diffEnh":"High","diffCre":"High","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Lakes","name":"Low alkalinity lakes","dist":"High","condMode":"Assessed","diffEnh":"Medium","diffCre":"High","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Lakes","name":"Marl lakes","dist":"High","condMode":"Assessed","diffEnh":"High","diffCre":"High","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Lakes","name":"Moderate alkalinity lakes","dist":"High","condMode":"Assessed","diffEnh":"High","diffCre":"High","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Lakes","name":"Peat lakes","dist":"High","condMode":"Assessed","diffEnh":"High","diffCre":"High","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Lakes","name":"Ponds (priority habitat)","dist":"High","condMode":"Assessed","diffEnh":"Medium","diffCre":"Medium","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Lakes","name":"Ponds (non-priority habitat)","dist":"Medium","condMode":"Assessed","diffEnh":"Medium","diffCre":"Low","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Lakes","name":"Reservoirs","dist":"Medium","condMode":"Assessed","diffEnh":"Medium","diffCre":"Medium","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Lakes","name":"Temporary lakes ponds and pools (H3170)","dist":"High","condMode":"Assessed","diffEnh":"Medium","diffCre":"Medium","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Sparsely vegetated land","name":"Calaminarian grasslands","dist":"V.High","condMode":"Assessed","diffEnh":"Medium","diffCre":"Very High","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Sparsely vegetated land","name":"Coastal sand dunes","dist":"High","condMode":"Assessed","diffEnh":"Medium","diffCre":"Very High","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Sparsely vegetated land","name":"Coastal vegetated shingle","dist":"High","condMode":"Assessed","diffEnh":"Medium","diffCre":"Very High","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Sparsely vegetated land","name":"Ruderal/Ephemeral","dist":"Low","condMode":"Assessed","diffEnh":"Medium","diffCre":"Low","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Sparsely vegetated land","name":"Tall forbs","dist":"Low","condMode":"Assessed","diffEnh":"Medium","diffCre":"Low","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Sparsely vegetated land","name":"Inland rock outcrop and scree habitats","dist":"High","condMode":"Assessed","diffEnh":"Low","diffCre":"High","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Sparsely vegetated land","name":"Limestone pavement","dist":"V.High","condMode":"Assessed","diffEnh":"Medium","diffCre":"Very High","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Sparsely vegetated land","name":"Maritime cliff and slopes","dist":"High","condMode":"Assessed","diffEnh":"Medium","diffCre":"High","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Sparsely vegetated land","name":"Other inland rock and scree","dist":"Medium","condMode":"Assessed","diffEnh":"Medium","diffCre":"Medium","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Urban","name":"Allotments","dist":"Low","condMode":"Assessed","diffEnh":"Low","diffCre":"Low","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Urban","name":"Artificial unvegetated, unsealed surface","dist":"V.Low","condMode":"N/A - Other","diffEnh":"Low","diffCre":"Low","conds":["N/A - Other"]},{"unit":"Area","broad":"Urban","name":"Bioswale","dist":"Low","condMode":"Assessed","diffEnh":"Low","diffCre":"Medium","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Urban","name":"Intensive green roof","dist":"Low","condMode":"Assessed","diffEnh":"Low","diffCre":"Low","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Urban","name":"Built linear features","dist":"V.Low","condMode":"N/A - Other","diffEnh":"Low","diffCre":"Low","conds":["N/A - Other"]},{"unit":"Area","broad":"Urban","name":"Cemeteries and churchyards","dist":"Medium","condMode":"Assessed","diffEnh":"Low","diffCre":"Medium","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Urban","name":"Developed land; sealed surface","dist":"V.Low","condMode":"N/A - Other","diffEnh":"Low","diffCre":"Low","conds":["N/A - Other"]},{"unit":"Area","broad":"Urban","name":"Other green roof","dist":"Low","condMode":"Condition Assessment N/A","diffEnh":"Low","diffCre":"Low","conds":["Condition Assessment N/A"]},{"unit":"Area","broad":"Urban","name":"Facade-bound green wall","dist":"Low","condMode":"Assessed","diffEnh":"Medium","diffCre":"Medium","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Urban","name":"Ground based green wall","dist":"Low","condMode":"Assessed","diffEnh":"Medium","diffCre":"Medium","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Urban","name":"Ground level planters","dist":"Low","condMode":"Condition Assessment N/A","diffEnh":"Low","diffCre":"Low","conds":["Condition Assessment N/A"]},{"unit":"Area","broad":"Urban","name":"Biodiverse green roof","dist":"Medium","condMode":"Assessed","diffEnh":"Medium","diffCre":"Medium","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Urban","name":"Introduced shrub","dist":"Low","condMode":"Condition Assessment N/A","diffEnh":"Low","diffCre":"Low","conds":["Condition Assessment N/A"]},{"unit":"Area","broad":"Urban","name":"Open mosaic habitats on previously developed land","dist":"High","condMode":"Assessed","diffEnh":"Medium","diffCre":"Medium","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Urban","name":"Rain garden","dist":"Low","condMode":"Assessed","diffEnh":"Low","diffCre":"Low","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Urban","name":"Actively worked sand pit quarry or open cast mine","dist":"Low","condMode":"Condition Assessment N/A","diffEnh":"Low","diffCre":"Medium","conds":["Condition Assessment N/A"]},{"unit":"Area","broad":"Urban","name":"Sustainable drainage system","dist":"Low","condMode":"Assessed","diffEnh":"Medium","diffCre":"Medium","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Urban","name":"Unvegetated garden","dist":"V.Low","condMode":"N/A - Other","diffEnh":"Low","diffCre":"Low","conds":["N/A - Other"]},{"unit":"Area","broad":"Urban","name":"Vacant or derelict land","dist":"Low","condMode":"Assessed","diffEnh":"Low","diffCre":"Low","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Urban","name":"Bare ground","dist":"Low","condMode":"Assessed","diffEnh":"Low","diffCre":"Low","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Urban","name":"Vegetated garden","dist":"Low","condMode":"Condition Assessment N/A","diffEnh":"Low","diffCre":"Low","conds":["Condition Assessment N/A"]},{"unit":"Area","broad":"Individual trees","name":"Urban tree","dist":"Medium","condMode":"Assessed","diffEnh":"Low","diffCre":"Low","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Individual trees","name":"Rural tree","dist":"Medium","condMode":"Assessed","diffEnh":"Low","diffCre":"Low","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Wetland","name":"Blanket bog","dist":"V.High","condMode":"Assessed","diffEnh":"High","diffCre":"Very High","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Wetland","name":"Depressions on peat substrates (H7150)","dist":"V.High","condMode":"Assessed","diffEnh":"High","diffCre":"Very High","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Wetland","name":"Fens (upland and lowland)","dist":"V.High","condMode":"Assessed","diffEnh":"High","diffCre":"High","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Wetland","name":"Lowland raised bog","dist":"V.High","condMode":"Assessed","diffEnh":"High","diffCre":"Very High","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Wetland","name":"Oceanic valley mire[1] (D2.1)","dist":"V.High","condMode":"Assessed","diffEnh":"High","diffCre":"Very High","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Wetland","name":"Purple moor grass and rush pastures","dist":"V.High","condMode":"Assessed","diffEnh":"High","diffCre":"High","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Wetland","name":"Reedbeds","dist":"High","condMode":"Assessed","diffEnh":"Medium","diffCre":"Medium","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Wetland","name":"Transition mires and quaking bogs (H7140)","dist":"V.High","condMode":"Assessed","diffEnh":"High","diffCre":"Very High","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Woodland and forest","name":"Felled/replacement for felled","dist":"High","condMode":"Assessed","diffEnh":"Low","diffCre":"High","conds":["Good"]},{"unit":"Area","broad":"Woodland and forest","name":"Lowland beech and yew woodland","dist":"High","condMode":"Assessed","diffEnh":"High","diffCre":"High","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Woodland and forest","name":"Lowland mixed deciduous woodland","dist":"High","condMode":"Assessed","diffEnh":"High","diffCre":"High","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Woodland and forest","name":"Native pine woodlands","dist":"High","condMode":"Assessed","diffEnh":"High","diffCre":"High","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Woodland and forest","name":"Other coniferous woodland","dist":"Low","condMode":"Assessed","diffEnh":"Low","diffCre":"Low","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Woodland and forest","name":"Other Scot's pine woodland","dist":"Medium","condMode":"Assessed","diffEnh":"Medium","diffCre":"Medium","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Woodland and forest","name":"Other woodland; broadleaved","dist":"Medium","condMode":"Assessed","diffEnh":"Low","diffCre":"Low","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Woodland and forest","name":"Other woodland; mixed","dist":"Medium","condMode":"Assessed","diffEnh":"Low","diffCre":"Low","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Woodland and forest","name":"Upland birchwoods","dist":"High","condMode":"Assessed","diffEnh":"Medium","diffCre":"Medium","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Woodland and forest","name":"Upland mixed ashwoods","dist":"High","condMode":"Assessed","diffEnh":"High","diffCre":"High","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Woodland and forest","name":"Upland oakwood","dist":"High","condMode":"Assessed","diffEnh":"High","diffCre":"High","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Woodland and forest","name":"Wet woodland","dist":"High","condMode":"Assessed","diffEnh":"Medium","diffCre":"Medium","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Woodland and forest","name":"Wood-pasture and parkland","dist":"V.High","condMode":"Assessed","diffEnh":"High","diffCre":"Very High","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Coastal lagoons","name":"Coastal lagoons","dist":"High","condMode":"Assessed","diffEnh":"Medium","diffCre":"Medium","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Rocky shore","name":"High energy littoral rock","dist":"High","condMode":"Assessed","diffEnh":"Medium","diffCre":"High","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Rocky shore","name":"High energy littoral rock - on peat, clay or chalk","dist":"V.High","condMode":"Assessed","diffEnh":"Medium","diffCre":"Very High","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Rocky shore","name":"Moderate energy littoral rock","dist":"High","condMode":"Assessed","diffEnh":"Medium","diffCre":"High","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Rocky shore","name":"Moderate energy littoral rock - on peat, clay or chalk","dist":"V.High","condMode":"Assessed","diffEnh":"Medium","diffCre":"Very High","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Rocky shore","name":"Low energy littoral rock","dist":"High","condMode":"Assessed","diffEnh":"Medium","diffCre":"High","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Rocky shore","name":"Low energy littoral rock - on peat, clay or chalk","dist":"V.High","condMode":"Assessed","diffEnh":"Medium","diffCre":"Very High","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Rocky shore","name":"Features of littoral rock","dist":"High","condMode":"Assessed","diffEnh":"Medium","diffCre":"High","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Rocky shore","name":"Features of littoral rock - on peat, clay or chalk","dist":"V.High","condMode":"Assessed","diffEnh":"Medium","diffCre":"Very High","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Coastal saltmarsh","name":"Saltmarshes and saline reedbeds","dist":"High","condMode":"Assessed","diffEnh":"Medium","diffCre":"High","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Coastal saltmarsh","name":"Artificial saltmarshes and saline reedbeds","dist":"Low","condMode":"Assessed","diffEnh":"Medium","diffCre":"High","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Intertidal sediment","name":"Littoral coarse sediment","dist":"Medium","condMode":"Assessed","diffEnh":"Medium","diffCre":"Medium","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Intertidal sediment","name":"Littoral mud","dist":"High","condMode":"Assessed","diffEnh":"Medium","diffCre":"High","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Intertidal sediment","name":"Littoral mixed sediments","dist":"High","condMode":"Assessed","diffEnh":"Medium","diffCre":"High","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Intertidal sediment","name":"Littoral seagrass","dist":"High","condMode":"Assessed","diffEnh":"High","diffCre":"High","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Intertidal sediment","name":"Littoral seagrass on peat, clay or chalk","dist":"V.High","condMode":"Assessed","diffEnh":"High","diffCre":"Very High","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Intertidal sediment","name":"Littoral biogenic reefs - Mussels","dist":"High","condMode":"Assessed","diffEnh":"Medium","diffCre":"High","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Intertidal sediment","name":"Littoral biogenic reefs - Sabellaria","dist":"High","condMode":"Assessed","diffEnh":"Medium","diffCre":"High","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Intertidal sediment","name":"Features of littoral sediment","dist":"High","condMode":"Assessed","diffEnh":"Medium","diffCre":"High","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Intertidal sediment","name":"Artificial littoral coarse sediment","dist":"Low","condMode":"Assessed","diffEnh":"Medium","diffCre":"Medium","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Intertidal sediment","name":"Artificial littoral mud","dist":"Low","condMode":"Assessed","diffEnh":"Medium","diffCre":"High","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Intertidal sediment","name":"Artificial littoral sand","dist":"Low","condMode":"Assessed","diffEnh":"Medium","diffCre":"Medium","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Intertidal sediment","name":"Artificial littoral muddy sand","dist":"Low","condMode":"Assessed","diffEnh":"Medium","diffCre":"High","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Intertidal sediment","name":"Artificial littoral mixed sediments","dist":"Low","condMode":"Assessed","diffEnh":"Medium","diffCre":"High","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Intertidal sediment","name":"Artificial littoral seagrass","dist":"Low","condMode":"Assessed","diffEnh":"High","diffCre":"High","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Intertidal sediment","name":"Artificial littoral biogenic reefs","dist":"Low","condMode":"Assessed","diffEnh":"Medium","diffCre":"High","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Intertidal sediment","name":"Littoral sand","dist":"Medium","condMode":"Assessed","diffEnh":"Medium","diffCre":"Medium","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Intertidal sediment","name":"Littoral muddy sand","dist":"High","condMode":"Assessed","diffEnh":"Medium","diffCre":"High","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Intertidal hard structures","name":"Artificial hard structures","dist":"Low","condMode":"Assessed","diffEnh":"Medium","diffCre":"Medium","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Intertidal hard structures","name":"Artificial features of hard structures","dist":"Low","condMode":"Assessed","diffEnh":"Medium","diffCre":"Medium","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Intertidal hard structures","name":"Artificial hard structures with integrated greening of grey infrastructure (IGGI)","dist":"Medium","condMode":"Assessed","diffEnh":"Low","diffCre":"Low","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Area","broad":"Watercourse footprint","name":"Watercourse footprint","dist":"V.Low","condMode":"N/A - Other","diffEnh":"Low","diffCre":"Low","conds":["N/A - Other"]},{"unit":"Hedgerow","broad":"n/a","name":"Species-rich native hedgerow with trees - associated with bank or ditch","dist":"V.High","condMode":"Assessed","diffEnh":"Low","diffCre":"Low","conds":["Poor","Moderate","Good"]},{"unit":"Hedgerow","broad":"n/a","name":"Species-rich native hedgerow with trees","dist":"High","condMode":"Assessed","diffEnh":"Low","diffCre":"Low","conds":["Poor","Moderate","Good"]},{"unit":"Hedgerow","broad":"n/a","name":"Species-rich native hedgerow - associated with bank or ditch","dist":"High","condMode":"Assessed","diffEnh":"Low","diffCre":"Low","conds":["Poor","Moderate","Good"]},{"unit":"Hedgerow","broad":"n/a","name":"Native hedgerow with trees - associated with bank or ditch","dist":"High","condMode":"Assessed","diffEnh":"Low","diffCre":"Low","conds":["Poor","Moderate","Good"]},{"unit":"Hedgerow","broad":"n/a","name":"Species-rich native hedgerow","dist":"Medium","condMode":"Assessed","diffEnh":"Low","diffCre":"Low","conds":["Poor","Moderate","Good"]},{"unit":"Hedgerow","broad":"n/a","name":"Native hedgerow - associated with bank or ditch","dist":"Medium","condMode":"Assessed","diffEnh":"Low","diffCre":"Low","conds":["Poor","Moderate","Good"]},{"unit":"Hedgerow","broad":"n/a","name":"Native hedgerow with trees","dist":"Medium","condMode":"Assessed","diffEnh":"Low","diffCre":"Low","conds":["Poor","Moderate","Good"]},{"unit":"Hedgerow","broad":"n/a","name":"Ecologically valuable line of trees","dist":"Medium","condMode":"Assessed","diffEnh":"Low","diffCre":"Low","conds":["Poor","Moderate","Good"]},{"unit":"Hedgerow","broad":"n/a","name":"Ecologically valuable line of trees - associated with bank or ditch","dist":"Medium","condMode":"Assessed","diffEnh":"Low","diffCre":"Low","conds":["Poor","Moderate","Good"]},{"unit":"Hedgerow","broad":"n/a","name":"Native hedgerow","dist":"Low","condMode":"Assessed","diffEnh":"Low","diffCre":"Low","conds":["Poor","Moderate","Good"]},{"unit":"Hedgerow","broad":"n/a","name":"Line of trees","dist":"Low","condMode":"Assessed","diffEnh":"Low","diffCre":"Low","conds":["Poor","Moderate","Good"]},{"unit":"Hedgerow","broad":"n/a","name":"Line of trees - associated with bank or ditch","dist":"Low","condMode":"Assessed","diffEnh":"Low","diffCre":"Low","conds":["Poor","Moderate","Good"]},{"unit":"Hedgerow","broad":"n/a","name":"Non-native and ornamental hedgerow","dist":"V.Low","condMode":"Assessed","diffEnh":"Low","diffCre":"Low","conds":["Poor","Moderate","Good"]},{"unit":"Watercourse","broad":"n/a","name":"Priority habitat","dist":"V.High","condMode":"Assessed","diffEnh":"Medium","diffCre":"High","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Watercourse","broad":"n/a","name":"Other rivers and streams","dist":"High","condMode":"Assessed","diffEnh":"Medium","diffCre":"High","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Watercourse","broad":"n/a","name":"Ditches","dist":"Medium","condMode":"Assessed","diffEnh":"Low","diffCre":"Medium","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Watercourse","broad":"n/a","name":"Canals","dist":"Medium","condMode":"Assessed","diffEnh":"Low","diffCre":"Medium","conds":["Poor","Fairly Poor","Moderate","Fairly Good","Good"]},{"unit":"Watercourse","broad":"n/a","name":"Culvert","dist":"Low","condMode":"Assessed","diffEnh":"N/A","diffCre":"Medium","conds":["Poor"]}],"creationYears":{"Arable field margins cultivated annually":{"Good":null,"Fairly Good":null,"Moderate":null,"Fairly Poor":null,"Poor":null,"Condition Assessment N/A":1,"N/A - Other":null},"Arable field margins game bird mix":{"Good":null,"Fairly Good":null,"Moderate":null,"Fairly Poor":null,"Poor":null,"Condition Assessment N/A":1,"N/A - Other":null},"Arable field margins pollen and nectar":{"Good":null,"Fairly Good":null,"Moderate":null,"Fairly Poor":null,"Poor":null,"Condition Assessment N/A":1,"N/A - Other":null},"Arable field margins tussocky":{"Good":null,"Fairly Good":null,"Moderate":null,"Fairly Poor":null,"Poor":null,"Condition Assessment N/A":1,"N/A - Other":null},"Cereal crops":{"Good":null,"Fairly Good":null,"Moderate":null,"Fairly Poor":null,"Poor":null,"Condition Assessment N/A":1,"N/A - Other":null},"Winter stubble":{"Good":null,"Fairly Good":null,"Moderate":null,"Fairly Poor":null,"Poor":null,"Condition Assessment N/A":1,"N/A - Other":null},"Horticulture":{"Good":null,"Fairly Good":null,"Moderate":null,"Fairly Poor":null,"Poor":null,"Condition Assessment N/A":1,"N/A - Other":null},"Intensive orchards":{"Good":null,"Fairly Good":null,"Moderate":null,"Fairly Poor":null,"Poor":null,"Condition Assessment N/A":1,"N/A - Other":null},"Non-cereal crops":{"Good":null,"Fairly Good":null,"Moderate":null,"Fairly Poor":null,"Poor":null,"Condition Assessment N/A":1,"N/A - Other":null},"Temporary grass and clover leys":{"Good":null,"Fairly Good":null,"Moderate":null,"Fairly Poor":null,"Poor":null,"Condition Assessment N/A":1,"N/A - Other":null},"Traditional orchards":{"Good":30,"Fairly Good":25,"Moderate":20,"Fairly Poor":10,"Poor":5,"Condition Assessment N/A":null,"N/A - Other":null},"Bracken":{"Good":null,"Fairly Good":null,"Moderate":null,"Fairly Poor":null,"Poor":null,"Condition Assessment N/A":1,"N/A - Other":null},"Floodplain wetland mosaic and CFGM":{"Good":20,"Fairly Good":15,"Moderate":10,"Fairly Poor":8,"Poor":5,"Condition Assessment N/A":null,"N/A - Other":null},"Lowland calcareous grassland":{"Good":20,"Fairly Good":15,"Moderate":10,"Fairly Poor":8,"Poor":5,"Condition Assessment N/A":null,"N/A - Other":null},"Lowland dry acid grassland":{"Good":30,"Fairly Good":25,"Moderate":20,"Fairly Poor":15,"Poor":10,"Condition Assessment N/A":null,"N/A - Other":null},"Lowland meadows":{"Good":15,"Fairly Good":12,"Moderate":10,"Fairly Poor":8,"Poor":5,"Condition Assessment N/A":null,"N/A - Other":null},"Modified grassland":{"Good":7,"Fairly Good":5,"Moderate":4,"Fairly Poor":2,"Poor":1,"Condition Assessment N/A":null,"N/A - Other":null},"Other lowland acid grassland":{"Good":15,"Fairly Good":12,"Moderate":10,"Fairly Poor":5,"Poor":1,"Condition Assessment N/A":null,"N/A - Other":null},"Other neutral grassland":{"Good":10,"Fairly Good":7,"Moderate":5,"Fairly Poor":3,"Poor":2,"Condition Assessment N/A":null,"N/A - Other":null},"Tall herb communities (H6430)":{"Good":30,"Fairly Good":25,"Moderate":20,"Fairly Poor":15,"Poor":10,"Condition Assessment N/A":null,"N/A - Other":null},"Upland acid grassland":{"Good":15,"Fairly Good":12,"Moderate":10,"Fairly Poor":5,"Poor":1,"Condition Assessment N/A":null,"N/A - Other":null},"Upland calcareous grassland":{"Good":25,"Fairly Good":20,"Moderate":15,"Fairly Poor":12,"Poor":10,"Condition Assessment N/A":null,"N/A - Other":null},"Upland hay meadows":{"Good":20,"Fairly Good":18,"Moderate":15,"Fairly Poor":12,"Poor":10,"Condition Assessment N/A":null,"N/A - Other":null},"Blackthorn scrub":{"Good":10,"Fairly Good":7,"Moderate":5,"Fairly Poor":3,"Poor":1,"Condition Assessment N/A":null,"N/A - Other":null},"Bramble scrub":{"Good":null,"Fairly Good":null,"Moderate":null,"Fairly Poor":null,"Poor":null,"Condition Assessment N/A":1,"N/A - Other":null},"Gorse scrub":{"Good":10,"Fairly Good":7,"Moderate":5,"Fairly Poor":3,"Poor":1,"Condition Assessment N/A":null,"N/A - Other":null},"Hawthorn scrub":{"Good":10,"Fairly Good":7,"Moderate":5,"Fairly Poor":3,"Poor":1,"Condition Assessment N/A":null,"N/A - Other":null},"Hazel scrub":{"Good":15,"Fairly Good":12,"Moderate":10,"Fairly Poor":7,"Poor":5,"Condition Assessment N/A":null,"N/A - Other":null},"Lowland heathland":{"Good":30,"Fairly Good":25,"Moderate":20,"Fairly Poor":15,"Poor":10,"Condition Assessment N/A":null,"N/A - Other":null},"Mixed scrub":{"Good":10,"Fairly Good":7,"Moderate":5,"Fairly Poor":3,"Poor":1,"Condition Assessment N/A":null,"N/A - Other":null},"Mountain heaths and willow scrub":{"Good":30,"Fairly Good":30,"Moderate":25,"Fairly Poor":23,"Poor":15,"Condition Assessment N/A":null,"N/A - Other":null},"Rhododendron scrub":{"Good":null,"Fairly Good":null,"Moderate":null,"Fairly Poor":null,"Poor":null,"Condition Assessment N/A":1,"N/A - Other":null},"Dunes with sea buckthorn (H2160)":{"Good":10,"Fairly Good":7,"Moderate":5,"Fairly Poor":3,"Poor":1,"Condition Assessment N/A":null,"N/A - Other":null},"Other sea buckthorn scrub":{"Good":null,"Fairly Good":null,"Moderate":null,"Fairly Poor":null,"Poor":null,"Condition Assessment N/A":1,"N/A - Other":null},"Willow scrub":{"Good":15,"Fairly Good":12,"Moderate":10,"Fairly Poor":7,"Poor":5,"Condition Assessment N/A":null,"N/A - Other":null},"Upland heathland":{"Good":30,"Fairly Good":25,"Moderate":20,"Fairly Poor":15,"Poor":10,"Condition Assessment N/A":null,"N/A - Other":null},"Aquifer fed naturally fluctuating water bodies":{"Good":30,"Fairly Good":20,"Moderate":15,"Fairly Poor":10,"Poor":1,"Condition Assessment N/A":null,"N/A - Other":null},"Ornamental lake or pond":{"Good":5,"Fairly Good":4,"Moderate":3,"Fairly Poor":2,"Poor":1,"Condition Assessment N/A":null,"N/A - Other":null},"High alkalinity lakes":{"Good":30,"Fairly Good":20,"Moderate":10,"Fairly Poor":7,"Poor":5,"Condition Assessment N/A":null,"N/A - Other":null},"Low alkalinity lakes":{"Good":30,"Fairly Good":20,"Moderate":10,"Fairly Poor":7,"Poor":5,"Condition Assessment N/A":null,"N/A - Other":null},"Marl lakes":{"Good":30,"Fairly Good":20,"Moderate":10,"Fairly Poor":7,"Poor":5,"Condition Assessment N/A":null,"N/A - Other":null},"Moderate alkalinity lakes":{"Good":30,"Fairly Good":20,"Moderate":10,"Fairly Poor":7,"Poor":5,"Condition Assessment N/A":null,"N/A - Other":null},"Peat lakes":{"Good":30,"Fairly Good":20,"Moderate":10,"Fairly Poor":7,"Poor":5,"Condition Assessment N/A":null,"N/A - Other":null},"Ponds (priority habitat)":{"Good":5,"Fairly Good":4,"Moderate":3,"Fairly Poor":2,"Poor":1,"Condition Assessment N/A":null,"N/A - Other":null},"Ponds (non-priority habitat)":{"Good":5,"Fairly Good":4,"Moderate":3,"Fairly Poor":2,"Poor":1,"Condition Assessment N/A":null,"N/A - Other":null},"Reservoirs":{"Good":10,"Fairly Good":7,"Moderate":5,"Fairly Poor":3,"Poor":1,"Condition Assessment N/A":null,"N/A - Other":null},"Temporary lakes ponds and pools (H3170)":{"Good":5,"Fairly Good":4,"Moderate":3,"Fairly Poor":2,"Poor":1,"Condition Assessment N/A":null,"N/A - Other":null},"Calaminarian grasslands":{"Good":10,"Fairly Good":7,"Moderate":5,"Fairly Poor":3,"Poor":2,"Condition Assessment N/A":null,"N/A - Other":null},"Coastal sand dunes":{"Good":20,"Fairly Good":15,"Moderate":10,"Fairly Poor":7,"Poor":5,"Condition Assessment N/A":null,"N/A - Other":null},"Coastal vegetated shingle":{"Good":20,"Fairly Good":15,"Moderate":10,"Fairly Poor":7,"Poor":5,"Condition Assessment N/A":null,"N/A - Other":null},"Ruderal/Ephemeral":{"Good":5,"Fairly Good":4,"Moderate":3,"Fairly Poor":2,"Poor":1,"Condition Assessment N/A":null,"N/A - Other":null},"Tall forbs":{"Good":5,"Fairly Good":4,"Moderate":3,"Fairly Poor":2,"Poor":1,"Condition Assessment N/A":null,"N/A - Other":null},"Inland rock outcrop and scree habitats":{"Good":30,"Fairly Good":25,"Moderate":20,"Fairly Poor":15,"Poor":10,"Condition Assessment N/A":null,"N/A - Other":null},"Limestone pavement":{"Good":30,"Fairly Good":30,"Moderate":30,"Fairly Poor":30,"Poor":30,"Condition Assessment N/A":null,"N/A - Other":null},"Maritime cliff and slopes":{"Good":20,"Fairly Good":15,"Moderate":10,"Fairly Poor":7,"Poor":5,"Condition Assessment N/A":null,"N/A - Other":null},"Other inland rock and scree":{"Good":20,"Fairly Good":15,"Moderate":10,"Fairly Poor":7,"Poor":5,"Condition Assessment N/A":null,"N/A - Other":null},"Allotments":{"Good":1,"Fairly Good":1,"Moderate":1,"Fairly Poor":1,"Poor":1,"Condition Assessment N/A":null,"N/A - Other":null},"Artificial unvegetated, unsealed surface":{"Good":null,"Fairly Good":null,"Moderate":null,"Fairly Poor":null,"Poor":null,"Condition Assessment N/A":null,"N/A - Other":0},"Bioswale":{"Good":3,"Fairly Good":2,"Moderate":1,"Fairly Poor":1,"Poor":1,"Condition Assessment N/A":null,"N/A - Other":null},"Intensive green roof":{"Good":5,"Fairly Good":4,"Moderate":3,"Fairly Poor":2,"Poor":1,"Condition Assessment N/A":null,"N/A - Other":null},"Built linear features":{"Good":null,"Fairly Good":null,"Moderate":null,"Fairly Poor":null,"Poor":null,"Condition Assessment N/A":null,"N/A - Other":0},"Cemeteries and churchyards":{"Good":20,"Fairly Good":17,"Moderate":15,"Fairly Poor":12,"Poor":10,"Condition Assessment N/A":null,"N/A - Other":null},"Developed land; sealed surface":{"Good":null,"Fairly Good":null,"Moderate":null,"Fairly Poor":null,"Poor":null,"Condition Assessment N/A":null,"N/A - Other":0},"Other green roof":{"Good":null,"Fairly Good":null,"Moderate":null,"Fairly Poor":null,"Poor":null,"Condition Assessment N/A":1,"N/A - Other":null},"Facade-bound green wall":{"Good":5,"Fairly Good":4,"Moderate":3,"Fairly Poor":2,"Poor":1,"Condition Assessment N/A":null,"N/A - Other":null},"Ground based green wall":{"Good":5,"Fairly Good":4,"Moderate":3,"Fairly Poor":2,"Poor":1,"Condition Assessment N/A":null,"N/A - Other":null},"Ground level planters":{"Good":null,"Fairly Good":null,"Moderate":null,"Fairly Poor":null,"Poor":null,"Condition Assessment N/A":1,"N/A - Other":null},"Biodiverse green roof":{"Good":10,"Fairly Good":8,"Moderate":5,"Fairly Poor":3,"Poor":1,"Condition Assessment N/A":null,"N/A - Other":null},"Introduced shrub":{"Good":null,"Fairly Good":null,"Moderate":null,"Fairly Poor":null,"Poor":null,"Condition Assessment N/A":1,"N/A - Other":null},"Open mosaic habitats on previously developed land":{"Good":10,"Fairly Good":7,"Moderate":4,"Fairly Poor":2,"Poor":0,"Condition Assessment N/A":null,"N/A - Other":null},"Rain garden":{"Good":5,"Fairly Good":4,"Moderate":3,"Fairly Poor":2,"Poor":1,"Condition Assessment N/A":null,"N/A - Other":null},"Actively worked sand pit quarry or open cast mine":{"Good":null,"Fairly Good":null,"Moderate":null,"Fairly Poor":null,"Poor":null,"Condition Assessment N/A":1,"N/A - Other":null},"Sustainable drainage system":{"Good":5,"Fairly Good":4,"Moderate":3,"Fairly Poor":2,"Poor":1,"Condition Assessment N/A":null,"N/A - Other":null},"Unvegetated garden":{"Good":null,"Fairly Good":null,"Moderate":null,"Fairly Poor":null,"Poor":null,"Condition Assessment N/A":null,"N/A - Other":0},"Vacant or derelict land":{"Good":5,"Fairly Good":4,"Moderate":3,"Fairly Poor":2,"Poor":1,"Condition Assessment N/A":null,"N/A - Other":null},"Bare ground":{"Good":5,"Fairly Good":4,"Moderate":3,"Fairly Poor":2,"Poor":1,"Condition Assessment N/A":null,"N/A - Other":null},"Vegetated garden":{"Good":null,"Fairly Good":null,"Moderate":null,"Fairly Poor":null,"Poor":null,"Condition Assessment N/A":1,"N/A - Other":null},"Urban tree":{"Good":30,"Fairly Good":30,"Moderate":27,"Fairly Poor":19,"Poor":10,"Condition Assessment N/A":null,"N/A - Other":null},"Rural tree":{"Good":30,"Fairly Good":30,"Moderate":27,"Fairly Poor":19,"Poor":10,"Condition Assessment N/A":null,"N/A - Other":null},"Blanket bog":{"Good":30,"Fairly Good":30,"Moderate":30,"Fairly Poor":30,"Poor":30,"Condition Assessment N/A":null,"N/A - Other":null},"Depressions on peat substrates (H7150)":{"Good":30,"Fairly Good":30,"Moderate":30,"Fairly Poor":25,"Poor":15,"Condition Assessment N/A":null,"N/A - Other":null},"Fens (upland and lowland)":{"Good":30,"Fairly Good":25,"Moderate":20,"Fairly Poor":15,"Poor":10,"Condition Assessment N/A":null,"N/A - Other":null},"Lowland raised bog":{"Good":30,"Fairly Good":30,"Moderate":30,"Fairly Poor":20,"Poor":15,"Condition Assessment N/A":null,"N/A - Other":null},"Oceanic valley mire[1] (D2.1)":{"Good":30,"Fairly Good":30,"Moderate":30,"Fairly Poor":20,"Poor":15,"Condition Assessment N/A":null,"N/A - Other":null},"Purple moor grass and rush pastures":{"Good":30,"Fairly Good":25,"Moderate":20,"Fairly Poor":15,"Poor":10,"Condition Assessment N/A":null,"N/A - Other":null},"Reedbeds":{"Good":12,"Fairly Good":10,"Moderate":7,"Fairly Poor":5,"Poor":3,"Condition Assessment N/A":null,"N/A - Other":null},"Transition mires and quaking bogs (H7140)":{"Good":30,"Fairly Good":30,"Moderate":30,"Fairly Poor":25,"Poor":15,"Condition Assessment N/A":null,"N/A - Other":null},"Felled/replacement for felled":{"Good":30,"Fairly Good":null,"Moderate":null,"Fairly Poor":null,"Poor":null,"Condition Assessment N/A":null,"N/A - Other":null},"Lowland beech and yew woodland":{"Good":30,"Fairly Good":30,"Moderate":30,"Fairly Poor":25,"Poor":10,"Condition Assessment N/A":null,"N/A - Other":null},"Lowland mixed deciduous woodland":{"Good":30,"Fairly Good":30,"Moderate":30,"Fairly Poor":25,"Poor":10,"Condition Assessment N/A":null,"N/A - Other":null},"Native pine woodlands":{"Good":30,"Fairly Good":30,"Moderate":30,"Fairly Poor":25,"Poor":10,"Condition Assessment N/A":null,"N/A - Other":null},"Other coniferous woodland":{"Good":30,"Fairly Good":30,"Moderate":30,"Fairly Poor":10,"Poor":5,"Condition Assessment N/A":null,"N/A - Other":null},"Other Scot's pine woodland":{"Good":30,"Fairly Good":30,"Moderate":30,"Fairly Poor":25,"Poor":10,"Condition Assessment N/A":null,"N/A - Other":null},"Other woodland; broadleaved":{"Good":30,"Fairly Good":25,"Moderate":15,"Fairly Poor":7,"Poor":5,"Condition Assessment N/A":null,"N/A - Other":null},"Other woodland; mixed":{"Good":30,"Fairly Good":30,"Moderate":30,"Fairly Poor":10,"Poor":5,"Condition Assessment N/A":null,"N/A - Other":null},"Upland birchwoods":{"Good":30,"Fairly Good":30,"Moderate":25,"Fairly Poor":20,"Poor":10,"Condition Assessment N/A":null,"N/A - Other":null},"Upland mixed ashwoods":{"Good":30,"Fairly Good":30,"Moderate":30,"Fairly Poor":25,"Poor":10,"Condition Assessment N/A":null,"N/A - Other":null},"Upland oakwood":{"Good":30,"Fairly Good":30,"Moderate":30,"Fairly Poor":25,"Poor":10,"Condition Assessment N/A":null,"N/A - Other":null},"Wet woodland":{"Good":30,"Fairly Good":30,"Moderate":15,"Fairly Poor":10,"Poor":5,"Condition Assessment N/A":null,"N/A - Other":null},"Wood-pasture and parkland":{"Good":30,"Fairly Good":30,"Moderate":30,"Fairly Poor":25,"Poor":10,"Condition Assessment N/A":null,"N/A - Other":null},"Coastal lagoons":{"Good":10,"Fairly Good":8,"Moderate":5,"Fairly Poor":3,"Poor":1,"Condition Assessment N/A":null,"N/A - Other":null},"High energy littoral rock":{"Good":10,"Fairly Good":7,"Moderate":4,"Fairly Poor":2,"Poor":1,"Condition Assessment N/A":null,"N/A - Other":null},"High energy littoral rock - on peat, clay or chalk":{"Good":30,"Fairly Good":30,"Moderate":30,"Fairly Poor":30,"Poor":30,"Condition Assessment N/A":null,"N/A - Other":null},"Moderate energy littoral rock":{"Good":13,"Fairly Good":8,"Moderate":4,"Fairly Poor":2,"Poor":1,"Condition Assessment N/A":null,"N/A - Other":null},"Moderate energy littoral rock - on peat, clay or chalk":{"Good":30,"Fairly Good":30,"Moderate":30,"Fairly Poor":30,"Poor":30,"Condition Assessment N/A":null,"N/A - Other":null},"Low energy littoral rock":{"Good":15,"Fairly Good":10,"Moderate":5,"Fairly Poor":1,"Poor":1,"Condition Assessment N/A":null,"N/A - Other":null},"Low energy littoral rock - on peat, clay or chalk":{"Good":30,"Fairly Good":30,"Moderate":30,"Fairly Poor":30,"Poor":30,"Condition Assessment N/A":null,"N/A - Other":null},"Features of littoral rock":{"Good":13,"Fairly Good":8,"Moderate":4,"Fairly Poor":2,"Poor":1,"Condition Assessment N/A":null,"N/A - Other":null},"Features of littoral rock - on peat, clay or chalk":{"Good":30,"Fairly Good":30,"Moderate":30,"Fairly Poor":30,"Poor":30,"Condition Assessment N/A":null,"N/A - Other":null},"Saltmarshes and saline reedbeds":{"Good":15,"Fairly Good":10,"Moderate":7,"Fairly Poor":3,"Poor":1,"Condition Assessment N/A":null,"N/A - Other":null},"Artificial saltmarshes and saline reedbeds":{"Good":15,"Fairly Good":10,"Moderate":7,"Fairly Poor":3,"Poor":1,"Condition Assessment N/A":null,"N/A - Other":null},"Littoral coarse sediment":{"Good":3,"Fairly Good":2,"Moderate":1,"Fairly Poor":1,"Poor":1,"Condition Assessment N/A":null,"N/A - Other":null},"Littoral mud":{"Good":6,"Fairly Good":4,"Moderate":3,"Fairly Poor":2,"Poor":1,"Condition Assessment N/A":null,"N/A - Other":null},"Littoral mixed sediments":{"Good":5,"Fairly Good":4,"Moderate":3,"Fairly Poor":2,"Poor":1,"Condition Assessment N/A":null,"N/A - Other":null},"Littoral seagrass":{"Good":20,"Fairly Good":15,"Moderate":10,"Fairly Poor":5,"Poor":2,"Condition Assessment N/A":null,"N/A - Other":null},"Littoral seagrass on peat, clay or chalk":{"Good":30,"Fairly Good":30,"Moderate":30,"Fairly Poor":30,"Poor":30,"Condition Assessment N/A":null,"N/A - Other":null},"Littoral biogenic reefs - Mussels":{"Good":15,"Fairly Good":10,"Moderate":5,"Fairly Poor":3,"Poor":3,"Condition Assessment N/A":null,"N/A - Other":null},"Littoral biogenic reefs - Sabellaria":{"Good":15,"Fairly Good":10,"Moderate":5,"Fairly Poor":3,"Poor":3,"Condition Assessment N/A":null,"N/A - Other":null},"Features of littoral sediment":{"Good":10,"Fairly Good":7,"Moderate":5,"Fairly Poor":3,"Poor":3,"Condition Assessment N/A":null,"N/A - Other":null},"Artificial littoral coarse sediment":{"Good":3,"Fairly Good":2,"Moderate":1,"Fairly Poor":1,"Poor":1,"Condition Assessment N/A":null,"N/A - Other":null},"Artificial littoral mud":{"Good":6,"Fairly Good":4,"Moderate":3,"Fairly Poor":2,"Poor":1,"Condition Assessment N/A":null,"N/A - Other":null},"Artificial littoral sand":{"Good":4,"Fairly Good":2,"Moderate":1,"Fairly Poor":1,"Poor":1,"Condition Assessment N/A":null,"N/A - Other":null},"Artificial littoral muddy sand":{"Good":5,"Fairly Good":4,"Moderate":3,"Fairly Poor":2,"Poor":1,"Condition Assessment N/A":null,"N/A - Other":null},"Artificial littoral mixed sediments":{"Good":5,"Fairly Good":4,"Moderate":3,"Fairly Poor":2,"Poor":1,"Condition Assessment N/A":null,"N/A - Other":null},"Artificial littoral seagrass":{"Good":20,"Fairly Good":15,"Moderate":10,"Fairly Poor":5,"Poor":2,"Condition Assessment N/A":null,"N/A - Other":null},"Artificial littoral biogenic reefs":{"Good":15,"Fairly Good":10,"Moderate":5,"Fairly Poor":3,"Poor":3,"Condition Assessment N/A":null,"N/A - Other":null},"Littoral sand":{"Good":4,"Fairly Good":2,"Moderate":1,"Fairly Poor":1,"Poor":1,"Condition Assessment N/A":null,"N/A - Other":null},"Littoral muddy sand":{"Good":5,"Fairly Good":4,"Moderate":3,"Fairly Poor":2,"Poor":1,"Condition Assessment N/A":null,"N/A - Other":null},"Artificial hard structures":{"Good":15,"Fairly Good":10,"Moderate":5,"Fairly Poor":2,"Poor":1,"Condition Assessment N/A":null,"N/A - Other":null},"Artificial features of hard structures":{"Good":13,"Fairly Good":8,"Moderate":4,"Fairly Poor":2,"Poor":1,"Condition Assessment N/A":null,"N/A - Other":null},"Artificial hard structures with integrated greening of grey infrastructure (IGGI)":{"Good":13,"Fairly Good":8,"Moderate":4,"Fairly Poor":2,"Poor":1,"Condition Assessment N/A":null,"N/A - Other":null},"Watercourse footprint":{"Good":null,"Fairly Good":null,"Moderate":null,"Fairly Poor":null,"Poor":null,"Condition Assessment N/A":null,"N/A - Other":0}},"genericCreation":{"Good":10,"Fairly Good":8,"Moderate":5,"Fairly Poor":3,"Poor":1,"Condition Assessment N/A":1,"N/A - Other":0}};</script>
+<script>
+/* Trading Rules Simulator — v4. Single-file logic. DATA injected as window.DATA. */
+(function(){
+"use strict";
+const DATA = window.DATA;
+
+/* ---------- constants ---------- */
+const TYPES = ["area","hedgerow","watercourse"];
+const TYPE_NAME = {area:"Area", hedgerow:"Hedgerow", watercourse:"Watercourse"};
+const TYPE_TITLE = {area:"Areas", hedgerow:"Hedgerows", watercourse:"Watercourses"};
+const TYPE_UNIT = {area:"ha", hedgerow:"km", watercourse:"km"};
+const TYPE_PREFIX = {area:"A", hedgerow:"H", watercourse:"W"};
+const TYPE_MIN_INDIVIDUAL = {area:0.05, hedgerow:0.02, watercourse:0.02};
+const FIXED_TOTAL = {hedgerow:1.000, watercourse:0.500};
+const AREA_CAP = 100;
+
+const DIST_BANDS = ["V.High","High","Medium","Low","V.Low"];
+const DIST_RANK = {"V.Low":0,"Low":1,"Medium":2,"High":3,"V.High":4};
+const DIST_FULL = {"V.Low":"Very Low","Low":"Low","Medium":"Medium","High":"High","V.High":"Very High"};
+const DIST_SCORE = {
+  area:        {"V.High":8,"High":6,"Medium":4,"Low":2,"V.Low":0},
+  hedgerow:    {"V.High":8,"High":6,"Medium":4,"Low":2,"V.Low":1},
+  watercourse: {"V.High":8,"High":6,"Medium":4,"Low":2,"V.Low":0}
+};
+const ASSESSED = ["Poor","Fairly Poor","Moderate","Fairly Good","Good"]; // low -> high
+const COND_SCORE = {"Good":3,"Fairly Good":2.5,"Moderate":2,"Fairly Poor":1.5,"Poor":1,
+  "Condition Assessment N/A":1,"N/A - Other":0};
+const DIFF_MULT = {"Low":1.0,"Medium":0.67,"High":0.33,"Very High":0.1,"N/A":1.0};
+const MVS = new Set(["Medium","Low","V.Low"]);
+
+// year -> time multiplier (Time to Target - Years)
+const YEAR_MULT = {0:1,1:0.965,2:0.931,3:0.899,4:0.867,5:0.837,6:0.808,7:0.779,8:0.752,9:0.726,
+10:0.7,11:0.676,12:0.652,13:0.629,14:0.607,15:0.586,16:0.566,17:0.546,18:0.527,19:0.508,20:0.49,
+21:0.473,22:0.457,23:0.441,24:0.425,25:0.41,26:0.396,27:0.382,28:0.369,29:0.356,30:0.343,"30+":0.32};
+
+const INTERTIDAL = new Set(["Intertidal hard structures","Intertidal sediment"]);
+const TRADING_RULES = {
+  area: {"V.High":"Same habitat in better condition (bespoke compensation otherwise) ⚠","High":"Same habitat (like-for-like) in better condition",
+    "Medium":"Same broad habitat at same distinctiveness in better condition, or higher distinctiveness in same/better condition",
+    "Low":"Same distinctiveness in better condition, or higher distinctiveness in same/better condition","V.Low":"No compensation required"},
+  hedgerow: {"V.High":"Same habitat in better condition","High":"Same habitat in better condition, or higher distinctiveness in same/better condition",
+    "Medium":"Same distinctiveness in better condition, or higher distinctiveness in same/better condition",
+    "Low":"Same distinctiveness in better condition, or higher distinctiveness in same/better condition",
+    "V.Low":"Same distinctiveness in better condition, or higher distinctiveness in same/better condition"},
+  watercourse: {"V.High":"Same habitat in better condition (bespoke compensation otherwise) ⚠","High":"Same habitat in better condition",
+    "Medium":"Same habitat in better condition","Low":"Same or higher distinctiveness in same/better condition (culverts like-for-like)","V.Low":"n/a"}
+};
+const RULE_REF = {
+  area: {
+    "V.High":{desc:"Same habitat required – bespoke compensation option ⚠", logic:`Same habitat in better condition`},
+    "High":{desc:"Same habitat required =", logic:`Like-for-like in better condition`},
+    "Medium":{desc:"Same broad habitat or a higher distinctiveness habitat required (≥)", logic:`<b>When habitat has conditions:</b><br>• Same distinctiveness in better condition from the same broad habitat<br>• Higher distinctiveness in same/better condition<br><b>When Condition Assessment N/A:</b><br>• Same distinctiveness with condition &gt; 1 (higher than poor)<br>• Higher distinctiveness in any condition<br><b>When broad habitat is "Intertidal hard structures" or "Intertidal sediment":</b><br>• Same distinctiveness and better condition from those broad habitats`},
+    "Low":{desc:"Same distinctiveness or better habitat required", logic:`<b>When habitat has conditions:</b><br>• Same distinctiveness in better condition<br>• Higher distinctiveness in same/better condition<br><b>When Condition Assessment N/A:</b><br>• Same distinctiveness with condition &gt; 1 (higher than poor)<br>• Higher distinctiveness in any condition`},
+    "V.Low":{desc:"n/a", logic:`n/a`}
+  },
+  hedgerow: {
+    "V.High":{desc:"Same habitat required =", logic:`Same habitat in better condition`},
+    "High":{desc:"Like for like or better", logic:`• Same habitat in better condition<br>• Higher distinctiveness in same/better condition`},
+    "Medium":{desc:"Same distinctiveness or better habitat required", logic:`• Same distinctiveness in better condition<br>• Higher distinctiveness in same/better condition`},
+    "Low":{desc:"Same distinctiveness or better habitat required", logic:`• Same distinctiveness in better condition<br>• Higher distinctiveness in same/better condition`},
+    "V.Low":{desc:"Same distinctiveness or better habitat required", logic:`• Same distinctiveness in better condition<br>• Higher distinctiveness in same/better condition`}
+  },
+  watercourse: {
+    "V.High":{desc:"Same habitat required – bespoke compensation option ⚠", logic:`Same habitat in better condition`},
+    "High":{desc:"Same habitat required =", logic:`Same habitat in better condition`},
+    "Medium":{desc:"Same habitat required =", logic:`Same habitat in better condition`},
+    "Low":{desc:"Better distinctiveness habitat required", logic:`• Same distinctiveness in same/better condition<br>• Higher distinctiveness in same/better condition`},
+    "V.Low":{desc:"n/a", logic:`n/a`}
+  }
+};
+
+
+/* ---------- data indexes ---------- */
+const byType = {area:[],hedgerow:[],watercourse:[]};
+DATA.habitats.forEach(h=>{
+  const t = h.unit==="Area"?"area":h.unit==="Hedgerow"?"hedgerow":"watercourse";
+  byType[t].push(h);
+});
+const habByName = {};
+DATA.habitats.forEach(h=>{ habByName[h.unit+"|"+h.name]=h; });
+
+/* ---------- helpers ---------- */
+const rnd=(a,b)=>a+Math.random()*(b-a);
+const rint=(a,b)=>Math.floor(rnd(a,b+1));
+const pick=arr=>arr[Math.floor(Math.random()*arr.length)];
+const round2=x=>Math.round(x*100)/100;
+const round3=x=>Math.round(x*1000)/1000;
+const roundN=(x,dp)=>{const f=Math.pow(10,dp);return Math.round(x*f)/f;};
+const dp_for=t=>t==="area"?2:3;
+const fmtSize=(v,t)=>v.toFixed(t==="area"?2:3);
+const esc=s=>String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+
+function distScore(t,d){ return DIST_SCORE[t][d]; }
+function condsFor(h){
+  // Per-habitat condition list (v3 authoritative); fall back to derived list if absent.
+  if(h.conds && h.conds.length) return h.conds;
+  if(h.condMode==="Assessed") return ASSESSED.slice();
+  if(h.condMode==="Condition Assessment N/A") return ["Condition Assessment N/A"];
+  return ["N/A - Other"];
+}
+function creationYears(t,h,cond){
+  if(t==="area"){ const r=DATA.creationYears[h.name]; return r? r[cond] : null; }
+  return DATA.genericCreation[cond];
+}
+function enhancementYears(t,h,cond){
+  if(t==="area"){ const y=creationYears(t,h,cond); return y==null?null:Math.max(1,Math.round(y*0.7)); }
+  const y=DATA.genericCreation[cond]; return y==null?null:y;
+}
+function timeMultYears(years){
+  if(years==null) return null;
+  if(years>30) return YEAR_MULT["30+"];
+  if(YEAR_MULT[years]!=null) return YEAR_MULT[years];
+  return YEAR_MULT[Math.min(30,Math.round(years))];
+}
+function diffMult(label){ return DIFF_MULT[label]!=null?DIFF_MULT[label]:1.0; }
+
+/* ---------- trading rule ---------- */
+// Condition-aware trading rule (v2). base/post carry dist, broad, name and (optionally) cond.
+// When conditions are unknown (habitat-only candidacy, e.g. dropdowns / offset matching) the
+// condition test is treated as satisfied so structural eligibility still works.
+function condModeOf(x){ return (x && (x.condMode || (x.hab && x.hab.condMode))) || "Assessed"; }
+// Trading rule mirroring the v3 Trading Rules Widget (matchReasons). Structural eligibility
+// (distinctiveness / broad / habitat / condition-availability); the "better condition"
+// requirement is enforced by condition selection (bestEnhCond / condOptions), exactly as v3.
+function checkTradingRule(t, base, post){
+  if(!base||!post) return false;
+  const bd=base.dist, pd=post.dist;
+  const bs=distScore(t,bd), ps=distScore(t,pd);
+  if(!bs || !ps) return false;                 // score 0 (Area Very Low) -> no trade applies
+  const sameHab = post.name===base.name;
+  const sameBroad = post.broad===base.broad;
+  const baseNoCond = condModeOf(base)!=="Assessed";
+  const postNoCond = condModeOf(post)!=="Assessed";
+  // A same-distinctiveness candidate that has no condition assessment can never be a valid
+  // trade (it cannot be enhanced to a better condition).
+  if(pd===bd && postNoCond) return false;
+  if(t==="area"){
+    if(bd==="V.High"||bd==="High") return sameHab;
+    if(bd==="Medium"){
+      if(ps>bs) return true;                                  // higher distinctiveness
+      if(ps===bs){
+        if(baseNoCond) return !postNoCond;                    // CA N/A baseline: any broad
+        if(sameBroad) return true;                            // assessed baseline: same broad
+        if(INTERTIDAL.has(base.broad) && INTERTIDAL.has(post.broad)) return true; // intertidal cross-pair
+      }
+      return false;
+    }
+    return ps>=bs;                                            // Low (Very Low excluded by score 0)
+  }
+  if(t==="hedgerow"){
+    if(bd==="V.High") return sameHab;
+    if(bd==="High") return sameHab || ps>bs;
+    return ps>=bs;                                            // Medium / Low / Very Low
+  }
+  // watercourse
+  if(bd==="V.High"||bd==="High"||bd==="Medium") return sameHab;
+  if(bd==="Low") return sameHab || ps>bs;                     // like-for-like (culvert) or higher
+  return false;                                               // Very Low (none)
+}
+function getTradingRuleText(t,dist){ return TRADING_RULES[t][dist]||""; }
+// Whether a loss at this distinctiveness band needs compensation at all.
+function compRequired(t,dist){ if(t==="hedgerow") return true; return dist!=="V.Low"; }
+// Can a loss at baseline b be offset by any habitat other than itself? (false = same-habitat-required)
+function lossOffsettable(t,b){
+  if(!compRequired(t,b.dist)) return true; // no compensation needed, never a failure
+  return pool(t).some(h=> h.name!==b.name && checkTradingRule(t,b,h));
+}
+
+/* ---------- pools ---------- */
+let filter="MVS";
+function pool(t){
+  return byType[t].filter(h=> filter==="All" || MVS.has(h.dist));
+}
+
+/* ---------- condition selection ---------- */
+function biasedBaselineCond(h){
+  const cs=condsFor(h);
+  if(h.condMode!=="Assessed") return cs[0];
+  const avail=ASSESSED.filter(c=>cs.includes(c)); // grades this habitat has, low->high
+  if(avail.length<=1) return avail[0]||cs[0];
+  const pool=avail.slice(0,avail.length-1);        // drop top grade -> enhancement headroom
+  return pool[Math.floor(pool.length/2)] || pool[0];
+}
+// best target condition for enhancement of a habitat above a baseline rank
+function bestEnhCond(t,h,minRankExclusive){
+  const cs=condsFor(h);
+  if(h.condMode!=="Assessed"){
+    const c=cs[0];
+    return enhancementYears(t,h,c)!=null?c:null;
+  }
+  for(let i=ASSESSED.length-1;i>minRankExclusive;i--){
+    const c=ASSESSED[i];
+    if(!cs.includes(c)) continue;                  // only conditions this habitat has
+    if(enhancementYears(t,h,c)!=null) return c;
+  }
+  return null;
+}
+// best created condition maximising condScore*timeMult
+function bestCreatedCond(t,h){
+  const cs=condsFor(h); let best=null,bestVal=-1;
+  cs.forEach(c=>{
+    const y=creationYears(t,h,c); if(y==null) return;
+    const tm=timeMultYears(y); if(tm==null) return;
+    const val=COND_SCORE[c]*tm;
+    if(val>bestVal){bestVal=val;best=c;}
+  });
+  return best;
+}
+
+/* ---------- enhancement picker ---------- */
+function pickEnhancement(t, base){
+  const baseHab = base.hab;
+  // path 1: same habitat, strictly better condition — only if the trading rule allows same-habitat
+  if(baseHab.condMode==="Assessed" && checkTradingRule(t,base,baseHab)){
+    const br=ASSESSED.indexOf(base.cond);
+    const c=bestEnhCond(t,baseHab,br);
+    if(c) return {hab:baseHab, cond:c, kind:"cond"};
+  }
+  // path 2: alternative habitat satisfying trading rule
+  const cands=pool(t).filter(h=> h.name!==baseHab.name && checkTradingRule(t,base,h)
+      && bestEnhCond(t,h,-1)!=null);
+  if(cands.length){
+    // prefer strictly higher distinctiveness, then same-dist same-broad
+    cands.sort((a,b)=>{
+      const da=DIST_RANK[a.dist]>DIST_RANK[base.dist]?0:1;
+      const db=DIST_RANK[b.dist]>DIST_RANK[base.dist]?0:1;
+      if(da!==db) return da-db;
+      const sa=(a.broad===base.broad)?0:1, sb=(b.broad===base.broad)?0:1;
+      return sa-sb;
+    });
+    const h=cands[0];
+    const c=bestEnhCond(t,h,-1);
+    return {hab:h, cond:c, kind:"hab"};
+  }
+  return null;
+}
+function canEnhance(t,base){ return pickEnhancement(t,base)!=null; }
+
+/* ---------- unit calcs ---------- */
+function baselineUnits(t,b){ return b.size*distScore(t,b.dist)*COND_SCORE[b.cond]*b.ss; }
+function retainedUnits(t,b,size){ return size*distScore(t,b.dist)*COND_SCORE[b.cond]*b.ss; }
+function enhancedUnits(t,b,enh){
+  if(!enh.habName||enh.noEnhancement) return 0;
+  const h=habByName[TYPE_NAME[t]+"|"+enh.habName]; if(!h) return 0;
+  const PS=enh.size, PD=distScore(t,h.dist), PC=COND_SCORE[enh.cond], BC=COND_SCORE[b.cond];
+  const time=timeMultYears(enhancementYears(t,h,enh.cond))||0;
+  const diff=diffMult(h.diffEnh);
+  return ((PS*PD*PC - PS*PD*BC)*time*diff + PS*PD*BC)*b.ss;
+}
+function createdUnits(t,row){
+  if(!row.habName) return 0;
+  const h=habByName[TYPE_NAME[t]+"|"+row.habName]; if(!h) return 0;
+  const time=timeMultYears(creationYears(t,h,row.cond))||0;
+  const diff=diffMult(h.diffCre);
+  return row.size*distScore(t,h.dist)*COND_SCORE[row.cond]*1*time*diff;
+}
+
+/* ---------- size distribution ---------- */
+function splitSizes(total,n,minEach,dp){
+  let parts=[]; let rem=total;
+  for(let i=0;i<n;i++){
+    const left=n-i-1;
+    const maxHere=rem-left*minEach;
+    let v= i===n-1 ? rem : roundN(minEach+Math.random()*(maxHere-minEach),dp);
+    if(v<minEach) v=minEach; if(v>maxHere) v=maxHere;
+    v=roundN(v,dp); parts.push(v); rem=roundN(rem-v,dp);
+  }
+  // fix rounding into last
+  const s=parts.reduce((a,b)=>a+b,0);
+  parts[n-1]=roundN(parts[n-1]+(total-s),dp);
+  return parts;
+}
+
+/* ---------- baseline generation ---------- */
+// When more than 5 habitats are required for an intervention type, make ~1/3 of them duplicates.
+function dupSplit(n){ const dup = n>5 ? Math.min(n-1, Math.max(1, Math.round(n/3))) : 0; return {dup, distinct:n-dup}; }
+function baselineCondVaried(h, used){
+  const cs=condsFor(h); const u=used[h.name]||(used[h.name]=new Set());
+  if(h.condMode==="Assessed"){
+    const avail=ASSESSED.filter(c=>cs.includes(c));
+    const pref=avail.slice(0,Math.max(1,avail.length-1)); // drop top grade -> enhancement headroom
+    const unused=pref.filter(c=>!u.has(c));
+    let c = unused.length? pick(unused) : (pref.length? pick(pref) : (avail[0]||cs[0]));
+    u.add(c); return c;
+  }
+  const c=cs[0]; u.add(c); return c;
+}
+function createdCondVaried(t,h,used){
+  const u=used[h.name]||(used[h.name]=new Set());
+  const valid=condsFor(h).filter(c=>{const y=creationYears(t,h,c); return y!=null && timeMultYears(y)!=null;});
+  const list=valid.length? valid.slice().sort((a,b)=>COND_SCORE[b]-COND_SCORE[a]) : [bestCreatedCond(t,h)||condsFor(h)[0]];
+  let c; if(!u.size){ c=bestCreatedCond(t,h)||list[0]; } else { c=list.find(x=>!u.has(x))||list[0]; }
+  u.add(c); return c;
+}
+function enhValidConds(t,h){ return condsFor(h).filter(c=>{const y=enhancementYears(t,h,c); return y!=null && timeMultYears(y)!=null;}); }
+function bestEnhCondVaried(t,h,used){
+  const list=enhValidConds(t,h).slice().sort((a,b)=>COND_SCORE[b]-COND_SCORE[a]);
+  if(!list.length) return null;
+  const u=used[h.name]||(used[h.name]=new Set());
+  let c=list.find(x=>!u.has(x))||list[0]; u.add(c); return c;
+}
+function genBaseline(t){
+  const p=pool(t); const n=baselineCounts[t]; const dp=dp_for(t);
+  const {dup:dupCount, distinct:distinctTarget}=dupSplit(n);
+  const chosen=[]; const usedNames=new Set();
+  const addUnique=h=>{ chosen.push(h); usedNames.add(h.name); };
+  const bands=[...new Set(p.map(h=>h.dist))];
+  bands.forEach(d=>{ if(chosen.length<distinctTarget){ const opts=p.filter(h=>h.dist===d && !usedNames.has(h.name)); if(opts.length) addUnique(pick(opts)); }});
+  while(chosen.length<distinctTarget){ const opts=p.filter(h=>!usedNames.has(h.name)); if(!opts.length) break; addUnique(pick(opts)); }
+  if(t==="area"){
+    const dev=byType.area.find(h=>h.name==="Developed land; sealed surface");
+    if(dev && !usedNames.has(dev.name) && chosen.length){ usedNames.delete(chosen[chosen.length-1].name); chosen[chosen.length-1]=dev; usedNames.add(dev.name); }
+  }
+  // intentional duplicates (prefer Assessed habitats so their conditions can differ)
+  for(let i=0;i<dupCount && chosen.length<n;i++){
+    const assessed=chosen.filter(h=>h.condMode==="Assessed");
+    chosen.push(assessed.length? pick(assessed) : (chosen.length? pick(chosen) : pick(p)));
+  }
+  while(chosen.length<n) chosen.push(pick(p));
+  // sizes
+  let sizes;
+  if(t==="area"){
+    sizes=chosen.map(()=>round2(rnd(0.5,3.0)));
+    let tot=sizes.reduce((a,b)=>a+b,0);
+    if(tot>AREA_CAP){ const f=AREA_CAP/tot; sizes=sizes.map(s=>round2(s*f)); }
+  } else {
+    sizes=splitSizes(FIXED_TOTAL[t],n,TYPE_MIN_INDIVIDUAL[t],dp);
+  }
+  const condUsed={};
+  return chosen.map((h,i)=>{
+    let cond=baselineCondVaried(h, condUsed);
+    const row={id:TYPE_PREFIX[t]+(i+1), hab:h, name:h.name, broad:h.broad, dist:h.dist,
+      cond:cond, size:sizes[i], ss:1, ripEncr:"-", wcEncr:"-"};
+    if(t==="watercourse"){
+      if(h.name==="Culvert"){ row.ripEncr="N/A - Culvert"; row.wcEncr="N/A - Culvert"; }
+      else { row.ripEncr=pick(["None","Low","Medium"]); row.wcEncr=pick(["None","Low","Medium"]); }
+    }
+    return row;
+  });
+}
+
+/* ---------- post generation ---------- */
+function buildPostSet(t, baselines, mode){
+  const dp=dp_for(t);
+  const baseTotal=baselines.reduce((a,b)=>a+b.size,0)||1;
+  const createdShare=0.25+Math.random()*0.10;
+  const groups=baselines.map((b,bi)=>{
+    const enhPick=pickEnhancement(t,b);
+    const canEnh=enhPick!=null;
+    // Same-habitat-required baselines (e.g. High/V.High area) can't have their losses traded away,
+    // so don't strip area to For Creation — keep them fully retained/enhanced (no net unit loss).
+    const mustRetain = (mode!=="errors") && !lossOffsettable(t,b);
+    // For Creation size
+    let lost = mustRetain ? 0 : b.size*createdShare*(mode==="valid"?(0.85+0.3*Math.random()):(0.5+Math.random()));
+    lost=Math.min(b.size, Math.max(0, roundN(lost,dp)));
+    let remaining=roundN(b.size-lost,dp);
+    let enhSize=0, retSize=remaining;
+    if(canEnh && remaining>TYPE_MIN_INDIVIDUAL[t]*1.5){
+      const frac = mode==="valid" ? (0.45+0.35*Math.random()) : (0.25+0.4*Math.random());
+      enhSize=Math.max(TYPE_MIN_INDIVIDUAL[t], roundN(remaining*frac,dp));
+      if(enhSize>remaining) enhSize=remaining;
+      retSize=roundN(remaining-enhSize,dp);
+      if(retSize<0){retSize=0;enhSize=remaining;}
+    }
+    // reconcile so ret+enh+lost == size
+    lost=roundN(b.size-retSize-enhSize,dp);
+    if(lost<0){ retSize=roundN(retSize+lost,dp); lost=0; if(retSize<0){retSize=0;} }
+    const enh={habName:null,cond:null,size:enhSize,noEnhancement:!canEnh,canEnhance:canEnh};
+    if(canEnh && enhSize>0){ enh.habName=enhPick.hab.name; enh.cond=enhPick.cond; }
+    else { enh.noEnhancement=true; }
+    return {bi, retained:{size:retSize}, enhanced:enh, forCreation:{size:lost}};
+  });
+  // Intentional enhanced duplicates when >5 enhancements: reuse enhancement habitats across groups (rule-permitting), varying condition.
+  (function(){
+    const enhGroups=groups.filter(g=>g.enhanced.habName && !g.enhanced.noEnhancement && g.enhanced.size>0);
+    if(enhGroups.length<=5) return;
+    const {dup:dupTarget}=dupSplit(enhGroups.length);
+    const condUsed={};
+    enhGroups.forEach(g=>{ (condUsed[g.enhanced.habName]=condUsed[g.enhanced.habName]||new Set()).add(g.enhanced.cond); });
+    let made=0;
+    for(const g of enhGroups){
+      if(made>=dupTarget) break;
+      const b=baselines[g.bi];
+      const usedNames=[...new Set(enhGroups.map(x=>x.enhanced.habName))].filter(nm=>nm!==g.enhanced.habName);
+      for(const nm of usedNames){
+        const h=habByName[TYPE_NAME[t]+"|"+nm];
+        if(h && checkTradingRule(t,b,h)){
+          const ec=bestEnhCondVaried(t,h,condUsed);
+          if(ec){ g.enhanced.habName=nm; g.enhanced.cond=ec; made++; break; }
+        }
+      }
+    }
+  })();
+  // created rows fill the For-Creation budget
+  const budget=roundN(groups.reduce((a,g)=>a+g.forCreation.size,0),dp);
+  const created=[];
+  if(budget>0){
+    const p=pool(t);
+    const baseNames=new Set(baselines.map(b=>b.name));
+    // candidates: not in baseline, valid created time, higher distinctiveness preferred
+    let cands=p.filter(h=>!baseNames.has(h.name) && bestCreatedCond(t,h)!=null);
+    cands.sort((a,b)=>DIST_RANK[b.dist]-DIST_RANK[a.dist]);
+    if(!cands.length) cands=p.filter(h=>bestCreatedCond(t,h)!=null);
+    const want=Math.max(1, createdCounts[t]);
+    let picks=[];
+    const distinctPick=i=> cands.length ? (cands[i]||cands[i%cands.length]) : pick(p);
+    if(want<=5){
+      const nR=Math.max(1, Math.min(want, cands.length||1));
+      for(let i=0;i<nR;i++) picks.push(distinctPick(i));
+    } else {
+      const {dup:dupCount, distinct:distinctTarget}=dupSplit(want);
+      for(let i=0;i<distinctTarget;i++) picks.push(distinctPick(i));
+      for(let i=0;i<dupCount;i++){ const assessed=picks.filter(h=>h&&h.condMode==="Assessed"); picks.push(assessed.length?pick(assessed):(picks.length?pick(picks):(cands.length?pick(cands):pick(p)))); }
+    }
+    const nRows=picks.length;
+    const sizes=splitSizes(budget,nRows,Math.min(TYPE_MIN_INDIVIDUAL[t],budget/nRows),dp);
+    const condUsed={};
+    for(let i=0;i<nRows;i++){
+      const hh=picks[i]||pick(p);
+      created.push({id:TYPE_PREFIX[t]+"C"+(i+1), habName:hh.name, cond:createdCondVaried(t,hh,condUsed), size:sizes[i]});
+    }
+  }
+  return {groups, created};
+}
+
+/* ---------- scoring + valid retry ---------- */
+// Count real trading-rule failures: habitats with a net unit loss that the trading rules
+// leave un-offset (matching the FAILED rows in the Trading Rules Summary detail).
+function countTradingFailures(t){
+  const tr=computeTrading(t); let n=0;
+  Object.keys(tr.shortfallByHab).forEach(nm=>{
+    const sf=tr.shortfallByHab[nm]; const h=habByName[TYPE_NAME[t]+"|"+nm];
+    if(sf>1e-6 && h && compRequired(t,h.dist)) n++;
+  });
+  return n;
+}
+function summarize(t){
+  const sd=simData[t]; if(!sd) return null;
+  const bl=sd.baselines, gr=sd.groups, cr=sd.created;
+  let ub=0, up=0, enhCount=0;
+  bl.forEach(b=>{ ub+=baselineUnits(t,b); });
+  gr.forEach(g=>{
+    const b=bl[g.bi];
+    up+=retainedUnits(t,b,g.retained.size);
+    const eu=enhancedUnits(t,b,g.enhanced);
+    up+=eu;
+    if(g.enhanced.habName && !g.enhanced.noEnhancement && eu>0) enhCount++;
+  });
+  cr.forEach(r=>{ up+=createdUnits(t,r); });
+  const failures=countTradingFailures(t);
+  // created set trading-rule check against any baseline of >= its requirement: simplified — created of lower
+  // distinctiveness than all baselines may fail; check each created passes some baseline rule
+  const sizeBase=bl.reduce((a,b)=>a+b.size,0);
+  const sizePost=gr.reduce((a,g)=>a+g.retained.size+g.enhanced.size,0)+cr.reduce((a,r)=>a+r.size,0);
+  const gain=up-ub; const pct= ub>0 ? gain/ub*100 : 0;
+  return {ub,up,gain,pct,failures,enhCount,sizeBase,sizePost,
+    forCreationTotal:gr.reduce((a,g)=>a+g.forCreation.size,0),
+    createdTotal:cr.reduce((a,r)=>a+r.size,0)};
+}
+function scoreType(t){
+  const s=summarize(t); if(!s) return -1e9;
+  return s.pct + (s.failures===0?10000:-1000*s.failures) + (s.enhCount>=2?1000:0) + (s.pct>=10?500:0);
+}
+
+// Inject a minimal unoffsettable loss so the scheme fails a trading rule while keeping net gain.
+function injectError(t){
+  const sd=simData[t]; const dp=dp_for(t); const rank=d=>DIST_RANK[d];
+  let cand=sd.groups.map((g,i)=>({g,b:sd.baselines[g.bi]})).filter(x=>!lossOffsettable(t,x.b));
+  if(!cand.length) cand=sd.groups.map((g,i)=>({g,b:sd.baselines[g.bi]}));
+  if(!cand.length) return;
+  cand.sort((a,c)=>rank(c.b.dist)-rank(a.b.dist));
+  const g=cand[0].g, b=cand[0].b;
+  const chunk=roundN(Math.min(g.retained.size+g.enhanced.size, Math.max(TYPE_MIN_INDIVIDUAL[t], b.size*0.25)), dp);
+  if(chunk<=0) return;
+  let rem=chunk;
+  const tr=Math.min(g.retained.size,rem); g.retained.size=roundN(g.retained.size-tr,dp); rem=roundN(rem-tr,dp);
+  if(rem>0){ const te=Math.min(g.enhanced.size,rem); g.enhanced.size=roundN(g.enhanced.size-te,dp); rem=roundN(rem-te,dp); }
+  g.forCreation.size=roundN(b.size-g.retained.size-g.enhanced.size,dp);
+  // create the freed area as a habitat that cannot offset b (so the loss fails the rules)
+  const opts2=pool(t).filter(h=>h.name!==b.name && !checkTradingRule(t,b,h) && bestCreatedCond(t,h)!=null);
+  const hh=opts2.length?opts2.sort((a,c)=>rank(c.dist)-rank(a.dist))[0]:null;
+  if(hh) sd.created.push({id:TYPE_PREFIX[t]+"X"+sd.created.length, habName:hh.name, cond:bestCreatedCond(t,hh)||condsFor(hh)[0], size:roundN(chunk,dp)});
+}
+function genType(t, opts){
+  opts=opts||{};
+  const mode=opts.mode||"valid";
+  if(opts.errors){
+    let best=null,bestScore=-1e18;
+    const consider=()=>{ const s=summarize(t); if(s.pct>=10 && s.failures>=1) return true;
+      const sc=(s.failures>=1?2000:0)+(s.pct>=10?1000:0)+s.pct;
+      if(sc>bestScore){ bestScore=sc; best={baselines:simData[t].baselines,groups:simData[t].groups,created:simData[t].created}; } return false; };
+    for(let i=0;i<250;i++){ const bl=genBaseline(t); const ps=buildPostSet(t,bl,"errors"); simData[t]={baselines:bl,groups:ps.groups,created:ps.created}; if(consider()) return; }
+    for(let i=0;i<150;i++){ const bl=genBaseline(t); const ps=buildPostSet(t,bl,"valid"); simData[t]={baselines:bl,groups:ps.groups,created:ps.created}; injectError(t); if(consider()) return; }
+    if(best) simData[t]=best;
+    return;
+  }
+  if(opts.validRetry){
+    let best=null, bestScore=-1e18;
+    for(let i=0;i<60;i++){
+      const bl=(opts.regenBaseline!==false || i>=20) ? genBaseline(t) : simData[t].baselines; // keep baseline if it can be made valid; otherwise regenerate
+      const ps=buildPostSet(t,bl,"valid");
+      const cand={baselines:bl,groups:ps.groups,created:ps.created};
+      simData[t]=cand;
+      const sc=scoreType(t); const s=summarize(t);
+      if(sc>bestScore){ bestScore=sc; best=JSON.parse(JSON.stringify(cand)); rehydrate(best); }
+      if(s.pct>=10 && s.enhCount>=2 && s.failures===0) { break; }
+    }
+    simData[t]=best;
+  } else {
+    const bl=opts.regenBaseline ? genBaseline(t) : simData[t].baselines;
+    const ps=buildPostSet(t,bl,mode);
+    simData[t]={baselines:bl,groups:ps.groups,created:ps.created};
+  }
+}
+function rehydrate(state){ // restore hab references after JSON clone
+  state.baselines.forEach(b=>{ b.hab=habByName[b.hab.unit+"|"+b.hab.name]||habByName[TYPE_NAME[currentType]+"|"+b.name]; });
+}
+
+/* ---------- state ---------- */
+let simData={area:null,hedgerow:null,watercourse:null};
+let currentType="area";
+let baselineCounts={area:3,hedgerow:3,watercourse:3};
+let createdCounts={area:3,hedgerow:3,watercourse:3};
+
+function setDefaultCounts(){
+  const n = filter==="MVS"?3:5;
+  TYPES.forEach(t=>{ baselineCounts[t]=n; createdCounts[t]=n; });
+}
+function buildSimTab(){
+  setDefaultCounts();
+  TYPES.forEach(t=> genType(t,{validRetry:true,regenBaseline:true}));
+}
+
+/* ---------- rendering: header ---------- */
+function fmtPct(p){ return (p>=0?"+":"")+Math.round(p)+"%"; }
+function renderHeader(){
+  const rows=TYPES.map(t=>{
+    const s=summarize(t); const u=TYPE_UNIT[t];
+    if(!s||s.ub===0) return `<tr><td class="type">${TYPE_NAME[t]}</td><td colspan="6" style="text-align:center;color:#9aa1ad">—</td></tr>`;
+    const ngCls=s.pct>=10?"ng-good":"ng-bad";
+    const trCls=s.failures===0?"tr-pass-cell":"tr-fail-cell";
+    const trTxt=s.failures===0?"Passed":"Failed";
+    return `<tr><td class="type">${TYPE_NAME[t]}</td>`+
+      `<td>${s.sizeBase.toFixed(t==="area"?2:3)} ${u}</td>`+
+      `<td>${s.sizePost.toFixed(t==="area"?2:3)} ${u}</td>`+
+      `<td class="units">${s.ub.toFixed(2)}</td>`+
+      `<td class="units">${s.up.toFixed(2)}</td>`+
+      `<td class="uc-cell">${s.gain>=0?"+":""}${s.gain.toFixed(2)}</td>`+
+      `<td class="${ngCls}">${fmtPct(s.pct)}</td>`+
+      `<td class="${trCls}" title="${s.failures===0?"":s.failures+" failure(s)"}">${trTxt}</td></tr>`;
+  }).join("");
+  document.getElementById("summaryBody").innerHTML=rows;
+  // valid banner
+  let valid=true, anyPop=false;
+  TYPES.forEach(t=>{ const s=summarize(t); if(s&&s.ub>0){ anyPop=true; if(s.pct<10||s.failures>0) valid=false; }});
+  const ban=document.getElementById("validBanner");
+  ban.className="valid-banner show"+(valid&&anyPop?"":" invalid");
+  ban.textContent= (valid&&anyPop)?"VALID INTERVENTION":"INVALID INTERVENTION";
+}
+
+/* ---------- dropdown builders ---------- */
+function habOptions(t, selectedName, baseForRule, sentinelLabel){
+  // group by distinctiveness band, only habitats allowed (trading rule) when baseForRule given
+  let opts=`<option value="" class="sentinel"${selectedName?"":" selected"}>${sentinelLabel}</option>`;
+  if(t==="area"){
+    let list=pool(t).slice();
+    if(baseForRule) list=list.filter(h=>checkTradingRule(t,baseForRule,h));
+    list.sort((a,b)=> (DIST_RANK[a.dist]-DIST_RANK[b.dist]) || a.broad.localeCompare(b.broad) || a.name.localeCompare(b.name));
+    let prevBroad=null;
+    list.forEach(h=>{
+      const sel = h.name===selectedName?" selected":"";
+      const grp = h.broad!==prevBroad ? " grp-top":""; prevBroad=h.broad;
+      const isBase = !!(baseForRule && h.name===baseForRule.name);
+      const longTxt=(esc(h.broad+" - "+h.name)+(isBase?" - BASELINE HABITAT":"")).replace(/"/g,"&quot;");
+      opts+=`<option value="${esc(h.name)}"${sel} class="opt-area${grp}${isBase?" baseopt":""}" data-long="${longTxt}" data-short="${esc(h.name)}">${esc(h.name)}</option>`;
+    });
+    return opts;
+  }
+  DIST_BANDS.forEach(band=>{
+    let list=pool(t).filter(h=>h.dist===band);
+    if(baseForRule) list=list.filter(h=>checkTradingRule(t,baseForRule,h));
+    if(!list.length) return;
+    opts+=`<optgroup label="${DIST_FULL[band]} distinctiveness">`;
+    list.forEach(h=>{
+      const sel = h.name===selectedName?" selected":"";
+      opts+=`<option value="${esc(h.name)}"${sel}>${esc(h.name)}</option>`;
+    });
+    opts+=`</optgroup>`;
+  });
+  return opts;
+}
+function condOptions(h, selected, minBaselineCond){
+  const cs=condsFor(h);
+  const minIdx=(minBaselineCond!=null)?ASSESSED.indexOf(minBaselineCond):-1;
+  return cs.map(c=>{
+    if(minIdx>=0 && h.condMode==="Assessed" && ASSESSED.indexOf(c)<=minIdx) return "";
+    return `<option value="${esc(c)}"${c===selected?" selected":""}>${esc(c)} (${COND_SCORE[c]})</option>`;
+  }).join("");
+}
+
+/* ---------- rendering: baseline card ---------- */
+function baselineCard(t){
+  const sd=simData[t]; const u=TYPE_UNIT[t]; const wc=t==="watercourse"; const area=t==="area";
+  let head=`<div class="card-head"><h2 class="card-title">Baseline (${TYPE_TITLE[t]})</h2>
+    <div class="head-ctrl"><label>Habitats <input type="number" min="1" max="12" value="${baselineCounts[t]}" id="blCount-${t}"></label>
+    <button class="act" data-act="newbaseline" data-t="${t}">Generate new baseline</button></div></div>`;
+  let cols=`<tr><th>ID</th>`+(area?`<th>Broad Habitat</th>`:``)+`<th>Habitat</th><th>Size (${u})</th><th>Distinctiveness</th><th>Condition</th>`+
+    (wc?`<th>Rip. Encr.</th><th>Wat. Encr.</th>`:``)+`<th>SS</th><th>Units</th><th>Calc.</th></tr>`;
+  let body=sd.baselines.slice().sort((x,y)=>(parseInt(String(x.id).replace(/\D/g,""))||0)-(parseInt(String(y.id).replace(/\D/g,""))||0)).map(b=>{
+    const ds=distScore(t,b.dist), cs=COND_SCORE[b.cond], un=baselineUnits(t,b);
+    const calc=`${fmtSize(b.size,t)} × ${ds} × ${cs} × ${b.ss}`;
+    return `<tr><td>${b.id}</td>`+(area?`<td class="broadcol">${esc(b.broad)}</td>`:``)+`<td>${esc(b.name)}</td>`+
+      `<td class="num">${fmtSize(b.size,t)} <span class="usuf">${u}</span></td>`+
+      `<td>${DIST_FULL[b.dist]} (${ds})</td><td>${esc(b.cond)} (${cs})</td>`+
+      (wc?`<td>${esc(b.ripEncr)}</td><td>${esc(b.wcEncr)}</td>`:``)+
+      `<td class="num">${b.ss}</td><td class="units-cell">${un.toFixed(2)}</td><td class="calc">${calc}</td></tr>`;
+  }).join("");
+  return `<div class="card card-fit">${head}<div class="tbl-wrap"><table class="grid">${cols}${body}</table></div></div>`;
+}
+
+/* ---------- rendering: post card ---------- */
+function calcHelp(html){ return `<span class="qhelp qleft">?<span class="pop">${html}</span></span>`; }
+function postCard(t){
+  const sd=simData[t]; const u=TYPE_UNIT[t]; const wc=t==="watercourse"; const area=t==="area";
+  const s=summarize(t);
+  // habitats whose losses FAILED the trading rules (cross-grid flag onto baseline rows)
+  const trFlags=computeTrading(t);
+  const failedHabs=new Set();
+  Object.keys(trFlags.shortfallByHab).forEach(nm=>{ const sf=trFlags.shortfallByHab[nm];
+    const h=habByName[TYPE_NAME[t]+"|"+nm]; if(sf>1e-6 && h && compRequired(t,h.dist)) failedHabs.add(nm); });
+  let head=`<div class="card-head"><h2 class="card-title">Post Intervention (${TYPE_TITLE[t]})</h2>
+    <div class="head-ctrl"><label>Created Habitats <input type="number" min="1" max="12" value="${createdCounts[t]}" id="poCount-${t}"></label>
+    <button class="act act-red" data-act="genrandom" data-t="${t}">Generate Invalid Intervention</button>
+    <button class="act act-green" data-act="genvalid" data-t="${t}">Generate Valid Intervention</button></div></div>`;
+
+  /* --- R/E grid --- */
+  let reCols=`<tr><th>ID</th><th>Intervention</th>`+
+    (area?`<th>Broad Habitat</th>`:``)+
+    `<th>Habitat</th>`+
+    `<th class="size-col">Size (${u})</th>`+
+    `<th>Distinctiveness</th><th>Condition</th>`+
+    (wc?`<th>Rip.</th><th>Wat.</th>`:``)+
+    `<th>Time to Target</th><th>Difficulty</th>`+
+    `<th>Same Habitat</th><th class="nh-col">New Habitat</th>`+
+    `<th>Calc.</th></tr>`;
+  const ncol = 11 + (area?1:0) + (wc?2:0) + 3; // rough colspan
+  let reBody="";
+  let totRet=0,totEnh=0,totFC=0; const baseNet=[];
+  sd.groups.forEach(g=>{
+    const b=sd.baselines[g.bi];
+    const ds=distScore(t,b.dist), cs=COND_SCORE[b.cond], bu=baselineUnits(t,b);
+    const retU=retainedUnits(t,b,g.retained.size);
+    const euG=enhancedUnits(t,b,g.enhanced);
+    const fcNet=retU+(g.enhanced.habName===b.name&&!g.enhanced.noEnhancement?euG:0)-bu;
+    baseNet.push({id:b.id,name:b.name,net:fcNet});
+    const lossVal=bu-retU;
+    totRet+=g.retained.size; totEnh+=g.enhanced.size; totFC+=g.forCreation.size;
+    const pctOf=sz=> Math.round((b.size>0?sz/b.size:0)*100);
+    // parent
+    reBody+=`<tr class="parent-row"><td>${b.id}</td><td><span class="pill pill-baseline">BASELINE</span></td>`+
+      (area?`<td>${esc(b.broad)}</td>`:``)+
+      `<td class="hab-cell">${esc(b.name)}</td>`+
+      `<td class="num size-col"><span class="pct-pill">100%</span>${fmtSize(b.size,t)} <span class="usuf">${u}</span></td>`+
+      `<td>${DIST_FULL[b.dist]} (${ds})</td><td>${esc(b.cond)} (${cs})</td>`+
+      (wc?`<td>${esc(b.ripEncr)}</td><td>${esc(b.wcEncr)}</td>`:``)+
+      `<td>-</td><td>-</td>`+
+      `<td class="num">${bu.toFixed(2)} ${Math.abs(fcNet)<1e-9?`<span class="net-unchanged">0.00 Unchanged</span>`:`<span class="${fcNet<0?"gain-bad":"gain-good"}">(${fcNet.toFixed(2)} ${fcNet<0?"LOST":"GAINED"})</span>`}</td><td class="nh-col"></td>`+
+      `<td>${calcHelp(`Baseline units = Size × Baseline distinctiveness × Baseline condition × SS<br>= ${fmtSize(b.size,t)} × ${ds} × ${cs} × ${b.ss} = <b>${bu.toFixed(2)}</b>`)}</td></tr>`;
+    // retained
+    reBody+=`<tr><td><span class="post-id">Post</span></td><td><span class="pill pill-retained">Retained</span></td>`+
+      (area?`<td class="rt-grey">${esc(b.broad)}</td>`:``)+
+      `<td class="rt-grey">${esc(b.name)}</td>`+
+      `<td class="num size-col"><span class="pct-pill">${pctOf(g.retained.size)}%</span>`+
+        `<input class="size-in" type="number" min="0" max="${fmtSize(b.size,t)}" step="${t==="area"?"0.01":"0.001"}" data-act="size" data-t="${t}" data-bi="${g.bi}" data-role="retained" value="${fmtSize(g.retained.size,t)}"><span class="usuf">${u}</span></td>`+
+      `<td class="rt-grey">${DIST_FULL[b.dist]} (${ds})</td><td class="rt-grey">${esc(b.cond)} (${cs})</td>`+
+      (wc?`<td>${esc(b.ripEncr)}</td><td>${esc(b.wcEncr)}</td>`:``)+
+      `<td>-</td><td>-</td>`+
+      `<td class="units-cell">${retU.toFixed(2)}</td><td class="num nh-col">-</td>`+
+      `<td>${calcHelp(`Retained units = Size × Baseline distinctiveness × Baseline condition × SS<br>= ${fmtSize(g.retained.size,t)} × ${ds} × ${cs} × ${b.ss} = <b>${retU.toFixed(2)}</b>`)}</td></tr>`;
+    // enhanced
+    reBody+=enhancedRow(t,b,g,area,wc,u,ds);
+    // for creation
+    const fcPct=pctOf(g.forCreation.size);
+    reBody+=`<tr class="fc-row"><td><span class="post-id">Post</span></td><td><span class="pill pill-fc">To Create</span></td>`+
+      (area?`<td>-</td>`:``)+
+      `<td class="hab-cell muted-italic">Available for creation</td>`+
+      `<td class="num size-col"><span class="pct-pill">${fcPct}%</span>${fmtSize(g.forCreation.size,t)}<span class="usuf">${u}</span></td>`+
+      `<td>-</td><td>-</td>`+(wc?`<td>-</td><td>-</td>`:``)+`<td>-</td><td>-</td>`+
+      `<td class="num">-</td><td class="num nh-col">-</td>`+
+      `<td></td></tr>`;
+  });
+  const baseSize=sd.baselines.reduce((a,b)=>a+b.size,0)||1;
+  const pillSummary=`<div class="pill-summary">
+    <div class="line"><span class="pill pill-retained">Retained</span> <b>${fmtSize(totRet,t)} ${u}</b></div>
+    <div class="line"><span class="pill pill-enhanced">Enhanced</span> <b>${fmtSize(totEnh,t)} ${u}</b></div>
+    <div class="line"><span class="pill pill-fc">To Create</span> <b>${fmtSize(totFC,t)} ${u}</b></div>
+  </div>`;
+
+  /* --- Created grid --- */
+  const createdPct = s.sizeBase>0 ? Math.round(s.createdTotal/s.sizeBase*100):0;
+  let crCols=`<tr><th>ID</th>`+(area?`<th>Broad Habitat</th>`:``)+`<th>Habitat</th><th class="size-col">Size (${u})</th>`+
+    `<th>Distinctiveness</th><th>Condition</th>`+(wc?`<th>Encr.</th>`:``)+
+    `<th>Time to Target</th><th>Difficulty</th><th>Created Units</th><th>Calc.</th><th>In Baseline?</th></tr>`;
+  const crDiff = s.createdTotal - s.forCreationTotal;
+  const mism = Math.abs(crDiff) > (t==="area"?0.005:0.0005);
+  const crEntries=sd.created.map((r,ri)=>{ const _h=r.habName?habByName[TYPE_NAME[t]+"|"+r.habName]:null; return {r,ri,_sv:_h?distScore(t,_h.dist):-1}; });
+  crEntries.sort((a,b)=>b._sv-a._sv);
+  let crBody=crEntries.map(({r,ri})=>{
+    const h=r.habName?habByName[TYPE_NAME[t]+"|"+r.habName]:null;
+    const ds=h?distScore(t,h.dist):0, cs=h?COND_SCORE[r.cond]:0;
+    const yrs=h?creationYears(t,h,r.cond):null; const tm=timeMultYears(yrs);
+    const diff=h?diffMult(h.diffCre):1; const un=createdUnits(t,r);
+    const flagSize = (mism || (h && r.size===0))?" flag-red":"";
+    const flagU = (h && r.size===0)?" flag-red":"";
+    const inB=baseNet.filter(x=>x.name===r.habName);
+    const inBTxt=(r.habName&&inB.length)?inB.map(x=>`${esc(x.id)} <span class="${x.net<0?"gain-bad":"gain-good"}">(${x.net.toFixed(2)} ${x.net<0?"LOST":"GAINED"})</span>`).join(", "):"Not in baseline";
+    const crCalc = h ? `Created units = Size × Distinctiveness × Condition × SS × Time × Difficulty<br>= ${fmtSize(r.size,t)} × ${ds} × ${cs} × 1 × ${(tm||0).toFixed(3)} × ${diff} = <b>${un.toFixed(2)}</b>` : null;
+    return `<tr>`+
+      `<td>${r.id}</td>`+
+      (area?`<td class="broadcol">${h?esc(h.broad):"-"}</td>`:``)+
+      `<td>${habCellCreated(t,r,ri,h)}</td>`+
+      `<td class="num size-col${flagSize}"><input class="size-in" type="number" min="0" step="${t==="area"?"0.01":"0.001"}" data-act="csize" data-t="${t}" data-ri="${ri}" value="${fmtSize(r.size,t)}"><span class="usuf">${u}</span></td>`+
+      `<td>${h?DIST_FULL[h.dist]+" ("+ds+")":"-"}</td>`+
+      `<td>${h?condSelectCreated(t,r,ri,h):"-"}</td>`+
+      (wc?`<td>-</td>`:``)+
+      `<td>${tm!=null?(yrs+"y ×"+tm.toFixed(3)):"-"}</td><td>${h?h.diffCre+" ("+diff+")":"-"}</td>`+
+      `<td class="units-cell gain-good">${un.toFixed(2)} GAINED</td>`+
+      `<td>${crCalc?calcHelp(crCalc):"-"}</td><td class="muted-italic">${inBTxt}</td></tr>`;
+  }).join("");
+  const mismMsg = crDiff>0
+    ? `⚠ Total created size is ${fmtSize(Math.abs(crDiff),t)} ${u} too large — reduce the size of one or more created habitats.`
+    : `⚠ Total created size is ${fmtSize(Math.abs(crDiff),t)} ${u} too small — increase the size of one or more created habitats.`;
+  const mismBanner=`<div class="mismatch${mism?" show":""}">${mismMsg}</div>`;
+  const crUnitsTotal = sd.created.reduce((a,r)=>a+createdUnits(t,r),0);
+  const labelSpan = 1 + (area?1:0);    // [Broad], Habitat
+  const midSpan = 4 + (wc?1:0);         // Dist, Cond, [Encr], Time, Diff
+  const crTotals = `<tr class="totals-row">`+
+    `<td></td>`+
+    `<td colspan="${labelSpan}" class="num">Total created size</td>`+
+    `<td class="num size-col${mism?" flag-red":""}">${fmtSize(s.createdTotal,t)} <span class="usuf">${u}</span></td>`+
+    `<td colspan="${midSpan}"></td>`+
+    `<td class="units-cell gain-good">${crUnitsTotal.toFixed(2)} GAINED</td>`+
+    `<td colspan="2"></td></tr>`;
+
+  return `<div class="card card-fit">${head}
+    <h3 class="sub-title">Retained &amp; Enhanced</h3>
+    <div class="tbl-wrap"><table class="grid">${reCols}${reBody}</table></div>
+    <h3 class="sub-title created-head">Created <span class="pill pill-fc">To Create</span> <b style="font-size:10.5px">${fmtSize(totFC,t)} ${u}</b></h3>
+    <div class="tbl-wrap"><table class="grid">${crCols}${crBody}${crTotals}</table></div>
+    ${mismBanner}
+  </div>`;
+}
+
+function enhancedRow(t,b,g,area,wc,u,ds){
+  const enh=g.enhanced;
+  const pctOf=sz=> Math.round((b.size>0?sz/b.size:0)*100);
+  if(!enh.canEnhance){
+    return `<tr><td><span class="post-id">Post</span></td><td><span class="pill pill-enhanced">Enhanced</span></td>`+
+      `<td class="muted-italic" colspan="${9+(area?1:0)+(wc?2:0)}">No trading options</td></tr>`;
+  }
+  const h = enh.habName? habByName[TYPE_NAME[t]+"|"+enh.habName] : null;
+  const sentinel = !enh.habName || enh.noEnhancement;
+  const sameHab = h && !sentinel && enh.habName===b.name;
+  const isNewHab = h && !sentinel && !sameHab;
+  const ruleTxt=getTradingRuleText(t,b.dist);
+  const qpop=`<button class="rules-pill" data-act="ruleinfo" data-t="${t}" data-dist="${esc(b.dist)}">Rules</button>`;
+  const habSel=`<select class="hab${sentinel?" sel-invalid":""}${isNewHab?" newhab-text":""}" data-baseline="${esc(b.name)}" data-act="enhhab" data-t="${t}" data-bi="${g.bi}">`+
+    habOptions(t, sentinel?null:enh.habName, b, "Choose an enhancement")+`</select>`;
+  const binBtn=`<button class="enh-clear${sentinel?" hidden":""}" data-act="enhbin" data-t="${t}" data-bi="${g.bi}" title="Clear">×</button>`;
+  const eds = h?distScore(t,h.dist):0, ecs=h?COND_SCORE[enh.cond]:0;
+  const yrs=h?enhancementYears(t,h,enh.cond):null, tm=timeMultYears(yrs);
+  const diff=h?diffMult(h.diffEnh):1;
+  const eu=enhancedUnits(t,b,enh);
+  const flagSize=(h&&!sentinel&&enh.size===0)?" flag-red":"";
+  const flagU=(h&&!sentinel&&enh.size===0)?" flag-red":"";
+  const bc=COND_SCORE[b.cond];
+  const condSel = (h&&!sentinel)?(`<select class="cond" data-act="enhcond" data-t="${t}" data-bi="${g.bi}">`+
+      condOptions(h, enh.cond, h.condMode==="Assessed"?b.cond:null)+`</select>`):"-";
+  const enhCalc = (h&&!sentinel)
+    ? `Enhanced units = ((PostSize × PostDist × PostCond − PostSize × PostDist × BaseCond) × Time × Difficulty + PostSize × PostDist × BaseCond) × SS<br>= ((${fmtSize(enh.size,t)}×${eds}×${ecs} − ${fmtSize(enh.size,t)}×${eds}×${bc}) × ${(tm||0).toFixed(3)} × ${diff} + ${fmtSize(enh.size,t)}×${eds}×${bc}) × ${b.ss} = <b>${eu.toFixed(2)}</b>`
+    : null;
+  return `<tr><td><span class="post-id">Post</span></td><td><span class="pill pill-enhanced${isNewHab?" pill-enhanced-green":""}">Enhanced</span></td>`+
+    (area?`<td class="broadcol">${h?esc(h.broad):"-"}</td>`:``)+
+    `<td class="hab-cell-enh"><span class="enh-wrap">${habSel}${qpop}${binBtn}</span></td>`+
+    `<td class="num${flagSize} size-col"><span class="pct-pill">${pctOf(enh.size)}%</span>`+
+      `<input class="size-in" type="number" min="0" max="${fmtSize(b.size,t)}" step="${t==="area"?"0.01":"0.001"}" data-act="size" data-t="${t}" data-bi="${g.bi}" data-role="enhanced" value="${fmtSize(enh.size,t)}"><span class="usuf">${u}</span></td>`+
+    `<td>${h&&!sentinel?DIST_FULL[h.dist]+" ("+eds+")":"-"}</td>`+
+    `<td>${condSel}</td>`+
+    (wc?`<td>${esc(b.ripEncr)}</td><td>${esc(b.wcEncr)}</td>`:``)+
+    `<td>${(h&&!sentinel&&tm!=null)?(yrs+"y ×"+tm.toFixed(3)):"-"}</td>`+
+    `<td>${h&&!sentinel?h.diffEnh+" ("+diff+")":"-"}</td>`+
+    (sameHab?(enh.size===0?`<td class="num u-loss">${eu.toFixed(2)}</td>`:`<td class="units-cell">${eu.toFixed(2)}</td>`):`<td class="num">-</td>`)+
+    ((h&&!sentinel&&!sameHab)?`<td class="num nh-col ${eu>0?"u-gain":(enh.size===0?"u-loss":"")}">${eu.toFixed(2)}${eu>0?" GAINED":""}</td>`:`<td class="num nh-col">-</td>`)+
+    `<td>${enhCalc?calcHelp(enhCalc):"-"}</td></tr>`;
+}
+
+function habCellCreated(t,r,ri,h){
+  const sentinel=!r.habName;
+  const sel=`<select class="hab${(h&&!sentinel)?" sel-green cr-lite":""}" data-act="crhab" data-t="${t}" data-ri="${ri}">`+
+    habOptions(t, r.habName, null, "Choose a habitat")+`</select>`;
+  const bin=`<button class="enh-clear${sentinel?" hidden":""}" data-act="crbin" data-t="${t}" data-ri="${ri}" title="Clear">×</button>`;
+  return `<span class="enh-wrap">${sel}${bin}</span>`;
+}
+function condSelectCreated(t,r,ri,h){
+  return `<select class="cond" data-act="crcond" data-t="${t}" data-ri="${ri}">`+condOptions(h,r.cond,null)+`</select>`;
+}
+
+/* ---------- trading rules summary ---------- */
+// Per-habitat baseline/post units within the active type
+// Per-habitat baseline/post units within the active type (for offset allocation)
+function habUnitMap(t){
+  const sd=simData[t]; const m={};
+  const ensure=nm=>{ if(!m[nm]) m[nm]={name:nm,base:0,post:0,h:habByName[TYPE_NAME[t]+"|"+nm]}; return m[nm]; };
+  sd.baselines.forEach(b=>{ ensure(b.name).base+=baselineUnits(t,b); });
+  sd.groups.forEach(g=>{ const b=sd.baselines[g.bi];
+    ensure(b.name).post+=retainedUnits(t,b,g.retained.size);
+    if(g.enhanced.habName && !g.enhanced.noEnhancement) ensure(g.enhanced.habName).post+=enhancedUnits(t,b,g.enhanced);
+  });
+  sd.created.forEach(r=>{ if(r.habName) ensure(r.habName).post+=createdUnits(t,r); });
+  return m;
+}
+// Allocate each band's surplus units to lower-distinctiveness habitats that have losses,
+// per the trading rules (higher distinctiveness may offset lower-distinctiveness losses).
+// Real rule-based habitat-to-habitat trading: surplus habitats offset deficit habitats,
+// where checkTradingRule permits the surplus habitat as a replacement for the lost one.
+function computeTrading(t){
+  const m=habUnitMap(t); const rank=b=>DIST_RANK[b];
+  const providers=[], consumers=[];
+  Object.keys(m).forEach(nm=>{ const e=m[nm]; if(!e.h) return; const net=e.post-e.base;
+    if(net>1e-9) providers.push({name:nm,h:e.h,band:e.h.dist,broad:e.h.broad,remaining:net,total:net});
+    else if(net<-1e-9) consumers.push({name:nm,h:e.h,band:e.h.dist,broad:e.h.broad,need:-net,recv:0});
+  });
+  function basis(X,Y){
+    if(Y.name===X.name) return "like for like";
+    if(rank(Y.band)>rank(X.band)) return "higher distinctiveness";
+    if(Y.band===X.band && Y.broad===X.broad) return "same broad habitat";
+    if(Y.band===X.band) return "same distinctiveness";
+    return "trade";
+  }
+  consumers.sort((a,b)=>rank(b.band)-rank(a.band) || b.need-a.need);
+  const flows=[];
+  consumers.forEach(X=>{
+    const elig=providers.filter(Y=>Y.remaining>1e-9 && checkTradingRule(t,X.h,Y.h));
+    const pf=Y=> Y.band===X.band ? (Y.broad===X.broad?0:1) : 2+(rank(Y.band)-rank(X.band));
+    elig.sort((p,q)=>pf(p)-pf(q));
+    let need=X.need;
+    for(const Y of elig){
+      if(need<=1e-9) break;
+      const take=Math.min(Y.remaining,need); if(take<=1e-9) continue;
+      Y.remaining-=take; need-=take; X.recv+=take;
+      flows.push({fromName:Y.name,fromBand:Y.band,toName:X.name,toBand:X.band,amt:take,basis:basis(X,Y)});
+    }
+    X.shortfall=need;
+  });
+  const receivedByHab={};
+  flows.forEach(f=>{ const r=receivedByHab[f.toName]||(receivedByHab[f.toName]={total:0,lines:{}});
+    r.total+=f.amt; const k=f.fromBand+"|"+f.basis;
+    (r.lines[k]=r.lines[k]||{band:f.fromBand,basis:f.basis,amt:0}).amt+=f.amt; });
+  const shortfallByHab={}; consumers.forEach(c=>shortfallByHab[c.name]=c.shortfall);
+  const band={};
+  DIST_BANDS.forEach(b=>{
+    const surplusTotal=providers.filter(p=>p.band===b).reduce((a,p)=>a+p.total,0);
+    const outFlows=flows.filter(f=>f.fromBand===b);                 // offsets from this band (same + lower)
+    const byTo={}; outFlows.forEach(f=>{ (byTo[f.toName]=byTo[f.toName]||{amt:0,toBand:f.toBand,toName:f.toName}).amt+=f.amt; });
+    const lowerAllocs=Object.values(byTo).sort((a,c)=>c.amt-a.amt);
+    const usedTotal=outFlows.reduce((a,f)=>a+f.amt,0);
+    const notTraded=Math.max(0,surplusTotal-usedTotal);
+    band[b]={surplusTotal,availableForLower:surplusTotal,lowerAllocs,notTraded};
+  });
+  return {m,flows,receivedByHab,shortfallByHab,band};
+}
+const BAND_PILL={"V.High":"band-vhigh","High":"band-high","Medium":"band-medium","Low":"band-low","V.Low":"band-vlow"};
+function pillBand(b){ return `<span class="pill ${BAND_PILL[b]}" style="font-size:10px;padding:1px 7px;border:1px solid var(--line)">${DIST_FULL[b]}</span>`; }
+function baselineUnitsPopup(t,nm){
+  const sd=simData[t];
+  const body=sd.baselines.filter(bb=>bb.name===nm).map(bb=>`<tr><td>Baseline</td><td>${esc(bb.id)}</td><td>${esc(bb.name)}</td><td>${esc(bb.cond)}</td><td class="num">${baselineUnits(t,bb).toFixed(2)}</td></tr>`).join("");
+  return `<table class="pop-grid"><tr><th>Baseline</th><th>ID</th><th>Habitat Type</th><th>Condition</th><th>Unit Value</th></tr>${body}</table>`;
+}
+function postUnitsPopup(t,nm){
+  const sd=simData[t]; const rows=[];
+  sd.groups.forEach(g=>{ const b=sd.baselines[g.bi];
+    if(b.name===nm && g.retained.size>1e-9) rows.push(["Retained",b.id,nm,b.cond,retainedUnits(t,b,g.retained.size)]);
+    if(g.enhanced.habName===nm && !g.enhanced.noEnhancement) rows.push(["Enhanced",b.id,nm,g.enhanced.cond,enhancedUnits(t,b,g.enhanced)]);
+  });
+  sd.created.forEach(r=>{ if(r.habName===nm) rows.push(["Created",r.id,nm,r.cond,createdUnits(t,r)]); });
+  const body=rows.map(x=>`<tr><td>${x[0]}</td><td>${esc(x[1])}</td><td>${esc(x[2])}</td><td>${esc(x[3])}</td><td class="num">${x[4].toFixed(2)}</td></tr>`).join("");
+  return `<table class="pop-grid"><tr><th>Intervention</th><th>ID</th><th>Habitat Type</th><th>Condition</th><th>Unit Value</th></tr>${body}</table>`;
+}
+function tradingSummaryCard(t){
+  const sd=simData[t]; const area=t==="area";
+  if(!sd.baselines.length) return "";
+  const bandCls={"V.High":"band-vhigh","High":"band-high","Medium":"band-medium","Low":"band-low","V.Low":"band-vlow"};
+  const inBase=new Set(sd.baselines.map(b=>b.name));
+  const inPost=new Set();
+  sd.groups.forEach(g=>{ const b=sd.baselines[g.bi]; inPost.add(b.name); if(g.enhanced.habName&&!g.enhanced.noEnhancement) inPost.add(g.enhanced.habName); });
+  sd.created.forEach(r=>{ if(r.habName) inPost.add(r.habName); });
+  const tr=computeTrading(t);
+  const trdCols=`<colgroup>`+(area?`<col style="width:120px">`:``)+`<col style="width:190px"><col style="width:80px"><col style="width:80px"><col style="width:70px"><col style="width:70px"><col style="width:190px"><col style="width:64px"><col style="width:72px"></colgroup>`;
+  let sections="";
+  DIST_BANDS.forEach(band=>{
+    const habs={};
+    const add=(name)=>{ const h=habByName[TYPE_NAME[t]+"|"+name]; if(h&&h.dist===band) habs[name]=h; };
+    sd.baselines.forEach(b=>add(b.name));
+    inPost.forEach(n=>add(n));
+    const names=Object.keys(habs);
+    if(!names.length) return;
+    let gTot=0,lTot=0;
+    const rows=names.map(nm=>{
+      const h=habs[nm];
+      const e=tr.m[nm]||{base:0,post:0};
+      const bu=e.base, pu=e.post, change=pu-bu;
+      const B=inBase.has(nm), P=inPost.has(nm);
+      const isLoss = change < -1e-9;
+      if(change>1e-9) gTot+=change; else if(change<-1e-9) lTot+=-change;
+      const rec=tr.receivedByHab[nm];
+      const residual = isLoss ? (tr.shortfallByHab[nm]||0) : 0;
+      const nmAttr = esc(nm).replace(/"/g,"&quot;");
+      const naTd = `<td class="num cell-null"><span class="muted-italic">n/a</span></td>`;
+      const baseTd = (B && bu>1e-9)
+        ? `<td class="num unum">${bu.toFixed(2)} <button class="info-btn" data-act="popinfo" data-t="${t}" data-kind="base" data-nm="${nmAttr}">?</button></td>`
+        : `<td class="num unum cell-null"><span class="muted-italic">n/a</span></td>`;
+      const postTd = (P && pu>1e-9)
+        ? `<td class="num unum">${pu.toFixed(2)} <button class="info-btn" data-act="popinfo" data-t="${t}" data-kind="post" data-nm="${nmAttr}">?</button></td>`
+        : `<td class="num unum cell-null"><span class="muted-italic">n/a</span></td>`;
+      const gainsTd = change>1e-9 ? `<td class="num gain-good">${change.toFixed(2)}</td>` : naTd;
+      const lossesTd = change<-1e-9 ? `<td class="num gain-bad">${(-change).toFixed(2)}</td>` : naTd;
+      const tradeTd = (isLoss && rec && rec.total>1e-9)
+        ? `<td class="trade-cell">${Object.values(rec.lines).map(l=>`<div><span class="gain-good">+${l.amt.toFixed(2)}</span> from ${pillBand(l.band)}</div>`).join("")}</td>`
+        : `<td class="trade-cell cell-null"><span class="muted-italic">n/a</span></td>`;
+      const notOffsetTd = (isLoss && residual>1e-9) ? `<td class="num"><span class="gain-bad">-${residual.toFixed(2)}</span></td>` : naTd;
+      let rulesTd = `<td class="cell-null rules-col"><span class="muted-italic">n/a</span></td>`;
+      if(isLoss){
+        rulesTd = !compRequired(t,band) ? `<td class="rules-col"><span class="muted-italic">Not required</span></td>`
+          : (residual>1e-6 ? `<td class="rules-fail rules-col">Failed</td>` : `<td class="rules-pass rules-col">Passed</td>`);
+      }
+      return `<tr>`+(area?`<td class="broadcol trd-broad ${bandCls[band]}">${esc(h.broad)}</td>`:``)+`<td class="trd-hab ${bandCls[band]}">${esc(nm)}</td>`+
+        baseTd+postTd+gainsTd+lossesTd+tradeTd+notOffsetTd+rulesTd+`</tr>`;
+    }).join("");
+    const totalsRow = `<tr class="totals-row"><td colspan="${area?4:3}" class="num">Totals</td>`+
+      (gTot>1e-9?`<td class="num gain-good">${gTot.toFixed(2)}</td>`:`<td class="num cell-null"><span class="muted-italic">n/a</span></td>`)+
+      (lTot>1e-9?`<td class="num gain-bad">${lTot.toFixed(2)}</td>`:`<td class="num cell-null"><span class="muted-italic">n/a</span></td>`)+
+      `<td colspan="3"></td></tr>`;
+    const bd=tr.band[band];
+    let side=`<div class="flowbox"><div class="avail-head"><span class="avail-num">${bd.availableForLower.toFixed(2)}</span> ${pillBand(band)} gains available to offset losses</div>`;
+    if(bd.lowerAllocs.length){
+      side+=`<div class="offsets-sub">Actual offsets</div>`+bd.lowerAllocs.map(a=>`<div class="kv flow"><span><b>${a.amt.toFixed(2)}</b> → ${pillBand(a.toBand)} ${esc(a.toName)}</span></div>`).join("");
+    }
+    if(bd.notTraded>1e-9){
+      side+=`<div class="kv flow"><span><i>${bd.notTraded.toFixed(2)} → Not traded</i></span></div>`;
+    }
+    if(bd.availableForLower<=1e-9){
+      side+=`<div class="muted-italic" style="margin-top:4px">No surplus units in this band.</div>`;
+    }
+    side+=`</div>`;
+    sections+=`<div class="band ${bandCls[band]}"><h4>${DIST_FULL[band]} distinctiveness</h4>`+
+      `<button class="rules-pill" data-act="ruleinfo" data-t="${t}" data-dist="${esc(band)}">Rules</button></div>`+
+      `<div class="detail-wrap"><div class="tbl-wrap"><table class="grid trd">${trdCols}`+
+      `<tr>`+(area?`<th>Broad habitat</th>`:``)+`<th>Habitat</th><th>Baseline units</th><th>Post units</th><th>Gains</th><th>Losses</th><th>Losses offset by trading</th><th>Not offset</th><th>RULES</th></tr>`+
+      rows+totalsRow+`</table></div>${band==="V.Low"?"":`<div class="side">${side}</div>`}</div>`;
+  });
+  return `<div class="card"><h2 class="card-title">Trading Summary (${TYPE_TITLE[t]})</h2>${sections}</div>`;
+}
+/* ---------- main render ---------- */
+let _measSpan=null;
+function sizeHabSelects(){
+  if(typeof document.createElement!=="function" || !document.body) return;
+  if(!_measSpan){ _measSpan=document.createElement("span"); _measSpan.style.cssText="position:absolute;visibility:hidden;white-space:pre;font-size:12px"; document.body.appendChild(_measSpan); }
+  document.querySelectorAll("select.hab").forEach(sel=>{ const o=sel.options[sel.selectedIndex]; if(!o) return; _measSpan.textContent=o.textContent; sel.style.width=(_measSpan.offsetWidth+34)+"px"; });
+  document.querySelectorAll("input.size-in").forEach(inp=>{ const L=(String(inp.value).length)||3; inp.style.width=(L*7+24)+"px"; });
+}
+function decorateBaseline(sel,on){
+  const bn=sel.getAttribute("data-baseline"); if(bn==null) return;
+  for(let i=0;i<sel.options.length;i++){ const o=sel.options[i]; if(o.value===bn){ o.textContent= on?(bn+" - BASELINE HABITAT"):bn; o.style.fontWeight= on?"700":"400"; } }
+}
+function isAreaHabSel(sel){ return !!(sel.querySelector && sel.querySelector("option[data-long]")); }
+function expandHabOpts(sel,on){
+  for(let i=0;i<sel.options.length;i++){ const o=sel.options[i]; const lg=o.getAttribute&&o.getAttribute("data-long"); if(lg==null) continue; o.textContent= on?lg:(o.getAttribute("data-short")||lg); }
+}
+function renderType(){
+  const t=currentType;
+  document.getElementById("baselineMount").innerHTML=baselineCard(t);
+  document.getElementById("postMount").innerHTML=postCard(t);
+  document.getElementById("tradingMount").innerHTML=tradingSummaryCard(t);
+  renderHeader();
+  sizeHabSelects();
+}
+
+/* ---------- auto-rebalance on size edit ---------- */
+function onSizeEdit(t,bi,role,val){
+  // Invariant: retained + enhanced + forCreation === baseline size (always preserved).
+  const g=simData[t].groups[bi]; const b=simData[t].baselines[bi]; const dp=dp_for(t);
+  const size=b.size;
+  const oldFC=g.forCreation.size;
+  let v=parseFloat(val); if(isNaN(v)||v<0) v=0; v=roundN(v,dp);
+  if(v>size) v=size;
+  const editKey = role==="retained" ? "retained" : "enhanced";
+  const otherKey = role==="retained" ? "enhanced" : "retained";
+  const otherVal = g[otherKey].size;
+  // Natural plan: For Creation absorbs the change -> fc = size - v - otherVal
+  let fc = roundN(size - v - otherVal, dp);
+  if(fc >= 0){
+    // For Creation stays in range; other R/E row untouched.
+    g[editKey].size = v;
+    g.forCreation.size = fc;
+  } else {
+    // For Creation would go negative -> park it at 0 and divert the overflow to the other R/E row.
+    let newOther = roundN(size - v, dp);               // what the other row must drop to so fc=0
+    if(newOther >= 0){
+      g[editKey].size = v;
+      g[otherKey].size = Math.max(0, newOther);
+      g.forCreation.size = roundN(size - g.retained.size - g.enhanced.size, dp);
+    } else {
+      // Other row cannot absorb (would go below 0): clamp the edited cell instead.
+      g[editKey].size = roundN(Math.max(0, size - otherVal), dp);
+      g.forCreation.size = roundN(size - g.retained.size - g.enhanced.size, dp);
+    }
+  }
+  // Push this group's change in For Creation onto the first non-zero created habitat,
+  // so total created size keeps matching total For Creation (post size == baseline size).
+  const cd=roundN(g.forCreation.size-oldFC,dp);
+  if(cd!==0){ const cr=simData[t].created; let idx=cr.findIndex(r=>r.size>0); if(idx<0&&cr.length) idx=0; if(idx>=0) cr[idx].size=roundN(Math.max(0,cr[idx].size+cd),dp); }
+  renderType();
+}
+
+/* ---------- event wiring ---------- */
+function wireEvents(){
+  document.addEventListener("mousedown",e=>{ const sl=e.target&&e.target.closest&&e.target.closest("select.hab"); if(sl){ if(isAreaHabSel(sl)) expandHabOpts(sl,true); else decorateBaseline(sl,true); } },true);
+  document.addEventListener("blur",e=>{ const sl=e.target&&e.target.closest&&e.target.closest("select.hab"); if(sl){ if(isAreaHabSel(sl)) expandHabOpts(sl,false); else decorateBaseline(sl,false); } },true);
+  document.addEventListener("click",e=>{
+    const el=e.target.closest("[data-act]"); if(!el) return;
+    const act=el.dataset.act, t=el.dataset.t;
+    if(act==="newbaseline"){ const c=document.getElementById("blCount-"+t); if(c) baselineCounts[t]=Math.max(1,parseInt(c.value)||baselineCounts[t]); genType(t,{validRetry:true,regenBaseline:true}); renderType(); }
+    else if(act==="genrandom"){ const c=document.getElementById("poCount-"+t); if(c) createdCounts[t]=Math.max(1,parseInt(c.value)||createdCounts[t]); genType(t,{errors:true,regenBaseline:true}); renderType(); }
+    else if(act==="genvalid"){ const c=document.getElementById("poCount-"+t); if(c) createdCounts[t]=Math.max(1,parseInt(c.value)||createdCounts[t]); genType(t,{validRetry:true,regenBaseline:false}); renderType(); }
+    else if(act==="enhbin"){ binEnhanced(t,+el.dataset.bi); }
+    else if(act==="crbin"){ binCreated(t,+el.dataset.ri); }
+    else if(act==="popinfo"){ openModal((el.dataset.kind==="base"?"Baseline habitats \u2014 ":"Post-intervention habitats \u2014 ")+esc(el.dataset.nm), el.dataset.kind==="base"?baselineUnitsPopup(t,el.dataset.nm):postUnitsPopup(t,el.dataset.nm), el); }
+    else if(act==="modalclose"){ const ov=document.getElementById("modalOverlay"); if(ov&&ov.classList) ov.classList.remove("show"); }
+    else if(act==="ruleinfo"){ const d=el.dataset.dist; openModal(TYPE_NAME[t]+" with "+(DIST_FULL[d]||d)+" distinctiveness", ruleModalHtml(t,d), el); }
+  });
+  document.addEventListener("change",e=>{
+    const el=e.target.closest("[data-act]"); if(!el) return;
+    const act=el.dataset.act, t=el.dataset.t;
+    if(act==="size"){ onSizeEdit(t,+el.dataset.bi,el.dataset.role,el.value); }
+    else if(act==="csize"){ onCreatedSize(t,+el.dataset.ri,el.value); }
+    else if(act==="enhhab"){ onEnhHab(t,+el.dataset.bi,el.value); }
+    else if(act==="enhcond"){ simData[t].groups[+el.dataset.bi].enhanced.cond=el.value; renderType(); }
+    else if(act==="crhab"){ onCrHab(t,+el.dataset.ri,el.value); }
+    else if(act==="crcond"){ simData[t].created[+el.dataset.ri].cond=el.value; renderType(); }
+  });
+  document.querySelectorAll("[data-type-btn]").forEach(btn=>btn.addEventListener("click",()=>{
+    currentType=btn.dataset.typeBtn; syncRadios(); renderType();
+  }));
+  document.querySelectorAll("[data-filter-btn]").forEach(btn=>btn.addEventListener("click",()=>{
+    filter=btn.dataset.filterBtn; setDefaultCounts(); buildSimTab(); syncRadios(); renderType();
+  }));
+}
+function binEnhanced(t,bi){
+  const g=simData[t].groups[bi]; const dp=dp_for(t);
+  const freed=g.enhanced.size;
+  g.enhanced.noEnhancement=true; g.enhanced.habName=null; g.enhanced.cond=null;
+  g.enhanced.size=0;
+  g.forCreation.size=roundN(g.forCreation.size+freed,dp);
+  renderType();
+}
+function binCreated(t,ri){
+  const r=simData[t].created[ri];
+  r.habName=null; r.cond=null; r.size=0;
+  renderType();
+}
+function onEnhHab(t,bi,name){
+  const g=simData[t].groups[bi]; const b=simData[t].baselines[bi]; const dp=dp_for(t);
+  if(!name){ binEnhanced(t,bi); return; }
+  const h=habByName[TYPE_NAME[t]+"|"+name];
+  g.enhanced.noEnhancement=false; g.enhanced.habName=name;
+  g.enhanced.cond=bestEnhCond(t,h, h.condMode==="Assessed"?ASSESSED.indexOf(b.cond):-1) || bestEnhCond(t,h,-1) || condsFor(h)[0];
+  if(g.enhanced.size===0){
+    const take=Math.min(g.forCreation.size, roundN(b.size*0.2,dp));
+    g.enhanced.size=roundN(take,dp); g.forCreation.size=roundN(g.forCreation.size-take,dp);
+  }
+  renderType();
+}
+function onCrHab(t,ri,name){
+  const r=simData[t].created[ri];
+  if(!name){ binCreated(t,ri); return; }
+  const h=habByName[TYPE_NAME[t]+"|"+name];
+  r.habName=name; r.cond=bestCreatedCond(t,h)||condsFor(h)[0];
+  renderType();
+}
+function onCreatedSize(t,ri,val){
+  const dp=dp_for(t); let v=parseFloat(val); if(isNaN(v)||v<0)v=0;
+  simData[t].created[ri].size=roundN(v,dp); renderType();
+}
+
+/* ---------- radio sync ---------- */
+function syncRadios(){
+  document.querySelectorAll("[data-type-btn]").forEach(b=>b.classList.toggle("active",b.dataset.typeBtn===currentType));
+  document.querySelectorAll("[data-filter-btn]").forEach(b=>b.classList.toggle("active",b.dataset.filterBtn===filter));
+}
+
+/* ---------- init ---------- */
+function ruleModalHtml(t,dist){
+  const rref=(RULE_REF[t]&&RULE_REF[t][dist])||{desc:"",logic:""};
+  return `<div class="rule-modal"><hr class="rule-sep">`+
+    `<p><b>Trading Rule:</b> ${esc(rref.desc)}</p>`+
+    `<hr class="rule-sep">`+
+    `<p><b>Trading Rule Full Logic:</b><br>${rref.logic}</p></div>`;
+}
+function ensureModal(){
+  if(typeof document.createElement!=="function" || !document.body) return;
+  if(document.getElementById("modalOverlay")) return;
+  const ov=document.createElement("div"); ov.id="modalOverlay"; ov.className="modal-overlay";
+  ov.innerHTML=`<div class="modal-box"><button class="modal-close" data-act="modalclose">\u00d7</button><div id="modalBody"></div></div>`;
+  document.body.appendChild(ov);
+  ov.addEventListener("click",e=>{ if(e.target===ov || (e.target.getAttribute&&e.target.getAttribute("data-act")==="modalclose")) ov.classList.remove("show"); });
+  document.addEventListener("keydown",e=>{ if(e.key==="Escape") ov.classList.remove("show"); });
+}
+function openModal(title,html,anchorEl){
+  ensureModal(); const ov=document.getElementById("modalOverlay"); if(!ov||!ov.classList) return;
+  const body=document.getElementById("modalBody"); if(body) body.innerHTML=`<h3 class="modal-title">${title}</h3>${html}`;
+  ov.classList.add("show");
+  const box=ov.querySelector&&ov.querySelector(".modal-box");
+  if(box&&anchorEl&&anchorEl.getBoundingClientRect){
+    const r=anchorEl.getBoundingClientRect();
+    box.style.position="fixed"; box.style.margin="0"; box.style.visibility="hidden";
+    const bw=box.offsetWidth||360, bh=box.offsetHeight||200;
+    const vw=window.innerWidth||1200, vh=window.innerHeight||800;
+    let left=r.right+8; if(left+bw>vw-8) left=Math.max(8,r.left-bw-8);
+    let top=r.top;      if(top+bh>vh-8)  top=Math.max(8,vh-bh-8);
+    box.style.left=left+"px"; box.style.top=top+"px"; box.style.visibility="visible";
+  }
+}
+function init(){
+  filter="MVS"; currentType="area";
+  buildSimTab();
+  wireEvents(); ensureModal(); syncRadios(); renderType();
+}
+window.__SIM__={summarize, simData:()=>simData, setFilter:f=>{filter=f;}, buildSimTab, init,
+  genType, checkTradingRule, onSizeEdit, computeTrading, countTradingFailures, _state:()=>({filter,currentType})};
+if(document.readyState!=="loading") init(); else document.addEventListener("DOMContentLoaded",init);
+})();
+
+</script>
+</body>
+</html>
