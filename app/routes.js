@@ -61,8 +61,8 @@ registerTestRoutes(router)
 registerGenGpkgRoutes(router)
 
 router.get('/TradingRules', function (req, res) {
-  if (req.query.v !== '8') {
-    res.redirect('/TradingRules?v=8');
+  if (req.query.v !== '9') {
+    res.redirect('/TradingRules?v=9');
     return;
   }
 
@@ -71,6 +71,10 @@ router.get('/TradingRules', function (req, res) {
 
 router.get('/TradingRulesSimulator', function (req, res) {
   res.render('TradingRulesSimulator');
+});
+
+router.get('/EnhancementRules', function (req, res) {
+  res.render('EnhancementRules');
 });
 
 // Import metric calculation functions for API endpoint

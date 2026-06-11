@@ -12,6 +12,133 @@
     background: #f5f7fa;
     color: #1f2937;
   }
+  /* Sticky page-level header zone. JS measures its height into the CSS
+     variable --page-header-h so the next sticky band can stack underneath
+     without overlap. The header is a flex row: page-header-main holds the
+     page title / version / Distinctiveness filter / tabs on the left; the
+     selection-summary card sits on the right. */
+  .page-header {
+    position: sticky;
+    top: 0;
+    background: #f5f7fa;
+    z-index: 30;
+    padding-top: 4px;
+    padding-bottom: 4px;
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 20px;
+  }
+  .page-header-main {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  /* Selection summary card on the right. Two columns:
+       col 1 (narrower) — Unit / Habitat / Distinctiveness / Condition /
+                           Trading Rule (Summary). Wraps freely.
+       col 2 (wider)    — Underlying logic. Width is set so the longest
+                           "When …" label and every bullet fit on one line. */
+  .selection-summary {
+    flex: 0 0 auto;
+    width: 960px;
+    max-width: 75vw;
+    background: #ffffff;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 12px;
+    line-height: 1.3;
+    color: #1f2937;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+    display: flex;
+    flex-direction: row;
+    gap: 18px;
+  }
+  /* Hide the whole summary card when no baseline is selected. The
+     body.no-baseline class is toggled by applyHighlight() — same trigger
+     used to hide the Condition Constraint column and show the pale red
+     zero-variant cells. */
+  body.no-baseline .selection-summary { display: none; }
+  .selection-summary .sum-col-1 {
+    flex: 0 0 300px;
+    min-width: 0;
+    padding-right: 12px;
+    border-right: 1px solid #e5e7eb;
+  }
+  .selection-summary .sum-col-2 {
+    flex: 0 0 600px;
+    min-width: 0;
+  }
+  .selection-summary .sum-row { margin-bottom: 2px; }
+  .selection-summary .sum-row:last-child { margin-bottom: 0; }
+  .selection-summary .sum-label {
+    font-weight: 700;
+    margin-right: 4px;
+  }
+  /* Trading Rule / Spreadsheet logic headings carry inline navy-blue
+     placeholders for the active unit + distinctiveness, and the entire
+     heading is underlined. */
+  .selection-summary .sum-row-summary > .sum-label,
+  .selection-summary .sum-row-detail > .sum-label {
+    text-decoration: underline;
+    display: block;
+  }
+  .selection-summary .sum-label .dyn {
+    color: #1d4ed8;
+  }
+  /* Trading Rule (Summary) row: blank line above it; value sits on its
+     own line beneath the label and wraps freely within the 150px column. */
+  .selection-summary .sum-row-summary { margin-top: 10px; }
+  .selection-summary .sum-row-summary #sumRuleSummary {
+    display: block;
+    margin-top: 2px;
+    white-space: normal;
+  }
+  /* Column 2 — Spreadsheet Logic — must not wrap. Both the "When …" labels
+     and each <li> are forced onto a single line. The column is wide enough
+     to fit the longest bullet (~"Same distinctiveness in better condition
+     from the same broad habitat") and the longest label (~"WHEN broad
+     habitat is "Intertidal hard structures" or "Intertidal sediment""). */
+  .selection-summary #sumRuleDetail {
+    display: block;
+    margin-top: 2px;
+    padding-left: 20px;
+  }
+  .selection-summary #sumRuleDetail ul {
+    margin: 1px 0 2px 0;
+    padding-left: 18px;
+  }
+  .selection-summary #sumRuleDetail li {
+    white-space: nowrap;
+  }
+  .selection-summary #sumRuleDetail .plain-label {
+    font-weight: 600;
+    text-decoration: underline;
+    display: block;
+    margin-top: 2px;
+    white-space: nowrap;
+  }
+  .selection-summary #sumRuleDetail .plain-label:first-child {
+    margin-top: 0;
+  }
+  /* Sticky band for the Worked Examples heading + Total trading options
+     banner — sits immediately below the page-header on the unit tabs.
+     Hidden via the parent tab-panel on the Rules tab. */
+  .worked-header {
+    position: sticky;
+    top: var(--page-header-h, 200px);
+    background: #f5f7fa;
+    z-index: 25;
+    padding-top: 4px;
+    padding-bottom: 4px;
+  }
+  /* Worked Examples grid: sticky thead row sits just below the worked-header
+     band. The cells already carry the light-blue background. */
+  table#habitatTable thead th {
+    position: sticky;
+    top: calc(var(--page-header-h, 200px) + var(--worked-header-h, 60px));
+    z-index: 20;
+  }
   h1 {
     margin: 0 0 4px 0;
     font-size: 22px;
@@ -80,6 +207,12 @@
     white-space: normal;
     line-height: 1.2;
   }
+  /* Worked Examples grid's header row (Areas / Hedgerows / Watercourses
+     tabs) overrides the generic dark thead with light blue + dark text. */
+  table#habitatTable thead th {
+    background: #bfdbfe;
+    color: #1f2937;
+  }
   /* Keep data cells on one line so the column width is dictated by the
      widest single row of data, not by header text. Specific columns
      (Habitat Type, Notes, plain-English explanations) opt back in to
@@ -91,6 +224,13 @@
      even when the selected row is the first of a new distinctiveness band. */
   tbody tr.dist-break td {
     border-top: 12px solid #000;
+  }
+  /* Thin black separator above any Areas-tab row where the Broad Habitat
+     changes within the same distinctiveness band (otherwise the thicker
+     dist-break above wins). Deliberately much thinner than the dist-break
+     so the two are visually distinguishable. */
+  tbody tr.broad-break td {
+    border-top: 1px solid #000;
   }
   thead th:first-child { border-top-left-radius: 8px; }
   thead th:last-child { border-top-right-radius: 8px; }
@@ -110,40 +250,45 @@
     border-left: 1px solid #e5e7eb;
   }
   tbody tr:hover { background: #f8fafc; }
-  /* Habitat Type cell takes the green match highlight; the Condition
-     Constraint cell mirrors the same background so the two read as a unit. */
-  tbody tr.match td.habitat-cell,
-  tbody tr.match td.constraint-cell {
-    background: #dcfce7;
-  }
-  tbody tr.match:hover td.habitat-cell,
-  tbody tr.match:hover td.constraint-cell {
-    background: #bbf7d0;
-  }
+  /* Habitat Type cell keeps the light green match highlight; the Condition
+     Constraint cell now uses a pale yellow instead, matching the cond
+     tick cells. The two backgrounds intentionally differ so the user can
+     distinguish "habitat that qualifies" (green) from the condition-side
+     information (yellow). */
+  tbody tr.match td.habitat-cell { background: #dcfce7; }
+  tbody tr.match:hover td.habitat-cell { background: #bbf7d0; }
+  tbody tr.match td.constraint-cell { background: #fef08a; }
+  tbody tr.match:hover td.constraint-cell { background: #fde047; }
   /* Selected row's red box uses inset box-shadow rather than border, so the
      dist-break's 12px black border-top still draws on top of (above) it
      when the selected row sits directly under a separator. */
-  tbody tr.selected td {
-    font-weight: 700;
-    box-shadow: inset 0 4px 0 #dc2626, inset 0 -4px 0 #dc2626;
-  }
-  tbody tr.selected td:first-child {
-    box-shadow: inset 0 4px 0 #dc2626, inset 0 -4px 0 #dc2626, inset 4px 0 0 #dc2626;
-  }
-  /* The last condition tick column is the rightmost visible cell when
-     Show Conditions = Yes. When the condition columns are hidden the Has
-     Conditions cell takes over as the rightmost. */
-  tbody tr.selected td.cond-cell-last {
-    box-shadow: inset 0 4px 0 #dc2626, inset 0 -4px 0 #dc2626, inset -4px 0 0 #dc2626;
-  }
-  body.hide-conditions tbody tr.selected td.condition-cell {
-    box-shadow: inset 0 4px 0 #dc2626, inset 0 -4px 0 #dc2626, inset -4px 0 0 #dc2626;
+  tbody tr.selected td { font-weight: 700; }
+  /* Three individual cells of the selected row each get their own red box
+     outline (top/bottom/left/right insets on the SAME cell) instead of the
+     red border wrapping the whole row:
+       1. the column-1 hab radio cell
+       2. the habitat cell
+       3. the cond cell whose .cond-radio is currently checked
+     The cond-cell highlight uses :has() and is gated on Show all Conditions
+     = Yes — when the radios are hidden, there is no visible "selected
+     condition" to anchor the border on. */
+  tbody tr.selected td.radio-cell,
+  tbody tr.selected td.habitat-cell,
+  body:not(.hide-all-conditions) tbody tr.selected td.cond-cell:has(input.cond-radio:checked) {
+    box-shadow:
+      inset 0  4px 0 #9333ea,
+      inset 0 -4px 0 #9333ea,
+      inset  4px 0 0 #9333ea,
+      inset -4px 0 0 #9333ea;
   }
   /* Has Conditions cell — bold green "Yes" / pale grey non-bold "No" */
   .cond-yes { color: #15803d; font-weight: 700; }
-  .cond-no  { color: #dc2626; font-weight: 400; }
-  /* Condition Assessed column — pale yellow background on every data cell. */
-  td.condition-cell { background: #fefce8; }
+  .cond-no  { color: #000000; font-weight: 400; }
+  /* Has condition assessment column kept in the DOM (so isNoConditions /
+     mainCondition logic and the condition-yes / condition-no class plumbing
+     all keep running) but hidden from view. */
+  table#habitatTable th.condition-header,
+  table#habitatTable td.condition-cell { display: none; }
   /* Condition tick columns — narrow, centred ticks; headers wrap onto two
      lines so the very long "Condition Assessment N/A" / "N/A - Other" labels
      don't push the table miles wide. */
@@ -171,19 +316,28 @@
     word-break: keep-all;
     line-height: 1.25;
   }
+  /* Flex row that holds the habitat name and the "N options" pill on the
+     same baseline. The name flexes/wraps to fill remaining width; the pill
+     stays inline beside it instead of dropping to a new line below. */
+  .habitat-cell .habitat-row {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    flex-wrap: nowrap;
+  }
   .habitat-cell .habitat-name {
     font-weight: 700;
-    display: inline-block;
-    max-width: 50ch;
+    flex: 1 1 auto;
+    min-width: 0;
     white-space: normal;
     word-break: keep-all;
     overflow-wrap: normal;
   }
-  /* Condition Constraint column — italic grey text; wrapping header. Hidden
-     entirely when no habitat is selected. */
+  /* Condition Constraint column — normal black non-italic text; wrapping
+     header. Hidden entirely when no habitat is selected. */
   .constraint-cell {
-    font-style: italic;
-    color: #6b7280;
+    font-style: normal;
+    color: #000;
     font-weight: 400;
     white-space: normal;
   }
@@ -198,73 +352,53 @@
   body.no-baseline td.constraint-cell { display: none; }
   .trade-cell { text-align: center; }
   th.trade-header, td.trade-cell { padding-left: 2px; padding-right: 2px; }
+  /* Trade ticks column hidden by user request; matching still computes the
+     allowed flag (used for class toggles + condition constraint text). */
+  table#habitatTable th.trade-header,
+  table#habitatTable td.trade-cell { display: none; }
   .trade-yes { color: #15803d; font-weight: 700; }
   .trade-no  { color: #b91c1c; font-weight: 700; }
-  .match-count {
-    display: inline-block;
-    background: #1f2937;
-    color: #fff;
-    padding: 1px 7px;
-    border-radius: 10px;
-    font-size: 12px;
-    font-weight: 600;
-    margin-left: 8px;
-    vertical-align: middle;
-    position: relative;
-    cursor: help;
-  }
-  .match-count .match-tip {
-    display: none;
-    position: absolute;
-    left: 50%;
-    top: calc(100% + 6px);
-    transform: translateX(-50%);
-    background: #ffffff;
+  /* Total Trading Options banner — sits above the Worked Examples grid,
+     summing every variant-count cell that's currently visible under the
+     active unit-tab + MVS filter. */
+  .total-options {
+    font-size: 16px;
+    font-weight: 700;
     color: #1f2937;
-    border: 1px solid #d1d5db;
-    border-radius: 6px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.12);
-    padding: 8px 10px;
-    font-size: 12px;
-    font-weight: 400;
-    text-align: left;
-    white-space: nowrap;
-    width: max-content;
-    max-width: none;
-    z-index: 1000;
-    line-height: 1.35;
+    margin: 8px 0 12px;
   }
-  .match-count .match-tip * { white-space: nowrap; }
-  .match-count:hover .match-tip { display: block; }
-  .match-count .match-tip .match-tip-title {
-    display: block;
+  .total-options .count {
     font-size: 18px;
-    font-weight: 700;
     color: #1d4ed8;
-    margin-bottom: 10px;
+    margin-left: 6px;
   }
-  .match-count .match-tip .match-tip-label {
-    font-weight: 700;
-    color: #0f172a;
-    display: block;
-    margin-top: 6px;
-    margin-bottom: 6px;
-    font-size: 14px;
+  /* Condition tick cells now host an interactive radio button (replacing the
+     green tick) for every Has-Conditions=Yes habitat row in a column that
+     has a numeric condition score. The fallback green tick lives alongside
+     it but is hidden by default; the Show all Conditions = No toggle swaps
+     the visibility so the column reverts to the non-interactive tick view. */
+  .cond-cell .cond-radio {
+    display: inline-block;
+    vertical-align: middle;
+    margin: 0;
   }
-  .match-count .match-tip .match-tip-block { margin-bottom: 12px; }
-  .match-count .match-tip .match-tip-block:last-child { margin-bottom: 0; }
-  .match-count .match-tip .match-tip-block:first-child .match-tip-label { margin-top: 0; }
-  .match-count .match-tip .match-tip-body { padding-left: 15px; }
-  .match-count .match-tip ul { margin: 0; padding-left: 18px; }
-  .match-count .match-tip ul li { margin: 0; padding: 0; }
-  /* WHEN labels copied from the rules-table .plain cell — underline them
-     inside the tooltip too. */
-  .match-count .match-tip .plain-label {
-    font-weight: 600;
-    text-decoration: underline;
-    margin-top: 2px;
+  .cond-cell .cond-tick { display: none; }
+  /* Small numeric label rendered inline to the RIGHT of each cond radio:
+     the total number of (matched candidate × qualifying condition) pairs
+     that would result if this row were the baseline and this radio were
+     the chosen condition. "Condition variants" per the user spec — not a
+     unique-habitat count. */
+  .cond-cell .variant-count {
+    display: inline-block;
+    font-size: 11px;
+    color: #374151;
+    margin-left: 4px;
+    line-height: 1;
+    font-weight: 400;
+    vertical-align: middle;
   }
-  .match-count .match-tip .plain-label:first-child { margin-top: 0; }
+  body.hide-all-conditions .cond-cell .cond-radio { display: none; }
+  body.hide-all-conditions .cond-cell .cond-tick { display: inline; }
   tbody tr.hidden { display: none; }
   .radio-cell { text-align: center; padding-left: 4px !important; padding-right: 4px !important; }
   /* When body has .hide-broad, hide the 4th column on the main table (Broad Habitat) */
@@ -295,6 +429,21 @@
      Condition Assessment N/A tick) have no special background. */
   td.cond-cell.cond-cell-empty { background: #f3f4f6; }
   .cond-empty-dash { color: #9ca3af; }
+  /* Pale yellow highlight on TICKED condition cells of matching rows whose
+     column corresponds to a condition that qualifies under the per-row
+     rule ("Better" -> strict >; "Same or better" -> >=) given the user's
+     chosen baseline condition. Same yellow (#fef3c7) as the Condition
+     Constraint cell so the per-row condition-side information reads as a
+     paired group. The Habitat Type cell keeps its green match highlight to
+     mark the habitat-side. Empty cells (those rendering a hyphen)
+     deliberately keep their grey background and never light up. */
+  td.cond-cell.cond-cell-condmatch:not(.cond-cell-empty) { background: #fef08a; }
+  /* Pale red on any cond cell whose per-radio variant count came back as
+     zero — visually flags conditions that yield no possible trade. Only
+     shown on the no-baseline (landing) state; once the user selects a
+     habitat the row+condition-match highlights take over and the pale red
+     would compete with them. */
+  body.no-baseline td.cond-cell.zero-variant { background: #fee2e2; }
   /* Sortable column headers — only interactive on Area (when body.sortable-on) */
   body.sortable-on thead th.sortable { cursor: pointer; user-select: none; }
   body.sortable-on thead th.sortable:hover { background: #374151; }
@@ -308,10 +457,34 @@
   body:not(.sortable-on) .sort-arrow { display: none; }
   body.sortable-on thead th.sorted-asc .sort-arrow::after  { content: "\25B2"; color: #fff; }
   body.sortable-on thead th.sorted-desc .sort-arrow::after { content: "\25BC"; color: #fff; }
-  /* Rules tables (shown above the main grid, one per unit) */
-  .rules-wrap { margin-bottom: 12px; }
-  .rules-table { display: none; }
-  .rules-table.active { display: table; }
+  /* Tabs (Areas / Hedgerows / Watercourses / Rules) */
+  .tabs {
+    display: flex;
+    gap: 4px;
+    border-bottom: 2px solid #1f2937;
+    margin: 8px 0 16px;
+  }
+  .tab-btn {
+    padding: 8px 18px;
+    background: #f3f4f6;
+    border: 1px solid #d1d5db;
+    border-bottom: none;
+    border-radius: 8px 8px 0 0;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    color: #1f2937;
+  }
+  .tab-btn:hover { background: #e5e7eb; }
+  .tab-btn.active {
+    background: #bfdbfe;
+    color: #1f2937;
+    border-color: #1f2937;
+  }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+  /* Rules tables (all three stacked inside the Rules tab panel) */
+  .rules-table { display: table; margin-bottom: 24px; }
   .rules-table {
     border-collapse: separate;
     border-spacing: 0;
@@ -319,6 +492,7 @@
     border: 1px solid #e5e7eb;
     border-radius: 8px;
     font-size: 13px;
+    table-layout: fixed;
     width: auto;
   }
   .rules-table caption {
@@ -360,39 +534,35 @@
      applies its .active-rule class) — they just don't render. */
   .rules-table thead th.rule-header,
   .rules-table tbody td.rule { display: none; }
-  /* "Spreadsheet Description" column — body cells do NOT wrap. Header
-     may wrap so the column heading itself does not balloon the column. */
-  .rules-table th.spreadsheet-summary-header {
-    white-space: normal;
-    line-height: 1.3;
-  }
+  /* "Spreadsheet Description" column — fixed 200px, header + body wrap. */
+  .rules-table th.spreadsheet-summary-header,
   .rules-table td.spreadsheet-summary {
-    white-space: nowrap;
-    max-width: none;
-    line-height: 1.3;
-  }
-  /* "Spreadsheet Logic" column — body cells do NOT wrap. */
-  .rules-table th.plain-header {
+    width: 200px;
+    min-width: 200px;
+    max-width: 200px;
     white-space: normal;
     line-height: 1.3;
   }
+  /* "Spreadsheet Logic" column — fixed 400px, header + body wrap. */
+  .rules-table th.plain-header,
   .rules-table td.plain {
-    white-space: nowrap;
-    max-width: none;
-    color: #374151;
-    line-height: 1.3;
-  }
-  /* "Notes" column — wraps, lighter italic styling. */
-  .rules-table th.notes-header {
+    width: 400px;
+    min-width: 400px;
+    max-width: 400px;
     white-space: normal;
     line-height: 1.3;
   }
+  .rules-table td.plain { color: #374151; }
+  /* "Notes" column — fixed 250px, header + body wrap. */
+  .rules-table th.notes-header,
   .rules-table td.notes {
+    width: 250px;
+    min-width: 250px;
+    max-width: 250px;
     white-space: normal;
-    max-width: 420px;
-    color: #374151;
     line-height: 1.35;
   }
+  .rules-table td.notes { color: #374151; }
   .rules-table td.notes em { font-style: normal; }
   .rules-table td.plain .plain-label { font-weight: 600; margin-top: 2px; text-decoration: underline; }
   .rules-table td.plain .plain-label:first-child { margin-top: 0; }
@@ -418,41 +588,164 @@
     font-weight: 700;
   }
   .rules-table tr.active-row td {
-    border-top: 2px solid #dc2626;
-    border-bottom: 2px solid #dc2626;
+    border-top: 2px solid #9333ea;
+    border-bottom: 2px solid #9333ea;
     font-weight: 700;
   }
   .rules-table tr.active-row td:first-child {
-    border-left: 2px solid #dc2626;
+    border-left: 2px solid #9333ea;
   }
   .rules-table tr.active-row td:last-child {
-    border-right: 2px solid #dc2626;
+    border-right: 2px solid #9333ea;
   }
   .dist-cell { color: #000; }
-  .stats { font-size: 12px; color: #6b7280; margin-top: 8px; }
+  /* "{Unit Type} habitats : N" line — same styling as Total trading
+     options: bold dark label, navy-blue count. */
+  .stats {
+    font-size: 16px;
+    font-weight: 700;
+    color: #1f2937;
+    margin: 0 0 8px;
+  }
+  .stats .count {
+    font-size: 18px;
+    color: #1d4ed8;
+    margin-left: 6px;
+  }
+  /* "Trading Options for: …" panel — sits below the main grid on the unit
+     tabs and is only shown when the user has both a baseline AND a
+     condition selected. Row count matches the variant count alongside the
+     chosen condition radio. */
+  .trading-options-panel {
+    display: none;
+    margin-top: 28px;
+    background: #ffffff;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    padding: 14px 16px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  }
+  .trading-options-panel.active { display: block; }
+  /* Heading: "{count} trading options for {Habitat} in {condition}
+     condition" — dynamic chunks (count, habitat, condition) coloured navy
+     blue via the .count span; static connective text stays dark. */
+  .trading-options-heading {
+    font-size: 18px;
+    font-weight: 700;
+    color: #1f2937;
+    margin-bottom: 12px;
+  }
+  .trading-options-heading .count {
+    color: #1d4ed8;
+    margin: 0 2px;
+  }
+  .trading-options-table {
+    border-collapse: collapse;
+    font-size: 13px;
+    width: auto;
+  }
+  .trading-options-table th,
+  .trading-options-table td {
+    padding: 4px 14px;
+    border-bottom: 1px solid #e5e7eb;
+    text-align: left;
+    vertical-align: top;
+  }
+  .trading-options-table thead th {
+    background: #bfdbfe;
+    color: #1f2937;
+    font-weight: 700;
+  }
+  .trading-options-table th.ref-col,
+  .trading-options-table td.ref-col {
+    text-align: right;
+    color: #6b7280;
+    font-variant-numeric: tabular-nums;
+    min-width: 48px;
+  }
+  /* Ref data column gets a light grey background to set the counter apart
+     from the data columns to its right. Header cell keeps its light-blue
+     fill from .trading-options-table thead th. */
+  .trading-options-table tbody td.ref-col { background: #f3f4f6; }
+  .trading-options-table tbody tr:hover { background: #f8fafc; }
 </style>
 </head>
 <body>
-  <h1>BNG Trading Rules Widget</h1>
-  <div style="font-size: 12px; font-weight: 400; color: #6b7280; margin-bottom: 16px;">v5 (11/06/2026) - Report any issues to Steve Phillips</div>
+  <div class="page-header">
+    <div class="page-header-main">
+      <h1>Enhancement Rules Widget</h1>
+      <div style="font-size: 12px; font-weight: 400; color: #6b7280; margin-bottom: 2px;">v1 (09/06/2026) - Report any issues to Steve Phillips</div>
+      <div style="font-size: 12px; font-weight: 600; color: #dc2626; margin-bottom: 16px;">Note: Does not yet reflect variations relating to orange guidance messages</div>
 
-  <div class="controls-row">
-    <div class="controls">
-      <span class="filter-label">Unit Type</span>
-      <label class="radio-label"><input type="radio" name="unitFilter" value="Area" checked> Areas</label>
-      <label class="radio-label"><input type="radio" name="unitFilter" value="Hedgerow"> Hedgerows</label>
-      <label class="radio-label"><input type="radio" name="unitFilter" value="Watercourse"> Watercourses</label>
+      <div class="controls-row">
+        <div class="controls">
+          <span class="filter-label">Distinctiveness</span>
+          <label class="radio-label"><input type="radio" name="scoreFilter" value="All"> All</label>
+          <label class="radio-label"><input type="radio" name="scoreFilter" value="MVS" checked> MVS</label>
+        </div>
+      </div>
+
+      <div class="tabs" role="tablist">
+        <button type="button" class="tab-btn active" data-tab="areas" role="tab">Areas</button>
+        <button type="button" class="tab-btn" data-tab="hedgerows" role="tab">Hedgerows</button>
+        <button type="button" class="tab-btn" data-tab="watercourses" role="tab">Watercourses</button>
+        <button type="button" class="tab-btn" data-tab="rules" role="tab">Enhancement Rule Definitions</button>
+      </div>
     </div>
-
-    <div class="controls">
-      <span class="filter-label">Distinctiveness</span>
-      <label class="radio-label"><input type="radio" name="scoreFilter" value="All" checked> All</label>
-      <label class="radio-label"><input type="radio" name="scoreFilter" value="MVS"> MVS</label>
+    <div class="selection-summary" id="selectionSummary">
+      <div class="sum-col sum-col-1">
+        <div class="sum-row"><span class="sum-label">Unit type:</span> <span id="sumUnit">&mdash;</span></div>
+        <div class="sum-row"><span class="sum-label">Habitat:</span> <span id="sumHabitat">&mdash;</span></div>
+        <div class="sum-row"><span class="sum-label">Distinctiveness:</span> <span id="sumDist">&mdash;</span></div>
+        <div class="sum-row"><span class="sum-label">Condition:</span> <span id="sumCondition">&mdash;</span></div>
+        <div class="sum-row sum-row-summary"><span class="sum-label">Enhancement Rule for <span class="dyn" id="sumRuleSummaryUnit">&mdash;</span> with <span class="dyn" id="sumRuleSummaryDist">&mdash;</span> distinctiveness</span><span id="sumRuleSummary">&mdash;</span></div>
+      </div>
+      <div class="sum-col sum-col-2">
+        <div class="sum-row sum-row-detail"><span class="sum-label">Spreadsheet logic for <span class="dyn" id="sumRuleDetailUnit">&mdash;</span> with <span class="dyn" id="sumRuleDetailDist">&mdash;</span> distinctiveness</span><span id="sumRuleDetail">&mdash;</span></div>
+      </div>
     </div>
-
   </div>
 
-  <div class="section-heading" id="habitatsHeading">Worked Examples</div>
+  <div id="rulesPanel" class="tab-panel">
+    <table class="rules-table" data-unit="Area">
+      <caption>Enhancement Rules - Areas</caption>
+      <thead><tr><th class="dist-header">Baseline Distinctiveness</th><th class="rule-header">Trading Rule</th><th class="spreadsheet-summary-header">Spreadsheet Description</th><th class="plain-header">Spreadsheet Logic</th><th class="notes-header">Notes</th></tr></thead>
+      <tbody>
+        <tr data-dist="Very High"><td class="dist">Very High</td><td class="rule">Like-for-Like (Bespoke Compensation)</td><td class="spreadsheet-summary">Same habitat required &ndash; bespoke compensation option &#9888;</td><td class="plain"><ul class="plain-list"><li>Same habitat in better condition</li></ul></td><td class="notes"><em>On sites where this is not achievable, offline processes may take place to consider trading with lower distinctiveness habitats &mdash; this &ldquo;bespoke compensation&rdquo; is outside the scope of our service.</em></td></tr>
+        <tr data-dist="High"><td class="dist">High</td><td class="rule">Like-for-like</td><td class="spreadsheet-summary">Same habitat required =</td><td class="plain"><ul class="plain-list"><li>Like-for-like in better condition</li></ul></td><td class="notes"><em>Felled / replacement for felled is handled differently in this widget and also on the new service, compared to the spreadsheet. The spreadsheet has two separate rows each named &ldquo;Felled&rdquo;.</em></td></tr>
+        <tr data-dist="Medium"><td class="dist">Medium</td><td class="rule">Area &gt; distinctiveness <strong>OR</strong> same broad habitat and distinctiveness<br><span style="font-size: 11px; color: #6b7280; font-style: italic; font-weight: 400;">OR <u>Exception</u> - allow trading across broad habitats for intertidal hard structures and intertidal sediment</span></td><td class="spreadsheet-summary">Same broad habitat or a higher distinctiveness habitat required (&ge;)</td><td class="plain"><div class="plain-label">When habitat has conditions</div><ul class="plain-list"><li>Same distinctiveness in better condition from the same broad habitat</li><li>Higher distinctiveness in same/better condition</li></ul><div class="plain-label">When Condition Assessment N/A</div><ul class="plain-list"><li>Same distinctiveness with condition &gt; 1 (higher than poor)</li><li>Higher distinctiveness in any condition</li></ul><div class="plain-label">WHEN broad habitat is &ldquo;Intertidal hard structures&rdquo; or &ldquo;Intertidal sediment&rdquo;</div><ul class="plain-list"><li>Same distinctiveness and better condition from those broad habitats</li></ul></td><td class="notes">Exception: Habitats within Broad habitats &ldquo;Intertidal hard structures&rdquo; and &ldquo;Intertidal sediment&rdquo; can be traded for one another.</td></tr>
+        <tr data-dist="Low"><td class="dist">Low</td><td class="rule">Area &gt;= distinctiveness</td><td class="spreadsheet-summary">Same distinctiveness or better habitat required</td><td class="plain"><div class="plain-label">When habitat has conditions</div><ul class="plain-list"><li>Same distinctiveness in better condition</li><li>Higher distinctiveness in same/better condition</li></ul><div class="plain-label">When Condition Assessment N/A</div><ul class="plain-list"><li>Same distinctiveness with condition &gt; 1 (higher than poor)</li><li>Higher distinctiveness in any condition</li></ul></td><td class="notes"></td></tr>
+        <tr data-dist="Very Low"><td class="dist">Very Low</td><td class="rule">No Unit Value - Trading Rules not applicable</td><td class="spreadsheet-summary" style="background:#f3f4f6;">n/a</td><td class="plain" style="background:#f3f4f6;">n/a</td><td class="notes"><p style="margin:0 0 8px 0;">No biodiversity value &mdash; no compensation required and no trade applies.</p><p style="margin:0;">Very Low does not appear on the areas trading summary on the spreadsheet &mdash; included below for completeness only.</p></td></tr>
+      </tbody>
+    </table>
+    <table class="rules-table" data-unit="Hedgerow">
+      <caption>Enhancement Rules - Hedgerows</caption>
+      <thead><tr><th class="dist-header">Baseline Distinctiveness</th><th class="rule-header">Trading Rule</th><th class="spreadsheet-summary-header">Spreadsheet Description</th><th class="plain-header">Spreadsheet Logic</th><th class="notes-header">Notes</th></tr></thead>
+      <tbody>
+        <tr data-dist="Very High"><td class="dist">Very High</td><td class="rule">Like-for-like</td><td class="spreadsheet-summary">Same habitat required =</td><td class="plain"><ul class="plain-list"><li>Same habitat in better condition</li></ul></td><td class="notes"></td></tr>
+        <tr data-dist="High"><td class="dist">High</td><td class="rule">Like-for-like <strong>OR</strong> hedgerow <strong>&gt;</strong>  distinctiveness </td><td class="spreadsheet-summary">Like for like or better</td><td class="plain"><ul class="plain-list"><li>Same habitat in better condition</li><li>Higher distinctiveness in same/better condition</li></ul></td><td class="notes"></td></tr>
+        <tr data-dist="Medium"><td class="dist">Medium</td><td class="rule">Hedgerows <strong>&gt;=</strong> Distinctiveness, with exceptions for interditals </td><td class="spreadsheet-summary">Same distinctiveness or better habitat required</td><td class="plain"><ul class="plain-list"><li>Same distinctiveness in better condition</li><li>Higher distinctiveness in same/better condition</li></ul></td><td class="notes"></td></tr>
+        <tr data-dist="Low"><td class="dist">Low</td><td class="rule">Hedgerows <strong>&gt;=</strong> Distinctiveness </td><td class="spreadsheet-summary">Same distinctiveness or better habitat required</td><td class="plain"><ul class="plain-list"><li>Same distinctiveness in better condition</li><li>Higher distinctiveness in same/better condition</li></ul></td><td class="notes"></td></tr>
+        <tr data-dist="Very Low"><td class="dist">Very Low</td><td class="rule">Hedgerows <strong>&gt;=</strong> Distinctiveness </td><td class="spreadsheet-summary">Same distinctiveness or better habitat required</td><td class="plain"><ul class="plain-list"><li>Same distinctiveness in better condition</li><li>Higher distinctiveness in same/better condition</li></ul></td><td class="notes"></td></tr>
+      </tbody>
+    </table>
+    <table class="rules-table" data-unit="Watercourse">
+      <caption>Enhancement Rules - Watercourses</caption>
+      <thead><tr><th class="dist-header">Baseline Distinctiveness</th><th class="rule-header">Trading Rule</th><th class="spreadsheet-summary-header">Spreadsheet Description</th><th class="plain-header">Spreadsheet Logic</th><th class="notes-header">Notes</th></tr></thead>
+      <tbody>
+        <tr data-dist="Very High"><td class="dist">Very High</td><td class="rule">Like-for-Like (Bespoke Compensation )</td><td class="spreadsheet-summary">Same habitat required &ndash; bespoke compensation option &#9888;</td><td class="plain"><ul class="plain-list"><li>Same habitat in better condition</li></ul></td><td class="notes">On sites where this is not achievable, offline processes may take place to consider trading with lower distinctiveness habitats &mdash; this &ldquo;bespoke compensation&rdquo; is outside the scope of our service.</td></tr>
+        <tr data-dist="High"><td class="dist">High</td><td class="rule">Like-for-like</td><td class="spreadsheet-summary">Same habitat required =</td><td class="plain"><ul class="plain-list"><li>Same habitat in better condition</li></ul></td><td class="notes"></td></tr>
+        <tr data-dist="Medium"><td class="dist">Medium</td><td class="rule">Like-for-like</td><td class="spreadsheet-summary">Same habitat required =</td><td class="plain"><ul class="plain-list"><li>Same habitat in better condition</li></ul></td><td class="notes"></td></tr>
+        <tr data-dist="Low"><td class="dist">Low</td><td class="rule">Like-for like OR higher distinctiveness</td><td class="spreadsheet-summary">Better distinctiveness habitat required</td><td class="plain"><ul class="plain-list"><li>Same distinctiveness in same/better condition</li><li>Higher distinctiveness in same/better condition</li></ul></td><td class="notes">Culverts can be legitimately traded like-for-like, despite the rule description suggesting they should not.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div id="workedPanel" class="tab-panel active">
+  <div class="worked-header">
+    <div class="stats" id="stats"></div>
+    <div class="total-options">Enhancement rule variations:<span class="count" id="totalOptionsCount">0</span></div>
+  </div>
 
   <table id="habitatTable">
     <thead>
@@ -462,23 +755,53 @@
         <th class="sortable" data-sort="distinctiveness">Distinctiveness<span class="sort-arrow"></span></th>
         <th class="sortable" data-sort="broad">Broad Habitat<span class="sort-arrow"></span></th>
         <th class="sortable" data-sort="habitat">Habitat Type<span class="sort-arrow"></span></th>
-        <th class="option-count-header">Trading Options</th>
+        <th class="constraint-header">Condition Constraint</th>
+        <th class="cond-header">Condition Assessment N/A (1)</th>
+        <th class="cond-header">Poor (1)</th>
+        <th class="cond-header">Fairly Poor (1.5)</th>
+        <th class="cond-header">Moderate (2)</th>
+        <th class="cond-header">Fairly Good (2.5)</th>
+        <th class="cond-header">Good (3)</th>
+        <th class="cond-header">N/A - Other</th>
+        <th class="condition-header">Has condition assessment</th>
       </tr>
     </thead>
     <tbody id="tbody"></tbody>
   </table>
-  <div class="stats" id="stats"></div>
+  <div id="tradingOptionsPanel" class="trading-options-panel">
+    <div class="trading-options-heading"><span class="count" id="tradingOptionsCount">0</span> trading options for <span class="count" id="tradingOptionsHabitat">&mdash;</span> in <span class="count" id="tradingOptionsConditionName">&mdash;</span> condition</div>
+    <table class="trading-options-table">
+      <thead>
+        <tr><th class="ref-col">Ref</th><th>Habitat Type</th><th>Distinctiveness</th><th>Condition</th></tr>
+      </thead>
+      <tbody id="tradingOptionsTbody"></tbody>
+    </table>
+  </div>
+  </div>
 
 <script>
 const HABITATS = [{"unit": "Area", "habitat": "Arable field margins cultivated annually", "broad": "Cropland", "distinctiveness": "Medium", "conditions": ["Condition Assessment N/A"], "mainCondition": "Condition Assessment N/A"}, {"unit": "Area", "habitat": "Arable field margins game bird mix", "broad": "Cropland", "distinctiveness": "Medium", "conditions": ["Condition Assessment N/A"], "mainCondition": "Condition Assessment N/A"}, {"unit": "Area", "habitat": "Arable field margins pollen and nectar", "broad": "Cropland", "distinctiveness": "Medium", "conditions": ["Condition Assessment N/A"], "mainCondition": "Condition Assessment N/A"}, {"unit": "Area", "habitat": "Arable field margins tussocky", "broad": "Cropland", "distinctiveness": "Medium", "conditions": ["Condition Assessment N/A"], "mainCondition": "Condition Assessment N/A"}, {"unit": "Area", "habitat": "Cereal crops", "broad": "Cropland", "distinctiveness": "Low", "conditions": ["Condition Assessment N/A"], "mainCondition": "Condition Assessment N/A"}, {"unit": "Area", "habitat": "Winter stubble", "broad": "Cropland", "distinctiveness": "Low", "conditions": ["Condition Assessment N/A"], "mainCondition": "Condition Assessment N/A"}, {"unit": "Area", "habitat": "Horticulture", "broad": "Cropland", "distinctiveness": "Low", "conditions": ["Condition Assessment N/A"], "mainCondition": "Condition Assessment N/A"}, {"unit": "Area", "habitat": "Intensive orchards", "broad": "Cropland", "distinctiveness": "Low", "conditions": ["Condition Assessment N/A"], "mainCondition": "Condition Assessment N/A"}, {"unit": "Area", "habitat": "Non-cereal crops", "broad": "Cropland", "distinctiveness": "Low", "conditions": ["Condition Assessment N/A"], "mainCondition": "Condition Assessment N/A"}, {"unit": "Area", "habitat": "Temporary grass and clover leys", "broad": "Cropland", "distinctiveness": "Low", "conditions": ["Condition Assessment N/A"], "mainCondition": "Condition Assessment N/A"}, {"unit": "Area", "habitat": "Traditional orchards", "broad": "Grassland", "distinctiveness": "High", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "Bracken", "broad": "Grassland", "distinctiveness": "Low", "conditions": ["Condition Assessment N/A"], "mainCondition": "Condition Assessment N/A"}, {"unit": "Area", "habitat": "Floodplain wetland mosaic and CFGM", "broad": "Grassland", "distinctiveness": "High", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "Lowland calcareous grassland", "broad": "Grassland", "distinctiveness": "High", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "Lowland dry acid grassland", "broad": "Grassland", "distinctiveness": "Very High", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "Lowland meadows", "broad": "Grassland", "distinctiveness": "Very High", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "Modified grassland", "broad": "Grassland", "distinctiveness": "Low", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "Other lowland acid grassland", "broad": "Grassland", "distinctiveness": "Medium", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "Other neutral grassland", "broad": "Grassland", "distinctiveness": "Medium", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "Tall herb communities (H6430)", "broad": "Grassland", "distinctiveness": "High", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "Upland acid grassland", "broad": "Grassland", "distinctiveness": "Medium", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "Upland calcareous grassland", "broad": "Grassland", "distinctiveness": "High", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "Upland hay meadows", "broad": "Grassland", "distinctiveness": "Very High", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "Blackthorn scrub", "broad": "Heathland and shrub", "distinctiveness": "Medium", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "Bramble scrub", "broad": "Heathland and shrub", "distinctiveness": "Medium", "conditions": ["Condition Assessment N/A"], "mainCondition": "Condition Assessment N/A"}, {"unit": "Area", "habitat": "Gorse scrub", "broad": "Heathland and shrub", "distinctiveness": "Medium", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "Hawthorn scrub", "broad": "Heathland and shrub", "distinctiveness": "Medium", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "Hazel scrub", "broad": "Heathland and shrub", "distinctiveness": "Medium", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "Lowland heathland", "broad": "Heathland and shrub", "distinctiveness": "High", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "Mixed scrub", "broad": "Heathland and shrub", "distinctiveness": "Medium", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "Mountain heaths and willow scrub", "broad": "Heathland and shrub", "distinctiveness": "Very High", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "Rhododendron scrub", "broad": "Heathland and shrub", "distinctiveness": "Low", "conditions": ["Condition Assessment N/A"], "mainCondition": "Condition Assessment N/A"}, {"unit": "Area", "habitat": "Dunes with sea buckthorn (H2160)", "broad": "Heathland and shrub", "distinctiveness": "High", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "Other sea buckthorn scrub", "broad": "Heathland and shrub", "distinctiveness": "Low", "conditions": ["Condition Assessment N/A"], "mainCondition": "Condition Assessment N/A"}, {"unit": "Area", "habitat": "Willow scrub", "broad": "Heathland and shrub", "distinctiveness": "Medium", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "Upland heathland", "broad": "Heathland and shrub", "distinctiveness": "High", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "Aquifer fed naturally fluctuating water bodies", "broad": "Lakes", "distinctiveness": "Very High", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "Ornamental lake or pond", "broad": "Lakes", "distinctiveness": "Low", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "High alkalinity lakes", "broad": "Lakes", "distinctiveness": "High", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "Low alkalinity lakes", "broad": "Lakes", "distinctiveness": "High", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "Marl lakes", "broad": "Lakes", "distinctiveness": "High", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "Moderate alkalinity lakes", "broad": "Lakes", "distinctiveness": "High", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "Peat lakes", "broad": "Lakes", "distinctiveness": "High", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "Ponds (priority habitat)", "broad": "Lakes", "distinctiveness": "High", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "Ponds (non-priority habitat)", "broad": "Lakes", "distinctiveness": "Medium", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "Reservoirs", "broad": "Lakes", "distinctiveness": "Medium", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "Temporary lakes ponds and pools (H3170)", "broad": "Lakes", "distinctiveness": "High", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "Calaminarian grasslands", "broad": "Sparsely vegetated land", "distinctiveness": "Very High", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "Coastal sand dunes", "broad": "Sparsely vegetated land", "distinctiveness": "High", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "Coastal vegetated shingle", "broad": "Sparsely vegetated land", "distinctiveness": "High", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "Ruderal/Ephemeral", "broad": "Sparsely vegetated land", "distinctiveness": "Low", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "Tall forbs", "broad": "Sparsely vegetated land", "distinctiveness": "Low", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "Inland rock outcrop and scree habitats", "broad": "Sparsely vegetated land", "distinctiveness": "High", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "Limestone pavement", "broad": "Sparsely vegetated land", "distinctiveness": "Very High", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "Maritime cliff and slopes", "broad": "Sparsely vegetated land", "distinctiveness": "High", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "Other inland rock and scree", "broad": "Sparsely vegetated land", "distinctiveness": "Medium", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "Allotments", "broad": "Urban", "distinctiveness": "Low", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "Artificial unvegetated, unsealed surface", "broad": "Urban", "distinctiveness": "Very Low", "conditions": ["N/A - Other"], "mainCondition": "N/A - Other"}, {"unit": "Area", "habitat": "Bioswale", "broad": "Urban", "distinctiveness": "Low", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "Intensive green roof", "broad": "Urban", "distinctiveness": "Low", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "Built linear features", "broad": "Urban", "distinctiveness": "Very Low", "conditions": ["N/A - Other"], "mainCondition": "N/A - Other"}, {"unit": "Area", "habitat": "Cemeteries and churchyards", "broad": "Urban", "distinctiveness": "Medium", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "Developed land; sealed surface", "broad": "Urban", "distinctiveness": "Very Low", "conditions": ["N/A - Other"], "mainCondition": "N/A - Other"}, {"unit": "Area", "habitat": "Other green roof", "broad": "Urban", "distinctiveness": "Low", "conditions": ["Condition Assessment N/A"], "mainCondition": "Condition Assessment N/A"}, {"unit": "Area", "habitat": "Facade-bound green wall", "broad": "Urban", "distinctiveness": "Low", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "Ground based green wall", "broad": "Urban", "distinctiveness": "Low", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "Ground level planters", "broad": "Urban", "distinctiveness": "Low", "conditions": ["Condition Assessment N/A"], "mainCondition": "Condition Assessment N/A"}, {"unit": "Area", "habitat": "Biodiverse green roof", "broad": "Urban", "distinctiveness": "Medium", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "Introduced shrub", "broad": "Urban", "distinctiveness": "Low", "conditions": ["Condition Assessment N/A"], "mainCondition": "Condition Assessment N/A"}, {"unit": "Area", "habitat": "Open mosaic habitats on previously developed land", "broad": "Urban", "distinctiveness": "High", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "Rain garden", "broad": "Urban", "distinctiveness": "Low", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "Actively worked sand pit quarry or open cast mine", "broad": "Urban", "distinctiveness": "Low", "conditions": ["Condition Assessment N/A"], "mainCondition": "Condition Assessment N/A"}, {"unit": "Area", "habitat": "Sustainable drainage system", "broad": "Urban", "distinctiveness": "Low", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "Unvegetated garden", "broad": "Urban", "distinctiveness": "Very Low", "conditions": ["N/A - Other"], "mainCondition": "N/A - Other"}, {"unit": "Area", "habitat": "Vacant or derelict land", "broad": "Urban", "distinctiveness": "Low", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "Bare ground", "broad": "Urban", "distinctiveness": "Low", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "Vegetated garden", "broad": "Urban", "distinctiveness": "Low", "conditions": ["Condition Assessment N/A"], "mainCondition": "Condition Assessment N/A"}, {"unit": "Area", "habitat": "Urban tree", "broad": "Individual trees", "distinctiveness": "Medium", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "Rural tree", "broad": "Individual trees", "distinctiveness": "Medium", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "Blanket bog", "broad": "Wetland", "distinctiveness": "Very High", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "Depressions on peat substrates (H7150)", "broad": "Wetland", "distinctiveness": "Very High", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "Fens (upland and lowland)", "broad": "Wetland", "distinctiveness": "Very High", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "Lowland raised bog", "broad": "Wetland", "distinctiveness": "Very High", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "Oceanic valley mire[1] (D2.1)", "broad": "Wetland", "distinctiveness": "Very High", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "Purple moor grass and rush pastures", "broad": "Wetland", "distinctiveness": "Very High", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "Reedbeds", "broad": "Wetland", "distinctiveness": "High", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "Transition mires and quaking bogs (H7140)", "broad": "Wetland", "distinctiveness": "Very High", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "Felled/replacement for felled", "broad": "Woodland and forest", "distinctiveness": "High", "conditions": ["Good"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "Lowland beech and yew woodland", "broad": "Woodland and forest", "distinctiveness": "High", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "Lowland mixed deciduous woodland", "broad": "Woodland and forest", "distinctiveness": "High", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "Native pine woodlands", "broad": "Woodland and forest", "distinctiveness": "High", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "Other coniferous woodland", "broad": "Woodland and forest", "distinctiveness": "Low", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "Other Scot's pine woodland", "broad": "Woodland and forest", "distinctiveness": "Medium", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "Other woodland; broadleaved", "broad": "Woodland and forest", "distinctiveness": "Medium", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "Other woodland; mixed", "broad": "Woodland and forest", "distinctiveness": "Medium", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "Upland birchwoods", "broad": "Woodland and forest", "distinctiveness": "High", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "Upland mixed ashwoods", "broad": "Woodland and forest", "distinctiveness": "High", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "Upland oakwood", "broad": "Woodland and forest", "distinctiveness": "High", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "Wet woodland", "broad": "Woodland and forest", "distinctiveness": "High", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "Wood-pasture and parkland", "broad": "Woodland and forest", "distinctiveness": "Very High", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "Coastal lagoons", "broad": "Coastal lagoons", "distinctiveness": "High", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "High energy littoral rock", "broad": "Rocky shore", "distinctiveness": "High", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "High energy littoral rock - on peat, clay or chalk", "broad": "Rocky shore", "distinctiveness": "Very High", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "Moderate energy littoral rock", "broad": "Rocky shore", "distinctiveness": "High", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "Moderate energy littoral rock - on peat, clay or chalk", "broad": "Rocky shore", "distinctiveness": "Very High", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "Low energy littoral rock", "broad": "Rocky shore", "distinctiveness": "High", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "Low energy littoral rock - on peat, clay or chalk", "broad": "Rocky shore", "distinctiveness": "Very High", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "Features of littoral rock", "broad": "Rocky shore", "distinctiveness": "High", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "Features of littoral rock - on peat, clay or chalk", "broad": "Rocky shore", "distinctiveness": "Very High", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "Saltmarshes and saline reedbeds", "broad": "Coastal saltmarsh", "distinctiveness": "High", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "Artificial saltmarshes and saline reedbeds", "broad": "Coastal saltmarsh", "distinctiveness": "Low", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "Littoral coarse sediment", "broad": "Intertidal sediment", "distinctiveness": "Medium", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "Littoral mud", "broad": "Intertidal sediment", "distinctiveness": "High", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "Littoral mixed sediments", "broad": "Intertidal sediment", "distinctiveness": "High", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "Littoral seagrass", "broad": "Intertidal sediment", "distinctiveness": "High", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "Littoral seagrass on peat, clay or chalk", "broad": "Intertidal sediment", "distinctiveness": "Very High", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "Littoral biogenic reefs - Mussels", "broad": "Intertidal sediment", "distinctiveness": "High", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "Littoral biogenic reefs - Sabellaria", "broad": "Intertidal sediment", "distinctiveness": "High", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "Features of littoral sediment", "broad": "Intertidal sediment", "distinctiveness": "High", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "Artificial littoral coarse sediment", "broad": "Intertidal sediment", "distinctiveness": "Low", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "Artificial littoral mud", "broad": "Intertidal sediment", "distinctiveness": "Low", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "Artificial littoral sand", "broad": "Intertidal sediment", "distinctiveness": "Low", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "Artificial littoral muddy sand", "broad": "Intertidal sediment", "distinctiveness": "Low", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "Artificial littoral mixed sediments", "broad": "Intertidal sediment", "distinctiveness": "Low", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "Artificial littoral seagrass", "broad": "Intertidal sediment", "distinctiveness": "Low", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "Artificial littoral biogenic reefs", "broad": "Intertidal sediment", "distinctiveness": "Low", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "Littoral sand", "broad": "Intertidal sediment", "distinctiveness": "Medium", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "Littoral muddy sand", "broad": "Intertidal sediment", "distinctiveness": "High", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "Artificial hard structures", "broad": "Intertidal hard structures", "distinctiveness": "Low", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "Artificial features of hard structures", "broad": "Intertidal hard structures", "distinctiveness": "Low", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "Artificial hard structures with integrated greening of grey infrastructure (IGGI)", "broad": "Intertidal hard structures", "distinctiveness": "Medium", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Area", "habitat": "Watercourse footprint", "broad": "Watercourse footprint", "distinctiveness": "Very Low", "conditions": ["N/A - Other"], "mainCondition": "N/A - Other"}, {"unit": "Hedgerow", "habitat": "Species-rich native hedgerow with trees - associated with bank or ditch", "broad": "n/a", "distinctiveness": "Very High", "conditions": ["Good", "Moderate", "Poor"], "mainCondition": "See condition table"}, {"unit": "Hedgerow", "habitat": "Species-rich native hedgerow with trees", "broad": "n/a", "distinctiveness": "High", "conditions": ["Good", "Moderate", "Poor"], "mainCondition": "See condition table"}, {"unit": "Hedgerow", "habitat": "Species-rich native hedgerow - associated with bank or ditch", "broad": "n/a", "distinctiveness": "High", "conditions": ["Good", "Moderate", "Poor"], "mainCondition": "See condition table"}, {"unit": "Hedgerow", "habitat": "Native hedgerow with trees - associated with bank or ditch", "broad": "n/a", "distinctiveness": "High", "conditions": ["Good", "Moderate", "Poor"], "mainCondition": "See condition table"}, {"unit": "Hedgerow", "habitat": "Species-rich native hedgerow", "broad": "n/a", "distinctiveness": "Medium", "conditions": ["Good", "Moderate", "Poor"], "mainCondition": "See condition table"}, {"unit": "Hedgerow", "habitat": "Native hedgerow - associated with bank or ditch", "broad": "n/a", "distinctiveness": "Medium", "conditions": ["Good", "Moderate", "Poor"], "mainCondition": "See condition table"}, {"unit": "Hedgerow", "habitat": "Native hedgerow with trees", "broad": "n/a", "distinctiveness": "Medium", "conditions": ["Good", "Moderate", "Poor"], "mainCondition": "See condition table"}, {"unit": "Hedgerow", "habitat": "Ecologically valuable line of trees", "broad": "n/a", "distinctiveness": "Medium", "conditions": ["Good", "Moderate", "Poor"], "mainCondition": "See condition table"}, {"unit": "Hedgerow", "habitat": "Ecologically valuable line of trees - associated with bank or ditch", "broad": "n/a", "distinctiveness": "Medium", "conditions": ["Good", "Moderate", "Poor"], "mainCondition": "See condition table"}, {"unit": "Hedgerow", "habitat": "Native hedgerow", "broad": "n/a", "distinctiveness": "Low", "conditions": ["Good", "Moderate", "Poor"], "mainCondition": "See condition table"}, {"unit": "Hedgerow", "habitat": "Line of trees", "broad": "n/a", "distinctiveness": "Low", "conditions": ["Good", "Moderate", "Poor"], "mainCondition": "See condition table"}, {"unit": "Hedgerow", "habitat": "Line of trees - associated with bank or ditch", "broad": "n/a", "distinctiveness": "Low", "conditions": ["Good", "Moderate", "Poor"], "mainCondition": "See condition table"}, {"unit": "Hedgerow", "habitat": "Non-native and ornamental hedgerow", "broad": "n/a", "distinctiveness": "Very Low", "conditions": ["Good", "Moderate", "Poor"], "mainCondition": "See condition table"}, {"unit": "Watercourse", "habitat": "Priority habitat", "broad": "n/a", "distinctiveness": "Very High", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Watercourse", "habitat": "Other rivers and streams", "broad": "n/a", "distinctiveness": "High", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Watercourse", "habitat": "Ditches", "broad": "n/a", "distinctiveness": "Medium", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Watercourse", "habitat": "Canals", "broad": "n/a", "distinctiveness": "Medium", "conditions": ["Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor"], "mainCondition": "See condition table"}, {"unit": "Watercourse", "habitat": "Culvert", "broad": "n/a", "distinctiveness": "Low", "conditions": ["Poor"], "mainCondition": "See condition table"}];
 
-// The seven condition columns rendered at the right of the main grid,
-// matching the Conditions reference data table. "Condition Assessment N/A"
-// now sits to the right of "Poor"; "N/A - Other" remains the rightmost.
+// The seven condition columns rendered at the right of the main grid.
+// Sequence: Condition Assessment N/A, then ascending score (Poor → Good),
+// with N/A - Other (no score) as the rightmost column.
 const CONDITION_COLS = [
-  "Good", "Fairly Good", "Moderate", "Fairly Poor", "Poor",
-  "Condition Assessment N/A", "N/A - Other"
+  "Condition Assessment N/A",
+  "Poor", "Fairly Poor", "Moderate", "Fairly Good", "Good",
+  "N/A - Other"
 ];
+
+// Condition multiplier scores per the Confluence reference data. "N/A - Other"
+// is intentionally omitted — it has no score (blank) so it is excluded from
+// the selected-row radio list.
+const CONDITION_SCORES = {
+  "Good": 3,
+  "Fairly Good": 2.5,
+  "Moderate": 2,
+  "Fairly Poor": 1.5,
+  "Poor": 1,
+  "Condition Assessment N/A": 1
+};
 
 // "Has Conditions" = No when the section-1 Condition value is one of these.
 function isNoConditions(h) {
@@ -515,6 +838,71 @@ function refreshTradeCountCells() {
     if (!cell) return;
     const total = tc.yes + tc.maybe;
     cell.innerHTML = '<span class="count-total">' + total + '</span>';
+  });
+}
+
+// Condition-variant counts per (baseline habitat, baseline condition).
+// For each habitat as potential baseline and each condition with a numeric
+// score, count the (matched candidate × qualifying condition) pairs that
+// would result IF the user selected that combination. "Condition variants"
+// per the user spec — not unique habitats. Re-evaluated whenever the MVS
+// filter changes since MVS excludes High / Very High from the match set.
+let CONDITION_VARIANT_COUNTS = null;
+function recomputeConditionVariantCounts() {
+  // Build the No-Conditions qualifying set once (score > 1: Fairly Poor,
+  // Moderate, Fairly Good, Good). Used for Has-No baselines.
+  const noCondQual = new Set();
+  Object.keys(CONDITION_SCORES).forEach(name => {
+    if (CONDITION_SCORES[name] > 1) noCondQual.add(name);
+  });
+  CONDITION_VARIANT_COUNTS = HABITATS.map((baseline) => {
+    const perCondition = {};
+    (baseline.conditions || []).forEach(condName => {
+      // Build the qualifying-set evaluator for this (baseline, baseline
+      // condition) pair.
+      const baselineHasCond = baseline.mainCondition === "See condition table";
+      const baselineScore = baselineHasCond ? CONDITION_SCORES[condName] : null;
+      // Skip Has-Yes baseline radios that point at an unscored column —
+      // shouldn't happen in practice (Has-Yes conditions all have scores)
+      // but defensive.
+      if (baselineHasCond && typeof baselineScore !== "number") return;
+      let total = 0;
+      HABITATS.forEach(cand => {
+        if (cand.unit !== baseline.unit) return;
+        const r = matchReasons(baseline, cand);
+        if (!(r.same || r.dist || r.broad)) return;
+        let qual;
+        if (baselineHasCond) {
+          const cmp = candidateCondConstraint(baseline, cand);
+          qual = qualifyingConditionSet(cmp, baselineScore);
+          // Mirror the live filter: the candidate must have at least one
+          // qualifying condition or it isn't a valid trade.
+          if (!(cand.conditions || []).some(c => qual.has(c))) return;
+        } else {
+          qual = noCondQual;
+        }
+        (cand.conditions || []).forEach(c => {
+          if (qual.has(c)) total++;
+        });
+      });
+      perCondition[condName] = total;
+    });
+    return perCondition;
+  });
+}
+function refreshConditionVariantCountCells() {
+  if (!CONDITION_VARIANT_COUNTS) return;
+  tbody.querySelectorAll("tr").forEach(tr => {
+    const idx = parseInt(tr.dataset.idx, 10);
+    const counts = CONDITION_VARIANT_COUNTS[idx] || {};
+    tr.querySelectorAll("td.cond-cell").forEach(cell => {
+      const span = cell.querySelector(".variant-count");
+      if (!span) return;
+      const condName = cell.dataset.condition;
+      const c = counts[condName];
+      span.textContent = (typeof c === "number") ? c : "";
+      cell.classList.toggle("zero-variant", c === 0);
+    });
   });
 }
 
@@ -594,9 +982,24 @@ function matchReasons(baseline, candidate) {
     if (bD === "Very High" || bD === "High") {
       reasons.same = (cH === bH);
     } else if (bD === "Medium") {
-      // Higher distinctiveness OR same broad habitat with equal-or-higher distinctiveness
+      // Higher distinctiveness always counts.
       reasons.dist  = (cScore > bScore);
-      reasons.broad = !!(cB && cB === bB && cScore >= bScore);
+      if (isNoConditions(baseline)) {
+        // Baseline has Condition Assessed = No.
+        // Rule: "Same distinctiveness with condition > 1 (higher than poor)"
+        // — no broad-habitat restriction. Candidate must have at least one
+        // possible condition with score > 1. The same-dist Has-No guard
+        // above has already eliminated Has-No candidates at this dist.
+        if (cScore === bScore) {
+          reasons.broad = (candidate.conditions || []).some(c =>
+            typeof CONDITION_SCORES[c] === "number" && CONDITION_SCORES[c] > 1);
+        }
+      } else {
+        // Baseline has conditions: same-distinctiveness candidates must be
+        // in the same broad habitat ("Same distinctiveness in better
+        // condition from the same broad habitat").
+        reasons.broad = !!(cB && cB === bB && cScore >= bScore);
+      }
       // Intertidal exception: when the baseline is a Medium habitat in one of
       // the two intertidal broad habitats, allow trading with any Medium
       // habitat in either of those broad habitats (cross-pair).
@@ -644,9 +1047,50 @@ function ruleText(b) {
 const tbody = document.getElementById("tbody");
 const stats = document.getElementById("stats");
 let selectedIndex = -1;
+// The currently-chosen baseline condition is derived from the DOM rather
+// than tracked as a separate variable. All condition radios across the grid
+// belong to the single global group name="conditionRadio" — only one can
+// ever be checked at a time. The "active" condition is whichever radio is
+// checked AND sits inside the currently-selected baseline row. When Show
+// all Conditions = No, the radios are hidden and no condition is considered
+// selected (the getter returns null).
+function getSelectedCondition() {
+  if (currentShowAllConditions() !== "Yes") return null;
+  if (selectedIndex < 0) return null;
+  // Only one conditionRadio can be checked across the whole grid (single
+  // global radio group). We only honour it if it sits inside the selected
+  // baseline row — otherwise the user has not yet picked a condition for
+  // the current baseline.
+  const tr = tbody.querySelector('tr[data-idx="' + selectedIndex + '"]');
+  if (!tr) return null;
+  const checked = tr.querySelector('input.cond-radio:checked');
+  return checked ? checked.value : null;
+}
+
+// On a row-click baseline selection, automatically pick the lowest-scored
+// condition radio on that row as the default. "Lowest" is by condition
+// score; conditions with no score (only "N/A - Other") rank last so they
+// are picked only when no scored radio exists on the row.
+function autoPickLowestCondition(habIdx) {
+  const tr = tbody.querySelector('tr[data-idx="' + habIdx + '"]');
+  if (!tr) return;
+  const radios = Array.from(tr.querySelectorAll('input.cond-radio'));
+  if (!radios.length) return;
+  radios.sort((a, b) => {
+    const sa = CONDITION_SCORES[a.value];
+    const sb = CONDITION_SCORES[b.value];
+    const ka = typeof sa === "number" ? sa : Infinity;
+    const kb = typeof sb === "number" ? sb : Infinity;
+    return ka - kb;
+  });
+  radios[0].checked = true;
+}
+// Active unit comes from the tab (Areas/Hedgerows/Watercourses) instead of
+// a radio. Rules tab keeps whatever unit was last set so cross-tab state is
+// preserved when the user flips back. Default Area.
+let activeUnitTab = "Area";
 function currentUnit() {
-  const checked = document.querySelector('input[name="unitFilter"]:checked');
-  return checked ? checked.value : "Area";
+  return activeUnitTab;
 }
 function currentScoreFilter() {
   const checked = document.querySelector('input[name="scoreFilter"]:checked');
@@ -654,6 +1098,11 @@ function currentScoreFilter() {
 }
 function currentShowConditions() {
   // Conditions are always shown now (radio control removed).
+  return "Yes";
+}
+function currentShowAllConditions() {
+  // Show all Conditions radio block was removed; the toggle was redundant
+  // once condition radios moved into the tick cells. Always Yes.
   return "Yes";
 }
 function excludedByScoreFilter(dist) {
@@ -673,27 +1122,37 @@ function render() {
       let cls = "cond-cell";
       if (idx === CONDITION_COLS.length - 1) cls += " cond-cell-last";
       // Empty condition cells render as a hyphen on a light grey background;
-      // ticked cells (including Condition Assessment N/A) have no special
-      // background.
+      // ticked cells (including Condition Assessment N/A and N/A - Other)
+      // are now ALL rendered as interactive radio buttons in a single global
+      // group (name="conditionRadio"), so only one condition can be chosen
+      // across the whole grid at any time. A fallback green tick lives
+      // alongside the radio for the Show all Conditions = No view.
       if (!tick) cls += " cond-cell-empty";
-      condTickCells += '<td class="' + cls + '">' +
-        (tick
-          ? '<span class="trade-yes">' + TICK + '</span>'
-          : '<span class="cond-empty-dash">-</span>') +
-        '</td>';
+      let inner;
+      if (tick) {
+        inner = '<input type="radio" name="conditionRadio" value="' + c + '" class="cond-radio">'
+              + '<span class="trade-yes cond-tick">' + TICK + '</span>'
+              + '<span class="variant-count"></span>';
+      } else {
+        inner = '<span class="cond-empty-dash">-</span>';
+      }
+      condTickCells += '<td class="' + cls + '" data-condition="' + c + '">' + inner + '</td>';
     });
     // Translate the section-1 "Condition" reference value into a Yes / No
     // display. "See condition table" -> bold green "Yes"; the two N/A values
     // -> pale grey non-bold "No". Anything else (e.g. blank, "Good") passes
     // through verbatim.
     let condDisplay;
+    let condCellClass;
     if (h.mainCondition === "See condition table") {
       condDisplay = '<span class="cond-yes">Yes</span>';
+      condCellClass = "condition-cell condition-yes";
     } else {
       // Anything that isn't "See condition table" reads as Has Conditions != Yes:
       // bold black "No" on a grey-background cell. The matching logic still
       // keys off the underlying mainCondition string via isNoConditions().
       condDisplay = '<span class="cond-no">No</span>';
+      condCellClass = "condition-cell condition-no";
     }
     const tc = TRADE_COUNTS[i];
     tr.innerHTML =
@@ -701,25 +1160,63 @@ function render() {
       '<td class="trade-cell"></td>' +
       '<td class="dist-cell">' + h.distinctiveness + ' (' + score(h.unit, h.distinctiveness) + ')</td>' +
       '<td class="broad-cell">' + (h.broad === "n/a" ? "" : h.broad) + '</td>' +
-      '<td class="habitat-cell"><span class="habitat-name">' + h.habitat + '</span></td>' +
-      '<td class="option-count-cell">' +
-        '<span class="count-total">' + (tc.yes + tc.maybe) + '</span>' +
-      '</td>';
+      '<td class="habitat-cell"><div class="habitat-row"><span class="habitat-name">' + h.habitat + '</span></div></td>' +
+      '<td class="constraint-cell"></td>' +
+      condTickCells +
+      // The Has condition assessment cell is rendered but hidden by CSS —
+      // every piece of logic that depends on it (mainCondition handling,
+      // No-Conditions matching path, the condition-yes/condition-no class
+      // ladder) keeps running.
+      '<td class="' + condCellClass + '">' + condDisplay + '</td>';
     tbody.appendChild(tr);
+    // Wire change + click handlers. Clicks ANYWHERE inside a cond cell now
+    // count as a click on that cell's radio (user spec) — clicking the
+    // small radio glyph itself is no longer required. The cell-level click
+    // handler also stops propagation so the row-click baseline-selector
+    // doesn't overwrite the chosen condition with the lowest-scored
+    // auto-pick. All radios share the single global group
+    // name="conditionRadio", so picking any one unchecks the rest.
+    const habIdx = i;
+    tr.querySelectorAll('td.cond-cell').forEach(cell => {
+      const radio = cell.querySelector('input.cond-radio');
+      if (!radio) return;
+      cell.addEventListener("click", e => {
+        e.stopPropagation();
+        if (!radio.checked) {
+          radio.checked = true;
+          radio.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+      });
+      radio.addEventListener("change", () => {
+        if (habIdx !== selectedIndex) {
+          const habRadio = tr.querySelector('input[name="hab"]');
+          if (habRadio) habRadio.checked = true;
+          selectedIndex = habIdx;
+        }
+        applyHighlight();
+      });
+    });
   });
   tbody.addEventListener("change", e => {
     if (e.target.name === "hab") {
       selectedIndex = parseInt(e.target.value, 10);
+      autoPickLowestCondition(selectedIndex);
       applyHighlight();
     }
   });
   tbody.addEventListener("click", e => {
     const tr = e.target.closest("tr");
     if (!tr) return;
-    const radio = tr.querySelector('input[type="radio"]');
+    const radio = tr.querySelector('input[name="hab"]');
     if (radio && e.target !== radio) {
+      const newIdx = parseInt(radio.value, 10);
+      // Re-clicking the already-selected row would otherwise overwrite the
+      // user's chosen condition radio with the lowest-scored auto-pick,
+      // so a no-op early return is the right call here.
+      if (newIdx === selectedIndex) return;
       radio.checked = true;
-      selectedIndex = parseInt(radio.value, 10);
+      selectedIndex = newIdx;
+      autoPickLowestCondition(newIdx);
       applyHighlight();
     }
   });
@@ -727,7 +1224,80 @@ function render() {
 }
 
 function clearRuleInfo() {
-  document.querySelectorAll(".match-count").forEach(n => n.remove());
+  // The condition radios live inside the seven tick cells (one radio per
+  // scored condition the habitat supports) and are persistent — rendered
+  // once at load by render() and toggled in/out of view by CSS. The black
+  // match-count pill is gone, so only the yellow highlight needs stripping.
+  document.querySelectorAll(".cond-cell-condmatch")
+    .forEach(n => n.classList.remove("cond-cell-condmatch"));
+}
+
+// Per-row condition constraint relative to the baseline:
+//   "gt"  -> strict greater than baseline condition score ("Better condition")
+//   "gte" -> greater or equal  ("Same or better condition")
+// Baseline is assumed to have conditions (Has Conditions = Yes) — this helper
+// is only consulted when the user has chosen a baseline condition radio.
+function candidateCondConstraint(baseline, cand) {
+  if (baseline.unit === "Watercourse" && baseline.distinctiveness === "Low") {
+    return "gte";
+  }
+  if (cand.distinctiveness === baseline.distinctiveness) return "gt";
+  return "gte";
+}
+
+// Build the set of condition names whose scores satisfy the comparison
+// against the baseline score. "N/A - Other" has no score and is therefore
+// never included.
+function qualifyingConditionSet(cmp, baselineScore) {
+  const set = new Set();
+  Object.keys(CONDITION_SCORES).forEach(name => {
+    const s = CONDITION_SCORES[name];
+    if (cmp === "gt" ? s > baselineScore : s >= baselineScore) set.add(name);
+  });
+  return set;
+}
+
+// Repaint the yellow highlight on candidate-row condition tick cells. Fired
+// in two cases:
+//   1. Baseline has conditions and the user has chosen one of the baseline
+//      condition radios — highlight columns that satisfy the per-row
+//      constraint (gt / gte) against that chosen score.
+//   2. Baseline has Condition Assessed = No — automatically highlight every
+//      column whose condition score is > 1 (Fairly Poor / Moderate /
+//      Fairly Good / Good) on every matching candidate row, without any
+//      user interaction. Condition Assessment N/A (score 1), Poor (1) and
+//      N/A - Other (no score) are not highlighted.
+function applyConditionHighlight() {
+  document.querySelectorAll(".cond-cell-condmatch")
+    .forEach(n => n.classList.remove("cond-cell-condmatch"));
+  if (selectedIndex < 0) return;
+  const baseline = HABITATS[selectedIndex];
+  let qual = null;
+  let perRow = null;
+  if (isNoConditions(baseline)) {
+    // Score > 1 columns: shared across every matching row.
+    const set = new Set();
+    Object.keys(CONDITION_SCORES).forEach(name => {
+      if (CONDITION_SCORES[name] > 1) set.add(name);
+    });
+    qual = set;
+  } else {
+    const chosenValue = getSelectedCondition();
+    if (!chosenValue) return;
+    const baselineScore = CONDITION_SCORES[chosenValue];
+    if (typeof baselineScore !== "number") return;
+    perRow = (cand) => qualifyingConditionSet(
+      candidateCondConstraint(baseline, cand), baselineScore);
+  }
+  tbody.querySelectorAll("tr.match").forEach(r => {
+    const idx = parseInt(r.dataset.idx, 10);
+    const cand = HABITATS[idx];
+    const set = perRow ? perRow(cand) : qual;
+    r.querySelectorAll("td.cond-cell").forEach(cell => {
+      const name = cell.dataset.condition;
+      if (name && set.has(name)) cell.classList.add("cond-cell-condmatch");
+    });
+  });
 }
 
 const TICK = '✔';
@@ -745,11 +1315,23 @@ function applyHighlight() {
     });
     document.body.classList.add("no-baseline");
     highlightActiveRule(null);
+    updateSelectionSummary(null);
+    updateTradingOptionsPanel(null);
     return;
   }
   document.body.classList.remove("no-baseline");
   const baseline = HABITATS[selectedIndex];
-  let matchCount = 0;
+  // If the baseline has conditions and the user has picked a condition
+  // radio, candidates are further filtered: each candidate must have at
+  // least one of its possible conditions satisfy the per-row constraint
+  // (gt for same distinctiveness, gte for higher; Watercourse/Low: gte
+  // for both).
+  const baselineHasCond = baseline.mainCondition === "See condition table";
+  const selectedCondition = getSelectedCondition();
+  const condFilterActive = baselineHasCond && selectedCondition
+    && typeof CONDITION_SCORES[selectedCondition] === "number";
+  const baselineCondScore = condFilterActive
+    ? CONDITION_SCORES[selectedCondition] : null;
   rows.forEach(r => {
     const idx = parseInt(r.dataset.idx, 10);
     const cand = HABITATS[idx];
@@ -758,7 +1340,13 @@ function applyHighlight() {
     const cc = r.querySelector(".constraint-cell");
     if (cc) cc.textContent = "";
     const reasons = matchReasons(baseline, cand);
-    const allowed = reasons.same || reasons.dist || reasons.broad;
+    let allowed = reasons.same || reasons.dist || reasons.broad;
+    if (allowed && condFilterActive) {
+      const cmp = candidateCondConstraint(baseline, cand);
+      const qual = qualifyingConditionSet(cmp, baselineCondScore);
+      const candHasQual = (cand.conditions || []).some(c => qual.has(c));
+      if (!candHasQual) allowed = false;
+    }
     if (idx === selectedIndex) r.classList.add("selected");
     if (allowed) {
       // .match applies to every allowed row (including the selected baseline
@@ -770,7 +1358,6 @@ function applyHighlight() {
       if (cand.distinctiveness === baseline.distinctiveness) {
         r.classList.add("same-dist");
       }
-      matchCount++;
     }
     if (tc) {
       tc.innerHTML = allowed
@@ -802,59 +1389,144 @@ function applyHighlight() {
     }
   });
   highlightActiveRule(baseline);
-  const pillText = matchCount + ' option' + (matchCount === 1 ? '' : 's');
-  const mainGridPillText = matchCount === 1 ? 'Like for Like' : pillText;
-  const activeCell = document.querySelector(".rules-table.active td.active-rule");
-  if (activeCell) {
-    const pill = document.createElement("span");
-    pill.className = "match-count";
-    pill.textContent = pillText;
-    activeCell.appendChild(pill);
-  }
-  const selectedHab = tbody.querySelector("tr.selected td.habitat-cell");
-  if (selectedHab) {
-    const pill = document.createElement("span");
-    pill.className = "match-count";
-    pill.textContent = mainGridPillText;
-    // Build a hover tooltip showing the Spreadsheet Description and
-    // Spreadsheet Logic for the baseline's distinctiveness row in the
-    // currently active rules-table.
-    const activeTable = document.querySelector(".rules-table.active");
-    if (activeTable) {
-      const ruleRow = activeTable.querySelector(
-        'tr[data-dist="' + baseline.distinctiveness + '"]'
-      );
-      if (ruleRow) {
-        const descCell = ruleRow.querySelector("td.spreadsheet-summary");
-        const logicCell = ruleRow.querySelector("td.plain");
-        const tip = document.createElement("span");
-        tip.className = "match-tip";
-        let html = '<span class="match-tip-title">' +
-          baseline.distinctiveness + ' distinctiveness ' + baseline.unit +
-          '</span>';
-        if (descCell) {
-          html += '<div class="match-tip-block">' +
-            '<span class="match-tip-label">Spreadsheet Description</span>' +
-            '<div class="match-tip-body">' + descCell.innerHTML + '</div>' +
-            '</div>';
-        }
-        if (logicCell) {
-          html += '<div class="match-tip-block">' +
-            '<span class="match-tip-label">Spreadsheet Logic</span>' +
-            '<div class="match-tip-body">' + logicCell.innerHTML + '</div>' +
-            '</div>';
-        }
-        tip.innerHTML = html;
-        pill.appendChild(tip);
-      }
-    }
-    selectedHab.appendChild(pill);
-  }
+  updateSelectionSummary(baseline);
+  updateTradingOptionsPanel(baseline);
+  // The black "N options" / "Up to N options" pill has been removed. The
+  // per-radio variant counts inside the cond cells, plus the "Total trading
+  // options" summary above the grid, fully cover what the pill used to
+  // communicate.
   // When the user is sorting by Trade, allowed-ness has just changed, so
   // the row order and the dist-break positions need to be recomputed.
   if (sortKey === "trade") {
     applyFilters();
   }
+  // Re-paint the yellow condition-cell highlight after the match-set has
+  // been recomputed. Safe to call unconditionally — it no-ops when no
+  // baseline condition is selected.
+  applyConditionHighlight();
+}
+
+// Populate the top-right selection summary card. Unit / Habitat /
+// Distinctiveness come straight off the baseline. Trading Rule (Summary)
+// and (Detail) are pulled from the matching row inside the rules-table for
+// the baseline's unit + distinctiveness (the rules-tables live in the
+// Rules tab panel but their DOM is always available).
+function updateSelectionSummary(baseline) {
+  const elUnit = document.getElementById("sumUnit");
+  const elHab  = document.getElementById("sumHabitat");
+  const elDist = document.getElementById("sumDist");
+  const elCond = document.getElementById("sumCondition");
+  const elSum  = document.getElementById("sumRuleSummary");
+  const elDet  = document.getElementById("sumRuleDetail");
+  const elSumHU = document.getElementById("sumRuleSummaryUnit");
+  const elSumHD = document.getElementById("sumRuleSummaryDist");
+  const elDetHU = document.getElementById("sumRuleDetailUnit");
+  const elDetHD = document.getElementById("sumRuleDetailDist");
+  if (!elUnit) return;
+  if (!baseline) {
+    elUnit.textContent = "—";
+    elHab .textContent = "—";
+    elDist.textContent = "—";
+    elCond.textContent = "—";
+    elSum .textContent = "—";
+    elDet .innerHTML   = "—";
+    elSumHU.textContent = "—";
+    elSumHD.textContent = "—";
+    elDetHU.textContent = "—";
+    elDetHD.textContent = "—";
+    return;
+  }
+  elUnit.textContent = baseline.unit;
+  elHab .textContent = baseline.habitat;
+  elDist.textContent = baseline.distinctiveness;
+  elSumHU.textContent = baseline.unit;
+  elSumHD.textContent = baseline.distinctiveness;
+  elDetHU.textContent = baseline.unit;
+  elDetHD.textContent = baseline.distinctiveness;
+  // Currently-selected baseline condition. Display "{Name} ({score})" when
+  // the condition has a score; just the name for the unscored "N/A - Other".
+  const condName = getSelectedCondition();
+  if (condName) {
+    const s = CONDITION_SCORES[condName];
+    elCond.textContent = condName + (typeof s === "number" ? " (" + s + ")" : "");
+  } else {
+    elCond.textContent = "—";
+  }
+  const ruleRow = document.querySelector(
+    '.rules-table[data-unit="' + baseline.unit + '"] tr[data-dist="' + baseline.distinctiveness + '"]');
+  if (!ruleRow) {
+    elSum.textContent = "—";
+    elDet.innerHTML   = "—";
+    return;
+  }
+  const descCell  = ruleRow.querySelector("td.spreadsheet-summary");
+  const logicCell = ruleRow.querySelector("td.plain");
+  elSum.textContent = descCell  ? descCell.textContent.trim() : "—";
+  elDet.innerHTML   = logicCell ? logicCell.innerHTML        : "—";
+}
+
+// "Trading Options for: {Habitat}" panel below the grid. Shown ONLY when a
+// baseline AND a baseline condition are both selected. Lists every
+// (candidate × qualifying condition) pair that contributes to the variant
+// count shown alongside the chosen condition radio — by construction, the
+// number of rows in this table is exactly that count.
+function updateTradingOptionsPanel(baseline) {
+  const panel = document.getElementById("tradingOptionsPanel");
+  if (!panel) return;
+  const condName = getSelectedCondition();
+  if (!baseline || !condName) {
+    panel.classList.remove("active");
+    return;
+  }
+  const baselineHasCond = baseline.mainCondition === "See condition table";
+  // Build the qualifying set evaluator — same dual path as the variant-
+  // count recompute.
+  let qualForCand;
+  if (baselineHasCond) {
+    const baselineScore = CONDITION_SCORES[condName];
+    if (typeof baselineScore !== "number") {
+      panel.classList.remove("active");
+      return;
+    }
+    qualForCand = (cand) => qualifyingConditionSet(
+      candidateCondConstraint(baseline, cand), baselineScore);
+  } else {
+    const noCondQual = new Set();
+    Object.keys(CONDITION_SCORES).forEach(name => {
+      if (CONDITION_SCORES[name] > 1) noCondQual.add(name);
+    });
+    qualForCand = () => noCondQual;
+  }
+  const pairs = [];
+  HABITATS.forEach(cand => {
+    if (cand.unit !== baseline.unit) return;
+    const r = matchReasons(baseline, cand);
+    if (!(r.same || r.dist || r.broad)) return;
+    const qual = qualForCand(cand);
+    // For Has-Yes baselines the live match-filter requires at least one
+    // qualifying condition per candidate; for Has-No baselines any
+    // matching candidate goes through and we list each of its conditions
+    // that sit in the score>1 set.
+    if (baselineHasCond && !(cand.conditions || []).some(c => qual.has(c))) return;
+    (cand.conditions || []).forEach(c => {
+      if (qual.has(c)) pairs.push({
+        habitat: cand.habitat,
+        distinctiveness: cand.distinctiveness,
+        condition: c,
+      });
+    });
+  });
+  document.getElementById("tradingOptionsHabitat").textContent = baseline.habitat;
+  document.getElementById("tradingOptionsConditionName").textContent = condName;
+  document.getElementById("tradingOptionsCount").textContent = pairs.length.toLocaleString();
+  const tbody = document.getElementById("tradingOptionsTbody");
+  const escapeHtml = s => String(s).replace(/[&<>"]/g, ch =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch]));
+  tbody.innerHTML = pairs.map((p, i) =>
+    '<tr><td class="ref-col">' + (i + 1) + '</td><td>' + escapeHtml(p.habitat)
+    + '</td><td>' + escapeHtml(p.distinctiveness)
+    + '</td><td>' + escapeHtml(p.condition) + '</td></tr>').join("");
+  panel.classList.add("active");
 }
 
 // Column sort state (Area only). When sortKey is null the load-time default
@@ -896,6 +1568,10 @@ function applySort() {
 }
 
 function distBreakComparator() {
+  // Returns the comparator that fires the THICK distinctiveness break above
+  // a row. The broad-habitat break (thin line) is intentionally handled
+  // separately by broadBreakComparator() so the two visuals don't get
+  // conflated.
   const uf = currentUnit();
   const effectiveKey = (sortKey === "broad" && uf !== "Area") ? null : sortKey;
   if (!effectiveKey)
@@ -918,6 +1594,15 @@ function distBreakComparator() {
   return null;
 }
 
+function broadBreakComparator() {
+  // Areas-only thin black line whenever the Broad Habitat changes between
+  // consecutive visible rows. Returned independently of the sort comparator
+  // so the dist-break can take priority when both would fire on the same
+  // row (the broad-break class is only applied when no dist-break fires).
+  if (currentUnit() !== "Area") return null;
+  return (h, prev) => (h.broad || "") !== (prev.broad || "");
+}
+
 function applyFilters() {
   const uf = currentUnit();
   const sf = currentScoreFilter();
@@ -925,16 +1610,33 @@ function applyFilters() {
   document.body.classList.toggle("unit-area", uf === "Area");
   document.body.classList.toggle("mvs", sf === "MVS");
   document.body.classList.toggle("hide-conditions", currentShowConditions() !== "Yes");
+  document.body.classList.toggle("hide-all-conditions", currentShowAllConditions() !== "Yes");
   // Hide the Condition Constraint column until a baseline is selected.
   if (selectedIndex < 0) document.body.classList.add("no-baseline");
-  document.body.classList.add("sortable-on");
+  // Sort affordances (cursor:pointer + arrow glyphs) are gated on this
+  // class; column-heading sort was removed so the class is never added.
   // Recount trade options under the current MVS state and refresh the cells.
   recomputeTradeCounts();
   refreshTradeCountCells();
-  document.querySelectorAll(".rules-table").forEach(t => {
-    t.classList.toggle("active", t.dataset.unit === uf);
+  // Same idea for the per-radio "condition variants" counts — they depend
+  // on the MVS state because excluded High / Very High candidates aren't
+  // available to contribute their qualifying conditions to the total.
+  recomputeConditionVariantCounts();
+  refreshConditionVariantCountCells();
+  // Total trading options banner above the grid: sum every variant count
+  // for habitats in the active unit (MVS-excluded baselines contribute 0
+  // because their per-cond counts are all 0 — see the matchReasons guard
+  // inside recomputeConditionVariantCounts).
+  let totalOptions = 0;
+  HABITATS.forEach((h, i) => {
+    if (h.unit !== uf) return;
+    const counts = CONDITION_VARIANT_COUNTS[i] || {};
+    Object.values(counts).forEach(c => { totalOptions += c; });
   });
-  document.getElementById("habitatsHeading").textContent = "Worked Examples";
+  const totalEl = document.getElementById("totalOptionsCount");
+  if (totalEl) totalEl.textContent = totalOptions.toLocaleString();
+  // Rules tables all live inside the Rules tab now — no per-unit toggling.
+  // (Worked Examples heading removed by user request.)
   applySort();
   document.querySelectorAll("thead th.sortable").forEach(th => {
     th.classList.remove("sorted-asc", "sorted-desc");
@@ -944,28 +1646,40 @@ function applyFilters() {
     th.classList.add(sortDir === "asc" ? "sorted-asc" : "sorted-desc");
   });
   const breakFn = distBreakComparator();
+  const broadFn = broadBreakComparator();
   let shown = 0;
   let totalForUnit = 0;
   let prevH = null;
   tbody.querySelectorAll("tr").forEach(r => {
     const idx = parseInt(r.dataset.idx, 10);
     const h = HABITATS[idx];
-    r.classList.remove("dist-break");
+    r.classList.remove("dist-break", "broad-break");
     const passesUnit  = h.unit === uf;
     const passesScore = !excludedByScoreFilter(h.distinctiveness);
     if (passesUnit && passesScore) {
       totalForUnit++;
       r.classList.remove("hidden");
       shown++;
-      if (breakFn && prevH && breakFn(h, prevH)) {
-        r.classList.add("dist-break");
+      if (prevH) {
+        if (breakFn && breakFn(h, prevH)) {
+          // Thick dist-break takes priority — broad-break is omitted on
+          // the same row so the thin line doesn't sit just below the thick
+          // one.
+          r.classList.add("dist-break");
+        } else if (broadFn && broadFn(h, prevH)) {
+          r.classList.add("broad-break");
+        }
       }
       prevH = h;
     } else {
       r.classList.add("hidden");
     }
   });
-  stats.textContent = totalForUnit + " habitats";
+  // "Area habitats : N" / "Hedgerow habitats : N" / "Watercourse
+  // habitats : N" — singular unit label by user request. The count sits in
+  // navy blue via the .count span (same pattern as Total trading options).
+  stats.innerHTML = uf + ' habitats :<span class="count">'
+    + totalForUnit.toLocaleString() + '</span>';
 }
 
 function highlightActiveRule(baseline) {
@@ -981,35 +1695,81 @@ function highlightActiveRule(baseline) {
   if (ruleCell) ruleCell.classList.add("active-rule");
 }
 
-// Unit / score filter changes may hide the currently selected row, so clear
-// the baseline selection alongside re-applying filters.
-document.querySelectorAll('input[name="unitFilter"], input[name="scoreFilter"]').forEach(r => {
+// Both unit-tab switches and the Distinctiveness (MVS / All) radio may
+// hide the currently selected baseline row, so clear the baseline selection
+// alongside re-applying filters.
+function resetBaselineSelection() {
+  selectedIndex = -1;
+  tbody.querySelectorAll('input[name="hab"]').forEach(x => x.checked = false);
+  const condChecked = tbody.querySelector('input.cond-radio:checked');
+  if (condChecked) condChecked.checked = false;
+}
+document.querySelectorAll('input[name="scoreFilter"]').forEach(r => {
   r.addEventListener("change", () => {
-    selectedIndex = -1;
-    tbody.querySelectorAll('input[name="hab"]').forEach(x => x.checked = false);
+    resetBaselineSelection();
     applyHighlight();
     applyFilters();
   });
 });
-// Show Conditions only toggles column visibility — leave the selection alone.
-document.querySelectorAll('input[name="showConditions"]').forEach(r => {
-  r.addEventListener("change", () => { applyFilters(); });
+
+// Tab wiring. Areas / Hedgerows / Watercourses select the active unit and
+// reveal the Worked Examples panel. Rules reveals the Rules panel (which
+// shows all three trading-rules tables stacked). Switching to/from a unit
+// tab clears the baseline selection (the prior unit's selection would be
+// hidden by the unit filter anyway).
+const TAB_UNIT = { areas: "Area", hedgerows: "Hedgerow", watercourses: "Watercourse" };
+function setActiveTab(name) {
+  document.querySelectorAll('.tab-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.tab === name);
+  });
+  const isRules = name === 'rules';
+  document.getElementById('rulesPanel').classList.toggle('active', isRules);
+  document.getElementById('workedPanel').classList.toggle('active', !isRules);
+  if (!isRules) {
+    const newUnit = TAB_UNIT[name] || "Area";
+    if (newUnit !== activeUnitTab) {
+      activeUnitTab = newUnit;
+      resetBaselineSelection();
+    }
+    applyHighlight();
+    applyFilters();
+  }
+}
+document.querySelectorAll('.tab-btn').forEach(b => {
+  b.addEventListener('click', () => setActiveTab(b.dataset.tab));
 });
 
-document.querySelectorAll("thead th.sortable").forEach(th => {
-  th.addEventListener("click", () => {
-    const key = th.dataset.sort;
-    if (sortKey === key) {
-      sortDir = sortDir === "asc" ? "desc" : "asc";
-    } else {
-      sortKey = key;
-      sortDir = "asc";
-    }
-    applyFilters();
-  });
+// Column-heading click-to-sort behaviour has been removed by user request.
+// The grid is locked to the default sort order (Distinctiveness DESC, then
+// Broad ASC, then Habitat ASC).
+
+// Sticky-header offsets. The page-header zone (h1 + version + distinctiveness
+// + tabs) and the worked-header zone (Worked Examples heading + Total
+// trading options) both use position:sticky. Each subsequent sticky band
+// needs to know the running total height so it stacks just below — values
+// are measured here and written into CSS variables. Re-run on load, on
+// resize, on tab switches, and whenever the panel's contents change height.
+function updateStickyOffsets() {
+  const pageH = document.querySelector('.page-header');
+  const workedH = document.querySelector('.worked-header');
+  const pageHeight = pageH ? pageH.getBoundingClientRect().height : 0;
+  // worked-header is hidden on the Rules tab — measure 0 so the thead's
+  // top offset doesn't include a phantom band.
+  const workedVisible = workedH && workedH.offsetParent !== null;
+  const workedHeight = workedVisible ? workedH.getBoundingClientRect().height : 0;
+  document.documentElement.style.setProperty('--page-header-h', pageHeight + 'px');
+  document.documentElement.style.setProperty('--worked-header-h', workedHeight + 'px');
+}
+window.addEventListener('load', updateStickyOffsets);
+window.addEventListener('resize', updateStickyOffsets);
+// Re-measure when a tab is switched (Rules → unit tab changes worked-header
+// visibility, which changes the thead's required offset).
+document.querySelectorAll('.tab-btn').forEach(b => {
+  b.addEventListener('click', () => requestAnimationFrame(updateStickyOffsets));
 });
 
 render();
+updateStickyOffsets();
 </script>
 </body>
 </html>
