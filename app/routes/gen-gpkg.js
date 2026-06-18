@@ -2,9 +2,6 @@
  * Test-data GeoPackage generator. Wraps bng-library's buffer API in a
  * simple form so testers can produce fixtures from a browser instead of
  * dropping to a shell.
- *
- * Gated on NODE_ENV !== 'production' — the prototype is a tester tool and
- * we never want this route exposed in the CDP prod environment.
  */
 
 const multer = require('multer')
@@ -38,7 +35,7 @@ function getGenerator () {
 }
 
 function isEnabled () {
-  return process.env.NODE_ENV !== 'production'
+  return process.env.SHOW_TOOLS === 'true'
 }
 
 function parseIntInRange (value, fallback, min, max) {
@@ -173,13 +170,13 @@ async function handleWorkbook (req, res, gen) {
 
 function registerGenGpkgRoutes (router) {
   router.get('/test-data/gen-gpkg', async function (req, res) {
-    if (!isEnabled()) return res.status(404).render('govuk-prototype-kit/error-page-404')
+    if (!isEnabled()) return res.status(404).send('Not found')
     const gen = await getGenerator()
     res.render('gen-gpkg/index', { flawGroups: groupFlaws(gen.listFlaws()) })
   })
 
   router.post('/test-data/gen-gpkg', upload.single('workbook'), async function (req, res, next) {
-    if (!isEnabled()) return res.status(404).render('govuk-prototype-kit/error-page-404')
+    if (!isEnabled()) return res.status(404).send('Not found')
     try {
       const gen = await getGenerator()
       const mode = req.body.source === 'workbook' ? 'workbook' : 'synthetic'
