@@ -40,10 +40,8 @@ const { registerProjectRoutes } = require('./routes/project')
 const { registerTestRoutes } = require('./routes/test')
 const { registerGenGpkgRoutes } = require('./routes/gen-gpkg')
 
-// Expose env-derived flags to every template render. Used by the landing
-// page to hide the test-data link in production.
+// Expose env-derived flags to every template render.
 router.use(function (req, res, next) {
-  res.locals.showTestDataLink = process.env.NODE_ENV !== 'production'
   res.locals.showTools = process.env.SHOW_TOOLS === 'true'
   next()
 })
