@@ -18,7 +18,7 @@
     "test": "cucumber-js features/"
   },
   "dependencies": {
-    "bng-library": "github:DEFRA/bng-library#e08fb922fa3dcdd1b778fbd08ebc71bf52aed63d",
+    "bng-library": "github:DEFRA/bng-library#5557454e9ff4b59376b26665e6bf61e5be8be807",
     "@cucumber/cucumber": "12.7.0",
     "@defra/interactive-map": "0.0.1-alpha",
     "@govuk-prototype-kit/common-templates": "2.0.1",
