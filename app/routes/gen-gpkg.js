@@ -23,10 +23,11 @@ const MAX_COUNT = 10
 const MIN_COUNT = 1
 const MIN_PARCELS = 1
 const MAX_PARCELS = 500
-// Mirrors bng-library's MIN_TREE_COUNT — the generator floors any lower request
-// at this value so every fixture still covers all tree size bands.
+// Default tree count when the field is blank/invalid (mirrors bng-library's
+// DEFAULT_TREE_COUNT). Any explicit count is honoured as-is; 0 yields an empty
+// Urban Trees layer, and fewer than 4 trees won't cover every size band.
 const DEFAULT_NUM_TREES = 5
-const MIN_TREES = 5
+const MIN_TREES = 0
 const MAX_TREES = 500
 
 // Lazy-load the generator so a failed install (or wrong Node version) is
