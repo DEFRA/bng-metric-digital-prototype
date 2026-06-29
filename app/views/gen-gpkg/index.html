@@ -36,6 +36,12 @@
       </div>
 
       <div class="govuk-form-group">
+        <label class="govuk-label" for="numTrees">Urban trees</label>
+        <div class="govuk-hint">How many individual trees to place. 0–500 (0 leaves the Urban Trees layer empty). The first few cover one of each size band — Small, Medium, Large, Very large — so 4 or more gives full coverage. Defaults to 5.</div>
+        <input class="govuk-input govuk-input--width-5" id="numTrees" name="numTrees" type="number" step="1" min="0" max="500" value="5">
+      </div>
+
+      <div class="govuk-form-group">
         <label class="govuk-label" for="count">Number of files</label>
         <div class="govuk-hint">Generate several distinct fixtures at once. Bundled as a .zip when more than one.</div>
         <input class="govuk-input govuk-input--width-5" id="count" name="count" type="number" step="1" min="1" max="10" value="1">

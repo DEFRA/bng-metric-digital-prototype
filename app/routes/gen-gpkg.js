@@ -23,28 +23,34 @@ const MAX_COUNT = 10
 const MIN_COUNT = 1
 const MIN_PARCELS = 1
 const MAX_PARCELS = 500
+// Default tree count when the field is blank/invalid (mirrors bng-library's
+// DEFAULT_TREE_COUNT). Any explicit count is honoured as-is; 0 yields an empty
+// Urban Trees layer, and fewer than 4 trees won't cover every size band.
+const DEFAULT_NUM_TREES = 5
+const MIN_TREES = 0
+const MAX_TREES = 500
 
 // Lazy-load the generator so a failed install (or wrong Node version) is
 // reported when the route is first hit, not at server startup.
 let genPromise = null
-function getGenerator () {
+function getGenerator() {
   if (!genPromise) {
     genPromise = import('bng-library')
   }
   return genPromise
 }
 
-function isEnabled () {
+function isEnabled() {
   return process.env.SHOW_TOOLS === 'true'
 }
 
-function parseIntInRange (value, fallback, min, max) {
+function parseIntInRange(value, fallback, min, max) {
   const parsed = Number.parseInt(value, 10)
   if (!Number.isFinite(parsed)) return fallback
   return Math.max(min, Math.min(max, parsed))
 }
 
-function parseCentre (eastingRaw, northingRaw) {
+function parseCentre(eastingRaw, northingRaw) {
   const easting = Number.parseFloat(eastingRaw)
   const northing = Number.parseFloat(northingRaw)
   if (!Number.isFinite(easting) || !Number.isFinite(northing)) {
@@ -53,7 +59,7 @@ function parseCentre (eastingRaw, northingRaw) {
   return [easting, northing]
 }
 
-function normaliseFlawsField (value) {
+function normaliseFlawsField(value) {
   // govuk-prototype-kit checkbox groups inject a hidden "_unchecked" value
   // so an empty submission is distinguishable from a missing field.
   const isReal = (v) => Boolean(v) && v !== '_unchecked'
@@ -62,7 +68,7 @@ function normaliseFlawsField (value) {
   return []
 }
 
-function groupFlaws (flaws) {
+function groupFlaws(flaws) {
   const toItem = (f) => ({
     value: f.name,
     text: f.name + (f.standalone ? ' (standalone)' : ''),
@@ -75,14 +81,14 @@ function groupFlaws (flaws) {
   }
 }
 
-function sendBuffer (res, { buffer, filenameHint }) {
+function sendBuffer(res, { buffer, filenameHint }) {
   res.set('Content-Type', 'application/geopackage+sqlite3')
   res.set('Content-Disposition', `attachment; filename="${filenameHint}"`)
   res.set('Content-Length', String(buffer.length))
   res.send(buffer)
 }
 
-function sendZip (res, files, zipFilename) {
+function sendZip(res, files, zipFilename) {
   const archive = archiver('zip', { zlib: { level: 9 } })
   const passthrough = new PassThrough()
   archive.pipe(passthrough)
@@ -97,16 +103,38 @@ function sendZip (res, files, zipFilename) {
   archive.finalize()
 }
 
-async function handleSynthetic (req, res, gen) {
-  const numParcels = parseIntInRange(req.body.numParcels, DEFAULT_NUM_PARCELS, MIN_PARCELS, MAX_PARCELS)
-  const count = parseIntInRange(req.body.count, DEFAULT_COUNT, MIN_COUNT, MAX_COUNT)
+async function handleSynthetic(req, res, gen) {
+  const numParcels = parseIntInRange(
+    req.body.numParcels,
+    DEFAULT_NUM_PARCELS,
+    MIN_PARCELS,
+    MAX_PARCELS
+  )
+  const numTrees = parseIntInRange(
+    req.body.numTrees,
+    DEFAULT_NUM_TREES,
+    MIN_TREES,
+    MAX_TREES
+  )
+  const count = parseIntInRange(
+    req.body.count,
+    DEFAULT_COUNT,
+    MIN_COUNT,
+    MAX_COUNT
+  )
   const centre = parseCentre(req.body.centreEasting, req.body.centreNorthing)
   const bad = req.body.bad === 'on' || req.body.bad === 'true'
   const flaws = normaliseFlawsField(req.body.flaw)
 
   // Single file: stream the gpkg directly.
   if (count === 1) {
-    const out = gen.generateSyntheticGpkg({ numParcels, centre, bad, flaws })
+    const out = gen.generateSyntheticGpkg({
+      numParcels,
+      numTrees,
+      centre,
+      bad,
+      flaws
+    })
     return sendBuffer(res, out)
   }
 
@@ -118,15 +146,24 @@ async function handleSynthetic (req, res, gen) {
   const pad = String(count).length
   const files = []
   for (let i = 0; i < count; i += 1) {
-    const out = gen.generateSyntheticGpkg({ numParcels, centre, bad, flaws })
+    const out = gen.generateSyntheticGpkg({
+      numParcels,
+      numTrees,
+      centre,
+      bad,
+      flaws
+    })
     const indexSuffix = `-${String(i + 1).padStart(pad, '0')}`
-    out.filenameHint = out.filenameHint.replace(/\.gpkg$/, `${indexSuffix}.gpkg`)
+    out.filenameHint = out.filenameHint.replace(
+      /\.gpkg$/,
+      `${indexSuffix}.gpkg`
+    )
     files.push(out)
   }
   return sendZip(res, files, `bng-test-data-bundle-${Date.now()}.zip`)
 }
 
-async function handleWorkbook (req, res, gen) {
+async function handleWorkbook(req, res, gen) {
   if (!req.file) {
     return res.status(400).render('gen-gpkg/index', {
       error: 'Upload a workbook (.xlsx or .xlsm) to use the workbook flow.'
@@ -168,36 +205,40 @@ async function handleWorkbook (req, res, gen) {
   return sendZip(res, files, `bng-from-workbook-${Date.now()}.zip`)
 }
 
-function registerGenGpkgRoutes (router) {
+function registerGenGpkgRoutes(router) {
   router.get('/test-data/gen-gpkg', async function (req, res) {
     if (!isEnabled()) return res.status(404).send('Not found')
     const gen = await getGenerator()
     res.render('gen-gpkg/index', { flawGroups: groupFlaws(gen.listFlaws()) })
   })
 
-  router.post('/test-data/gen-gpkg', upload.single('workbook'), async function (req, res, next) {
-    if (!isEnabled()) return res.status(404).send('Not found')
-    try {
-      const gen = await getGenerator()
-      const mode = req.body.source === 'workbook' ? 'workbook' : 'synthetic'
-      if (mode === 'workbook') {
-        return await handleWorkbook(req, res, gen)
-      }
-      return await handleSynthetic(req, res, gen)
-    } catch (err) {
-      // FlawSelectionError carries a user-facing message; re-render the form
-      // with it. Everything else propagates to the kit's default handler.
-      if (err && err.name === 'FlawSelectionError') {
+  router.post(
+    '/test-data/gen-gpkg',
+    upload.single('workbook'),
+    async function (req, res, next) {
+      if (!isEnabled()) return res.status(404).send('Not found')
+      try {
         const gen = await getGenerator()
-        return res.status(400).render('gen-gpkg/index', {
-          flawGroups: groupFlaws(gen.listFlaws()),
-          error: err.message,
-          form: req.body
-        })
+        const mode = req.body.source === 'workbook' ? 'workbook' : 'synthetic'
+        if (mode === 'workbook') {
+          return await handleWorkbook(req, res, gen)
+        }
+        return await handleSynthetic(req, res, gen)
+      } catch (err) {
+        // FlawSelectionError carries a user-facing message; re-render the form
+        // with it. Everything else propagates to the kit's default handler.
+        if (err && err.name === 'FlawSelectionError') {
+          const gen = await getGenerator()
+          return res.status(400).render('gen-gpkg/index', {
+            flawGroups: groupFlaws(gen.listFlaws()),
+            error: err.message,
+            form: req.body
+          })
+        }
+        return next(err)
       }
-      return next(err)
     }
-  })
+  )
 }
 
 module.exports = { registerGenGpkgRoutes }
