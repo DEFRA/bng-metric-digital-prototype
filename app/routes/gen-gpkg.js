@@ -23,10 +23,11 @@ const MAX_COUNT = 10
 const MIN_COUNT = 1
 const MIN_PARCELS = 1
 const MAX_PARCELS = 500
-// Default tree count when the field is blank/invalid (mirrors bng-library's
-// DEFAULT_TREE_COUNT). Any explicit count is honoured as-is; 0 yields an empty
-// Urban Trees layer, and fewer than 4 trees won't cover every size band.
-const DEFAULT_NUM_TREES = 5
+// Default tree count when the field is blank/invalid. Any explicit count is
+// honoured as-is; 0 yields an empty trees layer. Trees alternate urban/rural
+// and cycle through the four size bands, so 8 covers every size × type
+// combination — hence the default.
+const DEFAULT_NUM_TREES = 8
 const MIN_TREES = 0
 const MAX_TREES = 500
 
