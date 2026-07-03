@@ -242,4 +242,4 @@ function registerGenGpkgRoutes(router) {
   )
 }
 
-module.exports = { registerGenGpkgRoutes }
+module.exports = { registerGenGpkgRoutes, sendZip }

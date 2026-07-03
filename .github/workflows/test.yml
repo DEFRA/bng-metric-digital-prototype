@@ -1,0 +1,34 @@
+name: Tests
+
+# Runs on every PR (including dependabot PRs) and on pushes to main, so a
+# dependency bump that breaks a covered code path is caught before merge.
+# Make this a required status check in branch protection to gate merges.
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  unit:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Only the node:test unit suite runs here. The cucumber suite
+      # (npm run test:features) has pre-existing failing scenarios and is
+      # left out of the gate until those are triaged; run it locally via
+      # `npm test`.
+      - name: Run unit tests
+        run: npm run test:unit
