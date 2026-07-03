@@ -22,7 +22,7 @@
   },
   "dependencies": {
     "bng-library": "github:DEFRA/bng-library#4abf12967c6efd6118fa2ac9e1cb442077001230",
-    "@cucumber/cucumber": "12.7.0",
+    "@cucumber/cucumber": "13.0.0",
     "@defra/interactive-map": "0.0.1-alpha",
     "@govuk-prototype-kit/common-templates": "2.0.1",
     "@ministryofjustice/frontend": "8.0.1",
