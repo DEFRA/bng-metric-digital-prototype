@@ -1,0 +1,20 @@
+{#
+  Reusable, config-driven "results dashboard" component.
+
+  Non-standard GOV.UK pattern (metric/stat-card grid + status tags + side
+  sub-navigation) with no GOV.UK Frontend equivalent. Follows the govuk-frontend
+  macro/template split: each macro simply includes a template that reads `params`.
+
+  Import into a page with:
+    {% from "dashboard/macro.njk" import appDashboard, appSideNav %}
+
+  See app/views/dashboard/_dashboard.njk and _side-nav.njk for the params they accept.
+#}
+
+{% macro appDashboard(params) %}
+  {%- include "dashboard/_dashboard.njk" -%}
+{% endmacro %}
+
+{% macro appSideNav(params) %}
+  {%- include "dashboard/_side-nav.njk" -%}
+{% endmacro %}

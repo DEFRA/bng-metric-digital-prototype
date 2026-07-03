@@ -1,0 +1,53 @@
+{% extends "layouts/main.html" %}
+
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/table/macro.njk" import govukTable %}
+{% from "govuk/components/phase-banner/macro.njk" import govukPhaseBanner %}
+{% from "dashboard/macro.njk" import appDashboard, appSideNav %}
+
+{% set pageName = "Area habitats" %}
+
+{% block pageTitle %}{{ pageName }} – {{ serviceName }} – GOV.UK{% endblock %}
+
+{% block beforeContent %}
+  {{ govukPhaseBanner({
+    tag: { text: "Beta" },
+    html: 'This is a new service. Help us improve it and <a class="govuk-link" href="#">give your feedback (opens in new tab)</a>.'
+  }) }}
+{% endblock %}
+
+{% block content %}
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-one-quarter">
+    {{ appSideNav(sideNav) }}
+  </div>
+
+  <div class="govuk-grid-column-three-quarters">
+
+    <div class="app-page-header">
+      <div>
+        <span class="govuk-caption-l">Project name</span>
+        <h1 class="govuk-heading-l">Area habitats</h1>
+      </div>
+      <div class="app-page-header__actions">
+        {{ govukButton({ text: "View map", classes: "govuk-button--secondary", href: "#" }) }}
+        {{ govukButton({ text: "Upload file", href: "/metric-results/start" }) }}
+      </div>
+    </div>
+
+    <h2 class="govuk-heading-m">Area habitats results</h2>
+    {{ appDashboard(resultsDashboard) }}
+
+    <hr class="govuk-section-break govuk-section-break--l govuk-section-break--visible">
+
+    <h2 class="govuk-heading-l">Area habitats trading rules</h2>
+    {{ govukTable(tradingRulesTable) }}
+
+    <h3 class="govuk-heading-m">Low distinctiveness</h3>
+    {{ appDashboard(lowDistinctivenessDashboard) }}
+
+    {{ govukTable(habitatGroupTable) }}
+
+  </div>
+</div>
+{% endblock %}

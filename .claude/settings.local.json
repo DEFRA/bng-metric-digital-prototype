@@ -19,7 +19,9 @@
       "WebFetch(domain:cdn.simpleicons.org)",
       "WebFetch(domain:cdn.jsdelivr.net)",
       "Bash(lsof:*)",
-      "Bash(tee /tmp/context-diff.txt)"
+      "Bash(tee /tmp/context-diff.txt)",
+      "Bash(node .claude/skills/figma-journey/scripts/figma-extract.mjs:*)",
+      "Bash(node .claude/skills/figma-journey/scripts/figma-images.mjs:*)"
     ]
   },
   "outputStyle": "Explanatory"
