@@ -44,9 +44,13 @@
 
     <form method="post" action="/metric-results/upload-baseline" enctype="multipart/form-data" novalidate>
 
+      {# JavaScript-enhanced file upload (govuk-frontend >= 5.9): renders the
+         "Choose file / or drop file" button + drop zone shown in the design,
+         and falls back to the native file input when JS is unavailable. #}
       {{ govukFileUpload({
         id: "fileUpload",
         name: "fileUpload",
+        javascript: true,
         label: {
           text: "Upload a file",
           classes: "govuk-label--m"
