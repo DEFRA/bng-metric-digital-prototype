@@ -5,7 +5,7 @@
  */
 
 const multer = require('multer')
-const archiver = require('archiver')
+const { ZipArchive } = require('archiver')
 const { PassThrough } = require('node:stream')
 
 const MAX_WORKBOOK_BYTES = 25 * 1024 * 1024
@@ -90,7 +90,7 @@ function sendBuffer(res, { buffer, filenameHint }) {
 }
 
 function sendZip(res, files, zipFilename) {
-  const archive = archiver('zip', { zlib: { level: 9 } })
+  const archive = new ZipArchive({ zlib: { level: 9 } })
   const passthrough = new PassThrough()
   archive.pipe(passthrough)
 
