@@ -5,18 +5,8 @@
  */
 
 const multer = require('multer')
-const archiverModule = require('archiver')
+const archiver = require('archiver')
 const { PassThrough } = require('node:stream')
-
-// archiver's CommonJS export is a callable factory: `archiver('zip', opts)`.
-// Under some install / module-interop states it resolves wrapped (the factory
-// hangs off `.default`) or only exposes the named `.create` factory — either of
-// which makes a bare `archiver(...)` call throw "archiver is not a function".
-// Resolve the factory defensively so the zip path works however it resolved.
-const createArchive =
-  typeof archiverModule === 'function'
-    ? archiverModule
-    : (archiverModule.default ?? archiverModule.create)
 
 const MAX_WORKBOOK_BYTES = 25 * 1024 * 1024
 
@@ -100,7 +90,7 @@ function sendBuffer(res, { buffer, filenameHint }) {
 }
 
 function sendZip(res, files, zipFilename) {
-  const archive = createArchive('zip', { zlib: { level: 9 } })
+  const archive = archiver('zip', { zlib: { level: 9 } })
   const passthrough = new PassThrough()
   archive.pipe(passthrough)
 
