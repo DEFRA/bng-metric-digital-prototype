@@ -1,0 +1,89 @@
+{#
+  appDashboard(params) markup.
+
+  params:
+    classes        (string, optional) extra classes on the grid wrapper
+    headingLevel   (number, optional, default 3) heading level for card titles/labels
+    cards          (array) each item is one of:
+
+    Metric card (default):
+      {
+        heading: { text: "On-site baseline", href: "/..." },   # href optional -> renders a link
+        value:   "4.00 units",                                  # optional big number
+        valueModifier: "primary" | "success" | "error",         # optional colour
+        tag: { text: "Complete", classes: "govuk-tag--green" }  # optional govukTag, pinned to card foot
+      }
+
+    Composite/wide card ({ wide: true }):
+      {
+        wide: true,
+        metrics: [ { label: "Total net unit change", value: "-4.00 units" }, ... ],
+        rows:    [ { key: { text: "Units required", href: "/..." }, value: "4.40 units" },
+                   { key: { text: "Trading rules" }, tag: { text: "Not met", classes: "govuk-tag--red" } } ]
+      }
+#}
+{% from "govuk/components/tag/macro.njk" import govukTag %}
+
+{% set headingLevel = params.headingLevel | default(3) %}
+
+<div class="app-dashboard {{- ' ' + params.classes if params.classes }}">
+  {% for card in params.cards %}
+    <div class="app-dashboard__card{{ ' app-dashboard__card--wide' if card.wide }}">
+
+      {% if card.wide %}
+
+        {% if card.metrics %}
+          <div class="app-dashboard__metrics">
+            {% for metric in card.metrics %}
+              <div class="app-dashboard__metric">
+                <h{{ headingLevel }} class="app-dashboard__label">{{ metric.label }}</h{{ headingLevel }}>
+                <p class="app-dashboard__value{{ ' app-dashboard__value--' + metric.valueModifier if metric.valueModifier }}">{{ metric.value }}</p>
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+
+        {% if card.rows %}
+          <dl class="app-dashboard__rows">
+            {% for row in card.rows %}
+              <div class="app-dashboard__row">
+                <dt class="app-dashboard__row-key">
+                  {% if row.key.href %}
+                    <a class="govuk-link" href="{{ row.key.href }}">{{ row.key.text }}</a>
+                  {% else %}
+                    {{ row.key.text }}
+                  {% endif %}
+                </dt>
+                <dd class="app-dashboard__row-value">
+                  {% if row.tag %}{{ govukTag(row.tag) }}{% elif row.value %}{{ row.value }}{% endif %}
+                </dd>
+              </div>
+            {% endfor %}
+          </dl>
+        {% endif %}
+
+      {% else %}
+
+        {% if card.heading %}
+          <h{{ headingLevel }} class="app-dashboard__heading">
+            {% if card.heading.href %}
+              <a class="govuk-link" href="{{ card.heading.href }}">{{ card.heading.text }}</a>
+            {% else %}
+              {{ card.heading.text }}
+            {% endif %}
+          </h{{ headingLevel }}>
+        {% endif %}
+
+        {% if card.value %}
+          <p class="app-dashboard__value{{ ' app-dashboard__value--' + card.valueModifier if card.valueModifier }}">{{ card.value }}</p>
+        {% endif %}
+
+        {% if card.tag %}
+          <div class="app-dashboard__footer">{{ govukTag(card.tag) }}</div>
+        {% endif %}
+
+      {% endif %}
+
+    </div>
+  {% endfor %}
+</div>

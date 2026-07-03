@@ -1,0 +1,30 @@
+{#
+  appSideNav(params) markup — accessible vertical sub-navigation for dashboard pages.
+
+  params:
+    ariaLabel  (string, optional, default "Sub navigation") value for nav aria-label
+    classes    (string, optional) extra classes on the <nav>
+    items      (array) each: {
+                 text, href,
+                 current: true,            # marks aria-current="page" + active styling
+                 items: [ { text, href, current } ]   # optional one level of sub-items
+               }
+#}
+<nav class="app-side-nav {{- ' ' + params.classes if params.classes }}" aria-label="{{ params.ariaLabel | default('Sub navigation') }}">
+  <ul class="app-side-nav__list">
+    {% for item in params.items %}
+      <li class="app-side-nav__item{{ ' app-side-nav__item--current' if item.current }}">
+        <a class="app-side-nav__link govuk-link" href="{{ item.href }}"{{ ' aria-current="page"' | safe if item.current }}>{{ item.text }}</a>
+        {% if item.items %}
+          <ul class="app-side-nav__sub-list">
+            {% for sub in item.items %}
+              <li class="app-side-nav__sub-item{{ ' app-side-nav__sub-item--current' if sub.current }}">
+                <a class="app-side-nav__link govuk-link" href="{{ sub.href }}"{{ ' aria-current="page"' | safe if sub.current }}>{{ sub.text }}</a>
+              </li>
+            {% endfor %}
+          </ul>
+        {% endif %}
+      </li>
+    {% endfor %}
+  </ul>
+</nav>
