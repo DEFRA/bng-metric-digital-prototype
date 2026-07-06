@@ -21,7 +21,8 @@
       "Bash(lsof:*)",
       "Bash(tee /tmp/context-diff.txt)",
       "Bash(node .claude/skills/figma-journey/scripts/figma-extract.mjs:*)",
-      "Bash(node .claude/skills/figma-journey/scripts/figma-images.mjs:*)"
+      "Bash(node .claude/skills/figma-journey/scripts/figma-images.mjs:*)",
+      "Bash(node .claude/skills/figma-journey/scripts/figma-reconcile.mjs:*)"
     ]
   },
   "outputStyle": "Explanatory"
