@@ -3,12 +3,14 @@
 // Writes .tmp/figma-journey/<fileKey>/{page.json,flow.json,flow.md}.
 // No npm deps (Node 22 global fetch). Never prints the FIGMA_TOKEN.
 
+import { createHash } from 'node:crypto'
 import { mkdir, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 
 const API_BASE = 'https://api.figma.com/v1'
 const SETUP_DOC = '.claude/skills/figma-journey/references/setup.md'
 const HTTP_OK = 200
+const HASH_LEN = 12
 
 function fail(message) {
   console.error(message)
@@ -88,6 +90,29 @@ function addDest(seen, node, toId, navigation) {
   }
 }
 
+// NOTE: field names are the Figma *REST* API shape (GET /files/:key/nodes):
+// each node exposes `interactions[]`, and each interaction has `trigger` +
+// a plural `actions[]` of `{ type, destinationId, navigation }`. This is NOT
+// the Figma *Plugin* API, which uses `node.reactions[]` with a singular
+// `action`. We deliberately use REST (no Figma MCP), so `interactions`/`actions`
+// is correct — do not "fix" this to `reactions`/`action` (verified against the
+// live response: 1030 `interactions`, 0 `reactions`). `transitionNodeID` is the
+// legacy single-link fallback for older prototype nodes.
+function nodeDestinations(node) {
+  const dests = []
+  for (const interaction of node.interactions || []) {
+    for (const action of interaction.actions || []) {
+      if (action.destinationId) {
+        dests.push(action.destinationId)
+      }
+    }
+  }
+  if (node.transitionNodeID) {
+    dests.push(node.transitionNodeID)
+  }
+  return dests
+}
+
 function collectTransitions(screens) {
   const seen = new Map()
   for (const screen of screens) {
@@ -101,6 +126,27 @@ function collectTransitions(screens) {
     })
   }
   return [...seen.values()]
+}
+
+// A stable per-frame fingerprint used to detect designer changes on re-run (see
+// the "Updating an existing journey" section of SKILL.md). It hashes the frame's
+// meaningful content — node type, name, visible TEXT characters, and prototype
+// destinations — in document order, and deliberately ignores absolute canvas
+// coordinates so that merely moving a frame around the page is not a change.
+function frameFingerprint(frame) {
+  const parts = []
+  walk(frame, (node) => {
+    const entry = { t: node.type, n: node.name }
+    if (typeof node.characters === 'string') {
+      entry.c = node.characters
+    }
+    const dests = nodeDestinations(node)
+    if (dests.length > 0) {
+      entry.d = dests
+    }
+    parts.push(entry)
+  })
+  return createHash('sha256').update(JSON.stringify(parts)).digest('hex').slice(0, HASH_LEN)
 }
 
 function buildIdIndex(screens) {
@@ -201,7 +247,8 @@ async function main() {
     id: screen.id,
     name: screen.name,
     width: Math.round(screen.absoluteBoundingBox?.width || 0),
-    height: Math.round(screen.absoluteBoundingBox?.height || 0)
+    height: Math.round(screen.absoluteBoundingBox?.height || 0),
+    hash: frameFingerprint(screen)
   }))
   const flow = { fileKey, nodeId, startNodeId, screens: screenMeta, transitions }
 
