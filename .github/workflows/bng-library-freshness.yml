@@ -19,56 +19,59 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v4
 
-      - name: Compare pinned commit against bng-library main
-        id: compare
-        run: |
-          pinned="$(node -p "require('./package.json').dependencies['bng-library'].split('#')[1]")"
-          latest="$(git ls-remote https://github.com/DEFRA/bng-library.git main | cut -f1)"
-          echo "pinned=$pinned" >> "$GITHUB_OUTPUT"
-          echo "latest=$latest" >> "$GITHUB_OUTPUT"
-          # A branch ref (e.g. "#main") floats and is never "behind".
-          if [ "$pinned" = "$latest" ] || [ "$pinned" = "main" ]; then
-            echo "stale=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "stale=true" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Upsert PR comment
+      - name: Compare pin against bng-library main and upsert comment
         uses: actions/github-script@v7
-        env:
-          PINNED: ${{ steps.compare.outputs.pinned }}
-          LATEST: ${{ steps.compare.outputs.latest }}
-          STALE: ${{ steps.compare.outputs.stale }}
         with:
           script: |
+            const fs = require('node:fs');
             const marker = '<!-- bng-library-freshness -->';
-            const { PINNED, LATEST, STALE } = process.env;
+            const LIB = { owner: 'DEFRA', repo: 'bng-library' };
             const { owner, repo } = context.repo;
             const issue_number = context.issue.number;
+
+            const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+            const pinned = pkg.dependencies['bng-library'].split('#')[1];
 
             const comments = await github.paginate(
               github.rest.issues.listComments, { owner, repo, issue_number });
             const existing = comments.find((c) => c.body.includes(marker));
 
-            if (STALE !== 'true') {
+            const removeComment = async () => {
               if (existing) {
                 await github.rest.issues.deleteComment(
                   { owner, repo, comment_id: existing.id });
               }
-              return;
-            }
+            };
 
+            // A branch ref (e.g. "#main") floats and is never "behind".
+            if (pinned === 'main') return removeComment();
+
+            const { data: branch } = await github.rest.repos.getBranch(
+              { ...LIB, branch: 'main' });
+            const latest = branch.commit.sha;
+
+            if (pinned === latest) return removeComment();
+
+            // base...head: ahead_by is how far head (main) is ahead of the
+            // pinned commit — i.e. how many commits the pin is behind.
+            const { data: cmp } = await github.rest.repos.compareCommitsWithBasehead(
+              { ...LIB, basehead: `${pinned}...${latest}` });
+            const behind = cmp.ahead_by;
+
+            if (behind <= 0) return removeComment();
+
+            const plural = behind === 1 ? 'commit' : 'commits';
             const body = [
               marker,
               '> [!WARNING]',
-              '> **`bng-library` is behind `main`.**',
-              `> - Pinned: \`${PINNED}\``,
-              `> - Latest \`main\`: \`${LATEST}\``,
-              `> - [See what's changed](https://github.com/DEFRA/bng-library/compare/${PINNED}...${LATEST})`,
+              `> **\`bng-library\` is ${behind} ${plural} behind \`main\`.**`,
+              `> - Pinned: \`${pinned}\``,
+              `> - Latest \`main\`: \`${latest}\``,
+              `> - [See what's changed](https://github.com/DEFRA/bng-library/compare/${pinned}...${latest})`,
               '>',
               '> Update with:',
               '> ```sh',
-              `> npm install "github:DEFRA/bng-library#${LATEST}"`,
+              `> npm install "github:DEFRA/bng-library#${latest}"`,
               '> ```',
             ].join('\n');
 
