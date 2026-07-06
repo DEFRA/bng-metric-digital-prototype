@@ -18,7 +18,9 @@
     "likec4:export": "docker run --rm -v \"$PWD:/data\" -w /data likec4/likec4 export png -o ./arch-diagrams",
     "format": "prettier --write \"**/*.{cjs,js,json,md}\"",
     "format:check": "prettier --check \"**/*.{cjs,js,json,md}\"",
-    "test": "cucumber-js features/"
+    "test": "npm run test:unit && npm run test:features",
+    "test:unit": "node --test \"test/**/*.test.js\"",
+    "test:features": "cucumber-js features/"
   },
   "dependencies": {
     "bng-library": "github:DEFRA/bng-library#4abf12967c6efd6118fa2ac9e1cb442077001230",
