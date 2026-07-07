@@ -25,7 +25,7 @@
   "dependencies": {
     "@cucumber/cucumber": "13.0.0",
     "@defra/interactive-map": "0.0.1-alpha",
-    "@govuk-prototype-kit/common-templates": "2.0.1",
+    "@govuk-prototype-kit/common-templates": "3.0.0",
     "@ministryofjustice/frontend": "9.0.0",
     "archiver": "^8.0.0",
     "better-sqlite3": "12.11.1",
