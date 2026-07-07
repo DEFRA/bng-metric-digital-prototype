@@ -1,0 +1,70 @@
+{% extends "layouts/main.html" %}
+
+{% from "govuk/components/file-upload/macro.njk" import govukFileUpload %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/details/macro.njk" import govukDetails %}
+{% from "govuk/components/back-link/macro.njk" import govukBackLink %}
+{% from "govuk/components/phase-banner/macro.njk" import govukPhaseBanner %}
+
+{% set pageName = "Upload a baseline metric Geopackage (.gpkg) file" %}
+
+{% block pageTitle %}{{ pageName }} – {{ serviceName }} – GOV.UK{% endblock %}
+
+{% block beforeContent %}
+  {{ govukPhaseBanner({
+    tag: { text: "Beta" },
+    html: 'This is a new service. Help us improve it and <a class="govuk-link" href="#">give your feedback (opens in new tab)</a>.'
+  }) }}
+  {{ govukBackLink({ text: "Back", href: "/metric-results/start" }) }}
+{% endblock %}
+
+{% block content %}
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+
+    <span class="govuk-caption-l">Project name</span>
+    <h1 class="govuk-heading-l">{{ pageName }}</h1>
+
+    <p class="govuk-body">
+      Upload a GeoPackage (.gpkg) file containing a red line boundary and baseline habitat parcels.
+    </p>
+
+    {{ govukDetails({
+      summaryText: "What layers should my file contain?",
+      html: '
+        <p class="govuk-body">Your GeoPackage should contain the following layers:</p>
+        <ul class="govuk-list govuk-list--bullet">
+          <li>a red line boundary</li>
+          <li>baseline area habitat parcels</li>
+          <li>hedgerows, if present on your site</li>
+          <li>watercourses, if present on your site</li>
+        </ul>
+      '
+    }) }}
+
+    <form method="post" action="/metric-results/upload-baseline" enctype="multipart/form-data" novalidate>
+
+      {# JavaScript-enhanced file upload (govuk-frontend >= 5.9): renders the
+         "Choose file / or drop file" button + drop zone shown in the design,
+         and falls back to the native file input when JS is unavailable. #}
+      {{ govukFileUpload({
+        id: "fileUpload",
+        name: "fileUpload",
+        javascript: true,
+        label: {
+          text: "Upload a file",
+          classes: "govuk-label--m"
+        },
+        attributes: { accept: ".gpkg" }
+      }) }}
+
+      <div class="govuk-button-group">
+        {{ govukButton({ text: "Continue" }) }}
+        <a class="govuk-link" href="/metric-results/start">Cancel</a>
+      </div>
+
+    </form>
+
+  </div>
+</div>
+{% endblock %}

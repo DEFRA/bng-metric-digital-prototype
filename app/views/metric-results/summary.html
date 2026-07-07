@@ -1,0 +1,50 @@
+{% extends "layouts/main.html" %}
+
+{# Wide layout: the designer marked this screen "WIDE" (Dev Mode annotation) in
+   Figma, so header, footer and content use a 1280px container instead of the
+   GOV.UK default. `.app-wide` widens .govuk-width-container (application.scss). #}
+{% set bodyClasses = "app-wide" %}
+
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/phase-banner/macro.njk" import govukPhaseBanner %}
+{% from "dashboard/macro.njk" import appDashboard, appSideNav %}
+
+{% set pageName = "Summary" %}
+
+{% block pageTitle %}{{ pageName }} – {{ serviceName }} – GOV.UK{% endblock %}
+
+{% block beforeContent %}
+  {{ govukPhaseBanner({
+    tag: { text: "Beta" },
+    html: 'This is a new service. Help us improve it and <a class="govuk-link" href="#">give your feedback (opens in new tab)</a>.'
+  }) }}
+{% endblock %}
+
+{% block content %}
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-one-quarter">
+    {{ appSideNav(sideNav) }}
+  </div>
+
+  <div class="govuk-grid-column-three-quarters">
+
+    <div class="app-page-header">
+      <div>
+        <span class="govuk-caption-l">Project name</span>
+        <h1 class="govuk-heading-l">Summary</h1>
+      </div>
+      <div class="app-page-header__actions">
+        {{ govukButton({ text: "View map", classes: "govuk-button--secondary", href: "#" }) }}
+        {{ govukButton({ text: "Upload file", href: "/metric-results/start" }) }}
+      </div>
+    </div>
+
+    <h2 class="govuk-heading-m">
+      <a class="govuk-link" href="/metric-results/area-habitats">Area habitats</a>
+    </h2>
+
+    {{ appDashboard(resultsDashboard) }}
+
+  </div>
+</div>
+{% endblock %}

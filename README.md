@@ -8,6 +8,7 @@ the [GOV.UK Frontend](https://github.com/alphagov/govuk-frontend).
 - [Requirements](#requirements)
   - [Node.js](#nodejs)
 - [GOV.UK Prototype Kit and GOV.UK Frontend](#govuk-prototype-kit-and-govuk-frontend)
+- [Building journeys from Figma](#building-journeys-from-figma)
 - [Using the refreshed GOV.UK brand](#using-the-refreshed-govuk-brand)
 - [Setting a password](#setting-a-password)
 - [Setting multiple passwords](#setting-multiple-passwords)
@@ -66,6 +67,34 @@ template provides both tools in a wrapper that runs on the Core Delivery Platfor
 > The `bng-metric-digital-prototype` is not a production ready application, it is a tool for prototyping. It is not
 > designed to be used in production or to be resilient, secure or performant, nor should it be. It is designed to be
 > used for prototyping ideas and testing them with users. It's a great tool for prototyping GOV web applications.
+
+## Building journeys from Figma
+
+This prototype includes a reusable **Claude Code skill**, `figma-journey`
+(`.claude/skills/figma-journey/`), that turns a clickable Figma prototype into a working User-Research
+journey in this app. It talks to the **Figma REST API** directly (no Figma MCP): given a Figma
+prototype URL (or `<fileKey>#<node-id>`) it pulls the page's frames, the wired click-flow and a rendered
+PNG of each screen, maps them to GOV.UK Design System components, and scaffolds the routes + views so
+the flow clicks through at `http://localhost:3000`. Screens are populated from a static config object —
+it is a UR mock, not real file parsing.
+
+It works in two modes, chosen automatically:
+
+- **New journey** — no record of this Figma location exists, so it builds the whole journey and records
+  it in a manifest (`.claude/skills/figma-journey/journeys.json`).
+- **Update** — the Figma location was built before. The skill reconciles the fresh design against the
+  manifest and patches **only** the screens the designer actually changed (added / changed / removed),
+  preserving hand-written copy — so you never rebuild a journey from scratch after a small design tweak.
+
+Non-standard "dashboard" screens (stat cards, status tags, side navigation) that have no GDS equivalent
+use a reusable, accessible, config-driven macro at `app/views/dashboard/macro.njk` (`appDashboard` and
+`appSideNav`) rather than bespoke markup. Every journey built this way also adds a launcher link and a
+short User-Research purpose description to the homepage (`app/views/index.html`).
+
+Running it needs a read-only `FIGMA_TOKEN` in your environment. See the skill's `SKILL.md` for the full
+step-by-step, and `references/setup.md` for how to create and verify the token. The first journey built
+this way is **metric-results** (upload choice → upload baseline → results dashboard → area-habitats
+detail).
 
 ## Using the refreshed GOV.UK brand
 

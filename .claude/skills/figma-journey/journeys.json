@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "journeys": [
+    {
+      "journey": "metric-results",
+      "fileKey": "MCZmgs6nNcuhXT00u5i9At",
+      "node": "3452:31002",
+      "figmaUrl": "https://www.figma.com/proto/MCZmgs6nNcuhXT00u5i9At?node-id=3452-31002",
+      "viewsDir": "app/views/metric-results",
+      "routesFile": "app/routes/metric-results.js",
+      "frames": [
+        {
+          "id": "3452:31315",
+          "name": "1000 — upload choice",
+          "view": "start.html",
+          "hash": "10ac391fbf8d"
+        },
+        {
+          "id": "3452:31302",
+          "name": "1010 — upload baseline (empty)",
+          "view": "upload-baseline.html",
+          "hash": "a727e7be5763"
+        },
+        {
+          "id": "3452:31289",
+          "name": "1020 — upload baseline (file chosen)",
+          "view": "upload-baseline.html",
+          "hash": "6bb5eb99aa3d"
+        },
+        {
+          "id": "3452:31003",
+          "name": "1100 — summary dashboard",
+          "view": "summary.html",
+          "hash": "d0f770d7541d",
+          "wide": true
+        },
+        {
+          "id": "3452:31192",
+          "name": "1110 — area habitats detail",
+          "view": "area-habitats.html",
+          "hash": "8293d390a562",
+          "wide": true
+        }
+      ]
+    }
+  ]
+}

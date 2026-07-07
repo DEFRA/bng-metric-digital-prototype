@@ -1254,3 +1254,180 @@
     }
   }
 }
+
+// =========================================================================
+// App dashboard — reusable metric/stat-card grid + side sub-navigation
+//
+// Non-standard "results dashboard" pattern (metric cards + status tags +
+// side navigation) with no GOV.UK Frontend equivalent. Config-driven via
+// app/views/dashboard/macro.njk (appDashboard, appSideNav). Colours use the
+// GOV.UK palette expressed as hex, to match the house style used above.
+// =========================================================================
+
+.app-dashboard {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  margin-bottom: 30px;
+}
+
+.app-dashboard__card {
+  flex: 1 1 200px;
+  display: flex;
+  flex-direction: column;
+  padding: 15px 20px 20px;
+  background-color: #f3f2f1; // govuk light-grey
+  border-top: 3px solid #b1b4b6; // govuk mid-grey
+}
+
+.app-dashboard__card--wide {
+  flex: 2 1 460px;
+}
+
+.app-dashboard__heading,
+.app-dashboard__label {
+  @include govuk-font($size: 19, $weight: bold);
+  margin: 0 0 5px;
+}
+
+.app-dashboard__value {
+  @include govuk-font($size: 36, $weight: regular);
+  margin: 0 0 15px;
+  color: #0b0c0c; // govuk black
+
+  &--primary {
+    color: #1d70b8; // govuk blue
+  }
+
+  &--success {
+    color: #00703c; // govuk green
+  }
+
+  &--error {
+    color: #d4351c; // govuk red
+  }
+}
+
+.app-dashboard__footer {
+  margin-top: auto; // pin status tag to the bottom of the card
+  padding-top: 15px;
+}
+
+.app-dashboard__metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  margin-bottom: 10px;
+}
+
+.app-dashboard__metric {
+  flex: 1 1 180px;
+
+  .app-dashboard__value {
+    margin-bottom: 0;
+  }
+}
+
+.app-dashboard__rows {
+  margin: 0;
+}
+
+.app-dashboard__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 20px;
+  padding: 10px 0;
+  border-top: 1px solid #b1b4b6; // govuk mid-grey
+}
+
+.app-dashboard__row-key {
+  @include govuk-font($size: 19, $weight: bold);
+}
+
+.app-dashboard__row-value {
+  @include govuk-font($size: 19);
+  margin: 0;
+  text-align: right;
+}
+
+// Side sub-navigation
+
+.app-side-nav {
+  @include govuk-font($size: 19);
+  margin-bottom: 30px;
+}
+
+.app-side-nav__list,
+.app-side-nav__sub-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.app-side-nav__item {
+  border-bottom: 1px solid #b1b4b6; // govuk mid-grey
+}
+
+.app-side-nav__link {
+  display: block;
+  padding: 10px 0;
+}
+
+.app-side-nav__item--current > .app-side-nav__link {
+  padding-left: 15px;
+  border-left: 4px solid #1d70b8; // govuk blue
+  font-weight: 700;
+  color: #0b0c0c; // govuk black
+  text-decoration: none;
+}
+
+.app-side-nav__sub-list {
+  margin: 0 0 10px 15px;
+}
+
+.app-side-nav__sub-item .app-side-nav__link {
+  padding: 5px 0;
+}
+
+.app-side-nav__sub-item--current > .app-side-nav__link {
+  font-weight: 700;
+  color: #0b0c0c; // govuk black
+  text-decoration: none;
+}
+
+// Dashboard page header — caption + heading on the left, actions on the right
+
+.app-page-header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+}
+
+.app-page-header__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+
+  .govuk-button {
+    margin-bottom: 0;
+  }
+}
+
+// =========================================================================
+// Wide layout
+//
+// Screens the designer marks "WIDE" (a Dev Mode annotation on the frame root)
+// in Figma set `{% set bodyClasses = "app-wide" %}` in the view. That widens
+// the header, footer and content width containers from the GOV.UK default
+// (~960px) to 1280px, so dashboards with wide card grids and tables have room.
+// Used by the metric-results summary and area-habitats screens.
+// =========================================================================
+
+$app-wide-page-width: 1280px;
+
+.app-wide .govuk-width-container {
+  max-width: $app-wide-page-width;
+}
