@@ -31,13 +31,15 @@
           "id": "3452:31003",
           "name": "1100 — summary dashboard",
           "view": "summary.html",
-          "hash": "d0f770d7541d"
+          "hash": "d0f770d7541d",
+          "wide": true
         },
         {
           "id": "3452:31192",
           "name": "1110 — area habitats detail",
           "view": "area-habitats.html",
-          "hash": "8293d390a562"
+          "hash": "8293d390a562",
+          "wide": true
         }
       ]
     }

@@ -1,5 +1,10 @@
 {% extends "layouts/main.html" %}
 
+{# Wide layout: the designer marked this screen "WIDE" (Dev Mode annotation) in
+   Figma, so header, footer and content use a 1280px container instead of the
+   GOV.UK default. `.app-wide` widens .govuk-width-container (application.scss). #}
+{% set bodyClasses = "app-wide" %}
+
 {% from "govuk/components/button/macro.njk" import govukButton %}
 {% from "govuk/components/phase-banner/macro.njk" import govukPhaseBanner %}
 {% from "dashboard/macro.njk" import appDashboard, appSideNav %}

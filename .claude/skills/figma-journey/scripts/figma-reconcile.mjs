@@ -8,27 +8,9 @@
 
 import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
+import { fail, parseLocation } from './figma-lib.mjs'
 
 const MANIFEST = '.claude/skills/figma-journey/journeys.json'
-
-function fail(message) {
-  console.error(message)
-  process.exit(1)
-}
-
-function parseLocation(location) {
-  if (location && location.includes('figma.com')) {
-    const url = new URL(location)
-    const match = url.pathname.match(/\/(?:proto|file|design)\/([A-Za-z0-9]+)/)
-    const rawNode = url.searchParams.get('node-id')
-    return { fileKey: match ? match[1] : null, node: rawNode ? rawNode.replaceAll('-', ':') : null }
-  }
-  if (location && location.includes('#')) {
-    const [key, node] = location.split('#')
-    return { fileKey: key, node: node ? node.replaceAll('-', ':') : null }
-  }
-  return { fileKey: location, node: null }
-}
 
 async function readJson(path, label) {
   try {
@@ -116,7 +98,7 @@ async function main() {
   if (!location) {
     fail('Usage: figma-reconcile.mjs <figma-url | KEY#node | fileKey>')
   }
-  const { fileKey, node } = parseLocation(location)
+  const { fileKey, nodeId } = parseLocation(location)
   if (!fileKey) {
     fail(`Could not parse a fileKey from: ${location}`)
   }
@@ -125,7 +107,7 @@ async function main() {
   const flow = await readJson(flowPath, 'flow.json (run figma-extract.mjs first)')
   const manifest = await readJson(MANIFEST, 'journey manifest')
   const journeys = manifest.journeys || []
-  const resolvedNode = node || flow.nodeId
+  const resolvedNode = nodeId || flow.nodeId
 
   const match = journeys.find((j) => j.fileKey === fileKey && j.node === resolvedNode)
   if (!match) {

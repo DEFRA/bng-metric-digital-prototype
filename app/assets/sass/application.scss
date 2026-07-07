@@ -1415,3 +1415,19 @@
     margin-bottom: 0;
   }
 }
+
+// =========================================================================
+// Wide layout
+//
+// Screens the designer marks "WIDE" (a Dev Mode annotation on the frame root)
+// in Figma set `{% set bodyClasses = "app-wide" %}` in the view. That widens
+// the header, footer and content width containers from the GOV.UK default
+// (~960px) to 1280px, so dashboards with wide card grids and tables have room.
+// Used by the metric-results summary and area-habitats screens.
+// =========================================================================
+
+$app-wide-page-width: 1280px;
+
+.app-wide .govuk-width-container {
+  max-width: $app-wide-page-width;
+}

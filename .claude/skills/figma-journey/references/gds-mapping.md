@@ -32,6 +32,10 @@ with no GDS equivalent** — they map to this repo's reusable macro at `app/view
   `{% extends "layouts/main.html" %}` already renders them — don't re-add them per screen.
 - Standard GOV.UK pages sit inside `govuk-grid-row` → `govuk-grid-column-two-thirds`. Dashboards that
   need the full width use `govuk-grid-column-full` (see the dashboard macro's own layout guidance).
+- **Wide screens** — if a screen is flagged `wide` in `flow.json` (the designer added a `WIDE` Dev
+  Mode annotation on the frame root), add `{% set bodyClasses = "app-wide" %}` to the view. That
+  widens the whole page (header, footer, content) to a 1280px container. See the "Wide screens"
+  section of `SKILL.md`.
 - Colour-code tags to the status word in the design: green = complete/success, yellow/orange = in
   progress/pending, red = error/problem.
 - Import **only** the macros a given screen uses — keep each view's import block tight.
@@ -39,6 +43,7 @@ with no GDS equivalent** — they map to this repo's reusable macro at `app/view
   "Choose file" button, an "or drop file" drop zone, or a chosen-file name (rather than the browser's
   native file input), pass **`javascript: true`** to `govukFileUpload`. This renders the enhanced
   drag-and-drop upload (`govuk-drop-zone` + `data-module="govuk-file-upload"`) and progressively falls
-  back to the native input without JS. It requires **govuk-frontend >= 5.9** (this repo is on 5.13, so
-  it works out of the box) — if the installed version is older, upgrade govuk-frontend first and
-  re-check the other pages still render. Example: `app/views/metric-results/upload-baseline.html`.
+  back to the native input without JS. It requires **govuk-frontend >= 5.9** (this repo already
+  satisfies that, so it works out of the box) — if the installed version is older, upgrade
+  govuk-frontend first and re-check the other pages still render. Example:
+  `app/views/metric-results/upload-baseline.html`.

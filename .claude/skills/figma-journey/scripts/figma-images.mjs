@@ -5,71 +5,7 @@
 
 import { mkdir, writeFile, readFile, access } from 'node:fs/promises'
 import { join } from 'node:path'
-
-const API_BASE = 'https://api.figma.com/v1'
-const SETUP_DOC = '.claude/skills/figma-journey/references/setup.md'
-const HTTP_OK = 200
-
-function fail(message) {
-  console.error(message)
-  process.exit(1)
-}
-
-function parseArgs(argv) {
-  let location = null
-  let nodeFlag = null
-  for (let i = 0; i < argv.length; i += 1) {
-    if (argv[i] === '--node') {
-      nodeFlag = argv[i + 1]
-      i += 1
-    } else if (!location) {
-      location = argv[i]
-    }
-  }
-  return { location, nodeFlag }
-}
-
-function parseLocation(location, nodeFlag) {
-  let fileKey = null
-  let nodeId = null
-  if (location && location.includes('figma.com')) {
-    const url = new URL(location)
-    const match = url.pathname.match(/\/(?:proto|file|design)\/([A-Za-z0-9]+)/)
-    fileKey = match ? match[1] : null
-    nodeId = url.searchParams.get('node-id')
-  } else if (location && location.includes('#')) {
-    const [key, node] = location.split('#')
-    fileKey = key
-    nodeId = node
-  } else {
-    fileKey = location
-  }
-  if (nodeFlag) {
-    nodeId = nodeFlag
-  }
-  if (nodeId) {
-    nodeId = nodeId.replaceAll('-', ':')
-  }
-  return { fileKey, nodeId }
-}
-
-async function figmaGet(path, token) {
-  const res = await fetch(`${API_BASE}${path}`, {
-    headers: { 'X-Figma-Token': token }
-  })
-  const body = await res.json().catch(() => ({}))
-  if (res.status !== HTTP_OK) {
-    fail(`Figma API ${res.status}: ${body.err || res.statusText}`)
-  }
-  return body
-}
-
-function collectScreens(document) {
-  if (document.type === 'CANVAS') {
-    return (document.children || []).filter((c) => c.type === 'FRAME')
-  }
-  return [document]
-}
+import { SETUP_DOC, fail, parseArgs, parseLocation, figmaGet, collectScreens } from './figma-lib.mjs'
 
 function firstDocument(pageJson) {
   const first = Object.values(pageJson.nodes || {})[0]

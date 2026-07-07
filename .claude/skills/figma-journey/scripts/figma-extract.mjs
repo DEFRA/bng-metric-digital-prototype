@@ -6,78 +6,18 @@
 import { createHash } from 'node:crypto'
 import { mkdir, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
+import { SETUP_DOC, fail, parseArgs, parseLocation, figmaGet, collectScreens } from './figma-lib.mjs'
 
-const API_BASE = 'https://api.figma.com/v1'
-const SETUP_DOC = '.claude/skills/figma-journey/references/setup.md'
-const HTTP_OK = 200
 const HASH_LEN = 12
-
-function fail(message) {
-  console.error(message)
-  process.exit(1)
-}
-
-function parseArgs(argv) {
-  let location = null
-  let nodeFlag = null
-  for (let i = 0; i < argv.length; i += 1) {
-    if (argv[i] === '--node') {
-      nodeFlag = argv[i + 1]
-      i += 1
-    } else if (!location) {
-      location = argv[i]
-    }
-  }
-  return { location, nodeFlag }
-}
-
-function parseLocation(location, nodeFlag) {
-  let fileKey = null
-  let nodeId = null
-  if (location && location.includes('figma.com')) {
-    const url = new URL(location)
-    const match = url.pathname.match(/\/(?:proto|file|design)\/([A-Za-z0-9]+)/)
-    fileKey = match ? match[1] : null
-    nodeId = url.searchParams.get('node-id')
-  } else if (location && location.includes('#')) {
-    const [key, node] = location.split('#')
-    fileKey = key
-    nodeId = node
-  } else {
-    fileKey = location
-  }
-  if (nodeFlag) {
-    nodeId = nodeFlag
-  }
-  if (nodeId) {
-    nodeId = nodeId.replaceAll('-', ':')
-  }
-  return { fileKey, nodeId }
-}
-
-async function figmaGet(path, token) {
-  const res = await fetch(`${API_BASE}${path}`, {
-    headers: { 'X-Figma-Token': token }
-  })
-  const body = await res.json().catch(() => ({}))
-  if (res.status !== HTTP_OK) {
-    fail(`Figma API ${res.status}: ${body.err || res.statusText}`)
-  }
-  return body
-}
+// A screen whose Dev Mode annotation matches this is rendered full-width (1280px
+// container) — see the "Wide screens" note in SKILL.md.
+const WIDE_ANNOTATION = /\bwide\b/i
 
 function walk(node, visit) {
   visit(node)
   for (const child of node.children || []) {
     walk(child, visit)
   }
-}
-
-function collectScreens(document) {
-  if (document.type === 'CANVAS') {
-    return (document.children || []).filter((c) => c.type === 'FRAME')
-  }
-  return [document]
 }
 
 function addDest(seen, node, toId, navigation) {
@@ -149,6 +89,29 @@ function frameFingerprint(frame) {
   return createHash('sha256').update(JSON.stringify(parts)).digest('hex').slice(0, HASH_LEN)
 }
 
+// Dev Mode annotations the REST API exposes on a node as `annotations[]`, each
+// with a `label` / `labelMarkdown`. Designers use them to flag layout intent
+// (e.g. "WIDE" on a screen root). Collected across the whole frame subtree so an
+// annotation placed on the root frame or a child is picked up either way.
+function nodeAnnotationLabels(node) {
+  const labels = []
+  for (const annotation of node.annotations || []) {
+    const text = annotation.label || annotation.labelMarkdown
+    if (text) {
+      labels.push(text.trim())
+    }
+  }
+  return labels
+}
+
+function frameAnnotations(frame) {
+  const labels = []
+  walk(frame, (node) => {
+    labels.push(...nodeAnnotationLabels(node))
+  })
+  return labels
+}
+
 function buildIdIndex(screens) {
   const idToScreen = new Map()
   for (const screen of screens) {
@@ -181,11 +144,13 @@ function renderFlowMd({ fileKey, nodeId, startNodeId, screens, transitions }) {
     '',
     '## Screens',
     '',
-    '| # | id | name | size |',
-    '| - | -- | ---- | ---- |'
+    '| # | id | name | size | layout | annotations |',
+    '| - | -- | ---- | ---- | ------ | ----------- |'
   ]
   screens.forEach((screen, index) => {
-    lines.push(`| ${index + 1} | \`${screen.id}\` | ${screen.name} | ${screen.width}×${screen.height} |`)
+    const layout = screen.wide ? '**WIDE** (1280px)' : 'default'
+    const notes = (screen.annotations || []).join('; ') || '—'
+    lines.push(`| ${index + 1} | \`${screen.id}\` | ${screen.name} | ${screen.width}×${screen.height} | ${layout} | ${notes} |`)
   })
   lines.push('', '## On-page flow', '')
   if (transitions.onPage.length === 0) {
@@ -243,13 +208,18 @@ async function main() {
   const screens = collectScreens(document)
   const startNodeId = (document.flowStartingPoints || [{}])[0].nodeId || null
   const transitions = classify(collectTransitions(screens), buildIdIndex(screens))
-  const screenMeta = screens.map((screen) => ({
-    id: screen.id,
-    name: screen.name,
-    width: Math.round(screen.absoluteBoundingBox?.width || 0),
-    height: Math.round(screen.absoluteBoundingBox?.height || 0),
-    hash: frameFingerprint(screen)
-  }))
+  const screenMeta = screens.map((screen) => {
+    const annotations = frameAnnotations(screen)
+    return {
+      id: screen.id,
+      name: screen.name,
+      width: Math.round(screen.absoluteBoundingBox?.width || 0),
+      height: Math.round(screen.absoluteBoundingBox?.height || 0),
+      annotations,
+      wide: annotations.some((label) => WIDE_ANNOTATION.test(label)),
+      hash: frameFingerprint(screen)
+    }
+  })
   const flow = { fileKey, nodeId, startNodeId, screens: screenMeta, transitions }
 
   const outDir = join('.tmp', 'figma-journey', fileKey)

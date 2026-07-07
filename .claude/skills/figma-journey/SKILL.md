@@ -65,10 +65,13 @@ Writes `.tmp/figma-journey/<fileKey>/`:
 
 - `page.json` — the raw Figma node tree (for reference / re-use).
 - `flow.json` — machine-readable: `{ fileKey, nodeId, startNodeId, screens[], transitions{ onPage, offPage } }`.
-- `flow.md` — human-readable: a table of screens (id / name / size), the flow starting point, the
-  on-page transitions as `"<fromName>" (fromId) → <toScreenName> (toId)`, and a separate
-  "Off-page / library links (ignore)" list (destinations that point at shared library components, not
-  screens on this page).
+  Each screen carries `{ id, name, width, height, annotations, wide, hash }` — `annotations` is the
+  screen's Dev Mode annotation labels and `wide` is `true` when one of them says `WIDE` (see
+  [Wide screens](#wide-screens)).
+- `flow.md` — human-readable: a table of screens (id / name / size / layout / annotations), the flow
+  starting point, the on-page transitions as `"<fromName>" (fromId) → <toScreenName> (toId)`, and a
+  separate "Off-page / library links (ignore)" list (destinations that point at shared library
+  components, not screens on this page).
 
 **Read `flow.md`.** It is your map of the journey — which screens exist and which element clicks lead
 where. Ignore the off-page/library links; they are not part of this journey.
@@ -150,14 +153,17 @@ Pick a short kebab-case journey key (e.g. `dashboard-review`). Then:
 3. **Views** — create `app/views/<journey>/<screen>.html` per screen, each `{% extends "layouts/main.html" %}`
    with a `{% block content %}`. Import only the macros that screen needs. Follow an existing view such
    as `app/views/on-site-baseline/start.html` for structure (`{% set pageName %}`, grid columns, macros).
+   If the screen's `flow.json` `wide` flag is `true`, add `{% set bodyClasses = "app-wide" %}` — see
+   [Wide screens](#wide-screens).
 4. **Styles** — append any custom styles the design needs to `app/assets/sass/application.scss` (guard
    them under a clearly-commented block for this journey).
 5. **Homepage** — add a launcher link to the new journey and a short User-Research purpose description
    to `app/views/index.html`.
 6. **Record the journey** — add an entry to `.claude/skills/figma-journey/journeys.json` so future
-   re-runs recognise this journey (Step 3) instead of rebuilding it. Copy the frame ids, names and
-   **hashes straight from `flow.json`**, and map each frame id to the view file you created for it
-   (several frames may map to one view — e.g. an empty and a filled state of the same page):
+   re-runs recognise this journey (Step 3) instead of rebuilding it. Copy the frame ids, names,
+   **hashes and `wide` flag straight from `flow.json`**, and map each frame id to the view file you
+   created for it (several frames may map to one view — e.g. an empty and a filled state of the same
+   page). Include `"wide": true` only for screens the designer marked WIDE:
 
    ```json
    {
@@ -172,7 +178,8 @@ Pick a short kebab-case journey key (e.g. `dashboard-review`). Then:
          "id": "<frameId>",
          "name": "<short label>",
          "view": "<screen>.html",
-         "hash": "<from flow.json>"
+         "hash": "<from flow.json>",
+         "wide": false
        }
      ]
    }
@@ -191,6 +198,30 @@ npm run format:check   # prettier over **/*.{cjs,js,json,md}
 
 Open the homepage, launch the new journey, and click through every screen. Confirm each transition
 matches `flow.md` and each screen resembles its PNG. Fix any route wiring or view that diverges.
+
+## Wide screens
+
+Most screens use the GOV.UK default page width (~960px). When a screen needs to be wider — typically a
+dashboard with a wide card grid or table — the designer flags it with a **Dev Mode annotation** on the
+frame root whose text is **`WIDE`**. The extractor reads that annotation (`frame.annotations[].label`
+via the REST API) and sets `wide: true` on the screen in `flow.json`; `flow.md` shows it in the
+`layout` column.
+
+To honour it in the reconstructed view, add one line at the top of that screen's `.html`:
+
+```njk
+{% set bodyClasses = "app-wide" %}
+```
+
+`.app-wide` (in `app/assets/sass/application.scss`) widens the header, footer and content
+`.govuk-width-container` to 1280px. Nothing else changes — the page still uses standard GOV.UK
+components and grid columns inside the wider container. Record the flag as `"wide": true` on the
+frame in `journeys.json` (Step 6.6) so a later run knows the screen is meant to be wide.
+
+> **Note on annotation access:** Dev Mode annotations require the annotation to be readable by the
+> token. If a screen is meant to be wide but its `WIDE` annotation doesn't come through (e.g. seat /
+> permission limits), fall back to a plain text layer containing `WIDE` on the frame — the extractor
+> also matches annotation text, and a text layer is always readable via `characters`.
 
 ## Updating an existing journey
 
