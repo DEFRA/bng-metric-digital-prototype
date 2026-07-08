@@ -27,8 +27,8 @@
         value: entry.value,
         symbol: entry.symbol,
         group: layer.group,
+        variant: layer.variant,
         file: layer.file,
-        attr: layer.attr,
         geometry: layer.geometry,
         search: (
           entry.label +
@@ -401,6 +401,9 @@
 
   // ---- card render --------------------------------------------------------
   function card(item) {
+    // Show group / geometry / variant as compact tags. The variant
+    // (Master / baseline / proposed / …) tells near-duplicate habitat names
+    // apart; the full source path lives in the "Source file" filter instead.
     return (
       '<div class="ukhab-card"><div class="ukhab-card-head"><div class="ukhab-swatch">' +
       svgFor(item.symbol) +
@@ -410,13 +413,11 @@
       esc(item.group) +
       '</span><span class="ukhab-tag">' +
       esc(item.geometry) +
-      '</span></div><div class="ukhab-meta">' +
-      esc(item.file) +
-      '</div>' +
-      (item.attr
-        ? '<div class="ukhab-meta">by: ' + esc(item.attr) + '</div>'
+      '</span>' +
+      (item.variant
+        ? '<span class="ukhab-tag">' + esc(item.variant) + '</span>'
         : '') +
-      '</div></div>' +
+      '</div></div></div>' +
       detailsFor(item.symbol) +
       '</div>'
     )
