@@ -50,6 +50,24 @@
 
     <div class="ukhab-grid" id="ukhab-grid"></div>
 
+    <h2 class="govuk-heading-m">Compare on a map (OpenLayers)</h2>
+    <p class="govuk-body">
+      Render a style layer's categories as mock geometry on a Defra-style
+      OpenLayers map, using the same symbology, to check how the OpenLayers
+      rendering compares with the cards above and with QGIS. The map libraries
+      load only when you render.
+    </p>
+    <div class="govuk-button-group ukhab-map-controls">
+      <div class="govuk-form-group">
+        <label class="govuk-label" for="ukhab-map-layer">Style layer</label>
+        <select class="govuk-select" id="ukhab-map-layer"></select>
+      </div>
+      <button class="govuk-button govuk-button--secondary" id="ukhab-map-render" type="button">
+        Render on map
+      </button>
+    </div>
+    <div class="ukhab-map" id="ukhab-map" hidden></div>
+
   </div>
 </div>
 
@@ -102,9 +120,15 @@
   /* Property values: same font as everything else, just kept distinct by size. */
   .ukhab-mono { font-family: inherit; }
   .ukhab-empty { color: #505a5f; padding: 30px 0; }
+  .ukhab-map-controls { display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap; }
+  .ukhab-map {
+    height: 600px; width: 100%; margin-bottom: 30px;
+    border: 1px solid #b1b4b6; background: #ffffff;
+  }
 </style>
 
 <script id="ukhab-data" type="application/json">{{ ukhabData | safe }}</script>
 <script src="/public/javascripts/ukhab-styles.js"></script>
+<script src="/public/javascripts/ukhab-styles-map.js"></script>
 
 {% endblock %}
