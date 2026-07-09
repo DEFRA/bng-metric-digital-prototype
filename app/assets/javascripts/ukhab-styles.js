@@ -309,6 +309,9 @@
         const dist = Math.max(3, num(p.distance, 2) * MM)
         const angle = num(p.angle, 0)
         const dash = sub ? dashArray(sp, lw) : ''
+        // Draw the stripe down the middle of the tile, not at x=0: a line on the
+        // tile edge has half its stroke width clipped away, halving the stripe.
+        const cx = dist / 2
         defs.push(
           '<pattern id="' +
             id +
@@ -318,7 +321,11 @@
             dist +
             '" patternTransform="rotate(' +
             -angle +
-            ')"><line x1="0" y1="0" x2="0" y2="' +
+            ')"><line x1="' +
+            cx +
+            '" y1="0" x2="' +
+            cx +
+            '" y2="' +
             dist +
             '" stroke="' +
             col +
