@@ -10,18 +10,26 @@
     <h1 class="govuk-heading-xl">UKHab styles</h1>
 
     <p class="govuk-body">
-      Search and inspect the QGIS map symbology for every UKHab habitat,
-      hedgerow, river and tree type. Each card shows a swatch of how the type is
-      drawn — fill, outline, hatching, dot patterns, dashed lines, along-line
-      markers and transparency. Expand <strong>Symbol detail</strong> for the
-      exact colours and properties, which are authoritative.
+      The QGIS map symbology for every UKHab habitat, hedgerow, river and tree
+      type — rendered on a map, as cards, and with the exact style properties.
     </p>
+
+    <h2 class="govuk-heading-m">Compare on a map (OpenLayers)</h2>
+    <div class="govuk-button-group ukhab-map-controls">
+      <div class="govuk-form-group">
+        <label class="govuk-label" for="ukhab-map-layer">Style layer</label>
+        <select class="govuk-select" id="ukhab-map-layer"></select>
+      </div>
+      <button class="govuk-button govuk-button--secondary" id="ukhab-map-render" type="button">
+        Render on map
+      </button>
+    </div>
+    <div class="ukhab-map" id="ukhab-map" hidden></div>
+
+    <h2 class="govuk-heading-m">Style cards</h2>
     <p class="govuk-body govuk-!-font-size-16">
-      The swatch reproduces the symbology as faithfully as a fixed preview can.
-      Two things it cannot show exactly: true on-map <strong>size</strong> (a
-      swatch has no map scale, so relative proportions are indicative), and
-      exact <strong>placement</strong> along a feature — line markers and dot
-      patterns are shown on a straight segment and a regular grid.
+      Each card shows a swatch; expand <strong>Symbol detail</strong> for the
+      exact, authoritative properties.
     </p>
 
     <div class="govuk-grid-row">
@@ -49,24 +57,6 @@
     <p class="govuk-body govuk-!-font-size-16" id="ukhab-count"></p>
 
     <div class="ukhab-grid" id="ukhab-grid"></div>
-
-    <h2 class="govuk-heading-m">Compare on a map (OpenLayers)</h2>
-    <p class="govuk-body">
-      Render a style layer's categories as mock geometry on a Defra-style
-      OpenLayers map, using the same symbology, to check how the OpenLayers
-      rendering compares with the cards above and with QGIS. The map libraries
-      load only when you render.
-    </p>
-    <div class="govuk-button-group ukhab-map-controls">
-      <div class="govuk-form-group">
-        <label class="govuk-label" for="ukhab-map-layer">Style layer</label>
-        <select class="govuk-select" id="ukhab-map-layer"></select>
-      </div>
-      <button class="govuk-button govuk-button--secondary" id="ukhab-map-render" type="button">
-        Render on map
-      </button>
-    </div>
-    <div class="ukhab-map" id="ukhab-map" hidden></div>
 
   </div>
 </div>
