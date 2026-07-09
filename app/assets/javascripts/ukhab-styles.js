@@ -23,7 +23,7 @@
 
   const SW = 120
   const SH = 80 // swatch size in px
-  const MM = 3.2 // relative mm -> px scale for the swatch
+  const MM = 3.78 // mm -> px at 96 DPI, matching QGIS's default on-screen scale
 
   // Flatten every category/rule across all layers into one searchable list.
   const ITEMS = []
