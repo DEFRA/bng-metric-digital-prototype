@@ -1,7 +1,14 @@
 // Client-side renderer for the UKHab styles page (app/views/ukhab-styles).
 // Reads the JSON the route injected into #ukhab-data and renders a searchable
-// grid of habitat cards: an approximate SVG swatch of the QGIS symbology plus
-// the authoritative raw property tables. No dependencies — plain DOM.
+// grid of habitat cards: an SVG swatch of the QGIS symbology plus the
+// authoritative raw property tables. No dependencies — plain DOM.
+//
+// The swatch aims to be as faithful as possible to how QGIS draws each symbol.
+// Two things are inherent limits of a fixed swatch rather than missing work:
+//   - Absolute on-map size cannot be shown (a swatch has no map scale), so MM
+//     below is a consistent *relative* scale, not real-world millimetres.
+//   - Along-line placement (MarkerLine) and point-pattern grids are shown on a
+//     straight segment / regular grid; real placement follows the geometry.
 ;(function () {
   const dataEl = document.getElementById('ukhab-data')
   const grid = document.getElementById('ukhab-grid')
@@ -16,7 +23,7 @@
 
   const SW = 120
   const SH = 80 // swatch size in px
-  const MM = 3.2 // rough mm -> px for the swatch scale
+  const MM = 3.2 // relative mm -> px scale for the swatch
 
   // Flatten every category/rule across all layers into one searchable list.
   const ITEMS = []
@@ -66,176 +73,38 @@
       (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[ch]
     )
   }
-
-  // ---- SVG swatch renderer (approximate) ----------------------------------
-  let uid = 0
-  function svgFor(symbol) {
-    if (!symbol) return '<svg width="' + SW + '" height="' + SH + '"></svg>'
-    if (symbol.type === 'marker') return markerSwatch(symbol)
-    if (symbol.type === 'line') return lineSwatch(symbol)
-    return fillSwatch(symbol)
+  function num(v, d) {
+    const n = parseFloat(v)
+    return Number.isFinite(n) ? n : d
   }
 
-  function fillSwatch(symbol) {
-    const defs = []
-    const rects = []
-    for (const layer of symbol.layers.filter((l) => l.enabled)) {
-      const p = layer.props
-      if (layer.class === 'SimpleFill') {
-        const fill = p.style === 'no' ? 'none' : rgba(p.color)
-        const strokeOn = p.outline_style && p.outline_style !== 'no'
-        const stroke = strokeOn ? rgba(p.outline_color) : 'none'
-        const sw = strokeOn
-          ? Math.max(1, (parseFloat(p.outline_width) || 0.26) * MM)
-          : 0
-        rects.push(
-          '<rect x="1" y="1" width="' +
-            (SW - 2) +
-            '" height="' +
-            (SH - 2) +
-            '" fill="' +
-            fill +
-            '" stroke="' +
-            stroke +
-            '" stroke-width="' +
-            sw +
-            '"/>'
-        )
-      } else if (layer.class === 'LinePatternFill') {
-        const id = 'h' + uid++
-        const line = (layer.subSymbol && layer.subSymbol.layers[0]) || null
-        const col = rgba(line ? line.props.line_color : p.color)
-        const lw = Math.max(
-          0.7,
-          (parseFloat(line ? line.props.line_width : p.line_width) || 0.26) * MM
-        )
-        const dist = Math.max(4, (parseFloat(p.distance) || 2) * MM)
-        const angle = parseFloat(p.angle) || 0
-        defs.push(
-          '<pattern id="' +
-            id +
-            '" patternUnits="userSpaceOnUse" width="' +
-            dist +
-            '" height="' +
-            dist +
-            '" patternTransform="rotate(' +
-            -angle +
-            ')"><line x1="0" y1="0" x2="0" y2="' +
-            dist +
-            '" stroke="' +
-            col +
-            '" stroke-width="' +
-            lw +
-            '"/></pattern>'
-        )
-        rects.push(
-          '<rect x="1" y="1" width="' +
-            (SW - 2) +
-            '" height="' +
-            (SH - 2) +
-            '" fill="url(#' +
-            id +
-            ')"/>'
-        )
-      } else if (layer.class === 'PointPatternFill') {
-        const id = 'd' + uid++
-        const mk = (layer.subSymbol && layer.subSymbol.layers[0]) || null
-        const col = rgba(mk ? mk.props.color : p.color)
-        const dx = Math.max(5, (parseFloat(p.distance_x) || 2) * MM)
-        const dy = Math.max(5, (parseFloat(p.distance_y) || 2) * MM)
-        const r = Math.max(
-          1,
-          (parseFloat(mk ? mk.props.size : 1) || 1) * MM * 0.5
-        )
-        defs.push(
-          '<pattern id="' +
-            id +
-            '" patternUnits="userSpaceOnUse" width="' +
-            dx +
-            '" height="' +
-            dy +
-            '"><circle cx="' +
-            dx / 2 +
-            '" cy="' +
-            dy / 2 +
-            '" r="' +
-            r +
-            '" fill="' +
-            col +
-            '"/></pattern>'
-        )
-        rects.push(
-          '<rect x="1" y="1" width="' +
-            (SW - 2) +
-            '" height="' +
-            (SH - 2) +
-            '" fill="url(#' +
-            id +
-            ')"/>'
-        )
-      }
+  // ---- SVG swatch renderer ------------------------------------------------
+  function svgFor(symbol) {
+    let inner = ''
+    if (symbol) {
+      if (symbol.type === 'marker') inner = markerInner(symbol)
+      else if (symbol.type === 'line') inner = lineInner(symbol)
+      else inner = fillInner(symbol)
     }
+    // QGIS symbol-level alpha dims the whole symbol.
+    const a = symbol ? num(symbol.alpha, 1) : 1
+    const body = a < 1 ? '<g opacity="' + a + '">' + inner + '</g>' : inner
     return (
       '<svg width="' +
       SW +
       '" height="' +
       SH +
-      '"><defs>' +
-      defs.join('') +
-      '</defs>' +
-      rects.join('') +
+      '" viewBox="0 0 ' +
+      SW +
+      ' ' +
+      SH +
+      '">' +
+      body +
       '</svg>'
     )
   }
 
-  function dashArray(p, width) {
-    if (p.use_custom_dash === '1' && p.customdash) {
-      return p.customdash
-        .split(';')
-        .map((n) => (parseFloat(n) || 0) * MM)
-        .join(',')
-    }
-    const style = p.line_style
-    if (style === 'dash') return 4 * width + ',' + 3 * width
-    if (style === 'dot') return width + ',' + 2 * width
-    if (style === 'dash dot')
-      return 4 * width + ',' + 2 * width + ',' + width + ',' + 2 * width
-    return ''
-  }
-
-  function lineSwatch(symbol) {
-    const lines = []
-    const layers = symbol.layers.filter(
-      (l) => l.enabled && l.class === 'SimpleLine'
-    )
-    const n = Math.max(1, layers.length)
-    layers.forEach((layer, i) => {
-      const p = layer.props
-      if (p.line_style === 'no') return
-      const width = Math.max(1, (parseFloat(p.line_width) || 0.5) * MM)
-      const y = (SH * (i + 1)) / (n + 1)
-      const dash = dashArray(p, width)
-      lines.push(
-        '<line x1="6" y1="' +
-          y +
-          '" x2="' +
-          (SW - 6) +
-          '" y2="' +
-          y +
-          '" stroke="' +
-          rgba(p.line_color) +
-          '" stroke-width="' +
-          width +
-          '"' +
-          (dash ? ' stroke-dasharray="' + dash + '"' : '') +
-          ' stroke-linecap="round"/>'
-      )
-    })
-    return (
-      '<svg width="' + SW + '" height="' + SH + '">' + lines.join('') + '</svg>'
-    )
-  }
-
+  // Opening tag (no close) for a marker shape centred on (cx, cy), radius r.
   function markerPath(shape, cx, cy, r) {
     switch (shape) {
       case 'diamond':
@@ -309,39 +178,241 @@
     }
   }
 
-  function markerSwatch(symbol) {
-    const shapes = []
-    const layers = symbol.layers.filter(
+  // Draw one SimpleMarker layer at (cx, cy): size, colour, outline, per-layer
+  // offset and rotation. Shared by marker symbols, MarkerLine and point fills.
+  function simpleMarker(p, cx, cy) {
+    const size = num(p.size, 2) // QGIS marker size is a diameter (mm)
+    const r = Math.max(3, (size * MM) / 2)
+    const parts = String(p.offset || '0,0').split(',')
+    const x = cx + num(parts[0], 0) * MM
+    const y = cy + num(parts[1], 0) * MM
+    const isStroke = p.name === 'cross' || p.name === 'cross2'
+    const outlineOn = p.outline_style && p.outline_style !== 'no'
+    const fill = isStroke ? 'none' : rgba(p.color)
+    const stroke = isStroke
+      ? rgba(p.color)
+      : outlineOn
+        ? rgba(p.outline_color)
+        : 'none'
+    const sw = isStroke
+      ? Math.max(1, r * 0.3)
+      : outlineOn
+        ? Math.max(0.4, num(p.outline_width, 0) * MM)
+        : 0
+    let el =
+      markerPath(p.name, x, y, r) +
+      ' fill="' +
+      fill +
+      '" stroke="' +
+      stroke +
+      '" stroke-width="' +
+      sw +
+      '"/>'
+    const angle = num(p.angle, 0)
+    if (angle) {
+      el =
+        '<g transform="rotate(' +
+        angle +
+        ' ' +
+        x +
+        ' ' +
+        y +
+        ')">' +
+        el +
+        '</g>'
+    }
+    return el
+  }
+
+  function dashArray(p, width) {
+    if (p.use_custom_dash === '1' && p.customdash) {
+      return p.customdash
+        .split(';')
+        .map((n) => num(n, 0) * MM)
+        .join(',')
+    }
+    switch (p.line_style) {
+      case 'dash':
+        return 4 * width + ',' + 3 * width
+      case 'dot':
+        return width + ',' + 2 * width
+      case 'dash dot':
+        return 4 * width + ',' + 2 * width + ',' + width + ',' + 2 * width
+      case 'dash dot dot':
+        return (
+          4 * width +
+          ',' +
+          2 * width +
+          ',' +
+          width +
+          ',' +
+          2 * width +
+          ',' +
+          width +
+          ',' +
+          2 * width
+        )
+      default:
+        return ''
+    }
+  }
+
+  // ---- fill symbols -------------------------------------------------------
+  let uid = 0
+  function fillRect(fill, extra) {
+    return (
+      '<rect x="1" y="1" width="' +
+      (SW - 2) +
+      '" height="' +
+      (SH - 2) +
+      '" fill="' +
+      fill +
+      '"' +
+      (extra || '') +
+      '/>'
+    )
+  }
+
+  function fillInner(symbol) {
+    const defs = []
+    const body = []
+    for (const layer of symbol.layers.filter((l) => l.enabled)) {
+      const p = layer.props
+      if (layer.class === 'SimpleFill') {
+        const fill = p.style === 'no' ? 'none' : rgba(p.color)
+        const outlineOn = p.outline_style && p.outline_style !== 'no'
+        const stroke = outlineOn ? rgba(p.outline_color) : 'none'
+        const sw = outlineOn ? Math.max(1, num(p.outline_width, 0.26) * MM) : 0
+        const dash = outlineOn
+          ? dashArray({ line_style: p.outline_style }, sw)
+          : ''
+        body.push(
+          fillRect(
+            fill,
+            ' stroke="' +
+              stroke +
+              '" stroke-width="' +
+              sw +
+              '"' +
+              (dash ? ' stroke-dasharray="' + dash + '"' : '')
+          )
+        )
+      } else if (layer.class === 'LinePatternFill') {
+        const id = 'h' + uid++
+        const sub = (layer.subSymbol && layer.subSymbol.layers[0]) || null
+        const sp = sub ? sub.props : {}
+        const col = rgba(sub ? sp.line_color : p.color)
+        const lw = Math.max(
+          0.6,
+          num(sub ? sp.line_width : p.line_width, 0.26) * MM
+        )
+        const dist = Math.max(3, num(p.distance, 2) * MM)
+        const angle = num(p.angle, 0)
+        const dash = sub ? dashArray(sp, lw) : ''
+        defs.push(
+          '<pattern id="' +
+            id +
+            '" patternUnits="userSpaceOnUse" width="' +
+            dist +
+            '" height="' +
+            dist +
+            '" patternTransform="rotate(' +
+            -angle +
+            ')"><line x1="0" y1="0" x2="0" y2="' +
+            dist +
+            '" stroke="' +
+            col +
+            '" stroke-width="' +
+            lw +
+            '"' +
+            (dash ? ' stroke-dasharray="' + dash + '"' : '') +
+            '/></pattern>'
+        )
+        body.push(fillRect('url(#' + id + ')'))
+      } else if (layer.class === 'PointPatternFill') {
+        const id = 'd' + uid++
+        const markers = (layer.subSymbol ? layer.subSymbol.layers : []).filter(
+          (l) => l.enabled && l.class === 'SimpleMarker'
+        )
+        const dx = Math.max(6, num(p.distance_x, 2) * MM)
+        const dy = Math.max(6, num(p.distance_y, 2) * MM)
+        const inner = markers
+          .map((m) => simpleMarker(m.props, dx / 2, dy / 2))
+          .join('')
+        defs.push(
+          '<pattern id="' +
+            id +
+            '" patternUnits="userSpaceOnUse" width="' +
+            dx +
+            '" height="' +
+            dy +
+            '">' +
+            inner +
+            '</pattern>'
+        )
+        body.push(fillRect('url(#' + id + ')'))
+      }
+    }
+    return '<defs>' + defs.join('') + '</defs>' + body.join('')
+  }
+
+  // ---- line symbols -------------------------------------------------------
+  function simpleLine(p, cy) {
+    if (p.line_style === 'no') return ''
+    const width = Math.max(1, num(p.line_width, 0.5) * MM)
+    const y = cy + num(p.offset, 0) * MM
+    const dash = dashArray(p, width)
+    return (
+      '<line x1="4" y1="' +
+      y +
+      '" x2="' +
+      (SW - 4) +
+      '" y2="' +
+      y +
+      '" stroke="' +
+      rgba(p.line_color) +
+      '" stroke-width="' +
+      width +
+      '"' +
+      (dash ? ' stroke-dasharray="' + dash + '"' : '') +
+      ' stroke-linecap="' +
+      (p.capstyle === 'round' ? 'round' : 'butt') +
+      '"/>'
+    )
+  }
+
+  // MarkerLine: repeat the sub-marker along the line at its interval.
+  function markerLine(layer, cy) {
+    const sub = layer.subSymbol
+    if (!sub) return ''
+    const markers = sub.layers.filter(
       (l) => l.enabled && l.class === 'SimpleMarker'
     )
-    for (const layer of layers) {
-      const p = layer.props
-      const r = Math.max(4, (parseFloat(p.size) || 2) * MM)
-      const stroke =
-        p.outline_style && p.outline_style !== 'no'
-          ? rgba(p.outline_color)
-          : 'none'
-      const sw = Math.max(0.5, (parseFloat(p.outline_width) || 0) * MM)
-      shapes.push(
-        markerPath(p.name, SW / 2, SH / 2, r) +
-          ' fill="' +
-          rgba(p.color) +
-          '" stroke="' +
-          stroke +
-          '" stroke-width="' +
-          sw +
-          '"/>'
-      )
+    const interval = Math.max(4, num(layer.props.interval, 3) * MM)
+    let out = ''
+    for (let x = 6; x <= SW - 4; x += interval) {
+      out += markers.map((m) => simpleMarker(m.props, x, cy)).join('')
     }
-    return (
-      '<svg width="' +
-      SW +
-      '" height="' +
-      SH +
-      '">' +
-      shapes.join('') +
-      '</svg>'
-    )
+    return out
+  }
+
+  function lineInner(symbol) {
+    const cy = SH / 2
+    let out = ''
+    // Layers draw in declared order, overlaid on the same line (offsets in mm).
+    for (const layer of symbol.layers.filter((l) => l.enabled)) {
+      if (layer.class === 'SimpleLine') out += simpleLine(layer.props, cy)
+      else if (layer.class === 'MarkerLine') out += markerLine(layer, cy)
+    }
+    return out
+  }
+
+  // ---- marker symbols -----------------------------------------------------
+  function markerInner(symbol) {
+    return symbol.layers
+      .filter((l) => l.enabled && l.class === 'SimpleMarker')
+      .map((m) => simpleMarker(m.props, SW / 2, SH / 2))
+      .join('')
   }
 
   // ---- property tables ----------------------------------------------------
