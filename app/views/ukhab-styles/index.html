@@ -1,0 +1,123 @@
+{% extends "layouts/main.html" %}
+
+{% set pageName="Symbology" %}
+
+{% block content %}
+
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-full">
+
+    <h1 class="govuk-heading-xl">Symbology</h1>
+
+    <p class="govuk-body">
+      Explore and visualise habitat symbology.
+    </p>
+
+    <h2 class="govuk-heading-m">Map View</h2>
+    <div class="govuk-button-group ukhab-map-controls">
+      <div class="govuk-form-group">
+        <label class="govuk-label" for="ukhab-map-layer">Style layer</label>
+        <select class="govuk-select" id="ukhab-map-layer"></select>
+      </div>
+      <button class="govuk-button govuk-button--secondary" id="ukhab-map-render" type="button">
+        Render on map
+      </button>
+    </div>
+    <div class="ukhab-map" id="ukhab-map" hidden></div>
+
+    <h2 class="govuk-heading-m">Style cards</h2>
+    <p class="govuk-body govuk-!-font-size-16">
+      Each card shows a swatch; expand <strong>Symbol detail</strong> for the
+      exact, authoritative properties.
+    </p>
+
+    <div class="govuk-grid-row">
+      <div class="govuk-grid-column-one-half">
+        <div class="govuk-form-group">
+          <label class="govuk-label" for="ukhab-search">Search</label>
+          <input class="govuk-input" id="ukhab-search" type="search"
+                 placeholder="Habitat / type name…" autocomplete="off">
+        </div>
+      </div>
+      <div class="govuk-grid-column-one-quarter">
+        <div class="govuk-form-group">
+          <label class="govuk-label" for="ukhab-group">Group</label>
+          <select class="govuk-select" id="ukhab-group"></select>
+        </div>
+      </div>
+      <div class="govuk-grid-column-one-quarter">
+        <div class="govuk-form-group">
+          <label class="govuk-label" for="ukhab-file">Source file</label>
+          <select class="govuk-select" id="ukhab-file"></select>
+        </div>
+      </div>
+    </div>
+
+    <p class="govuk-body govuk-!-font-size-16" id="ukhab-count"></p>
+
+    <div class="ukhab-grid" id="ukhab-grid"></div>
+
+  </div>
+</div>
+
+<style>
+  .ukhab-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 15px;
+    margin-bottom: 30px;
+    /* Match the rest of the service — govuk-frontend only sets its font on
+       govuk-* classed elements, so custom markup would fall back otherwise. */
+    font-family: "GDS Transport", arial, sans-serif;
+  }
+  /* Two columns from the GOV.UK tablet breakpoint up; one column on mobile.
+     Two (rather than three) leaves room for the notes beside each swatch. */
+  @media (min-width: 40.0625em) {
+    .ukhab-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+  .ukhab-card {
+    border: 1px solid #b1b4b6;
+    padding: 12px;
+    background: #ffffff;
+  }
+  .ukhab-card-head { display: flex; gap: 12px; align-items: flex-start; }
+  .ukhab-swatch {
+    flex: 0 0 auto;
+    border: 1px solid #b1b4b6;
+    /* light chequerboard so transparent fills read as transparent */
+    background:
+      repeating-conic-gradient(#f3f2f1 0 25%, #ffffff 0 50%) 0 0 / 14px 14px;
+  }
+  .ukhab-title { font-weight: 700; color: #0b0c0c; }
+  .ukhab-meta { color: #505a5f; font-size: 14px; margin-top: 2px; word-break: break-word; }
+  .ukhab-tag {
+    display: inline-block; font-size: 12px; line-height: 1.4;
+    padding: 0 6px; margin: 2px 4px 0 0;
+    background: #f3f2f1; border: 1px solid #b1b4b6; color: #0b0c0c;
+  }
+  .ukhab-details { margin-top: 10px; border-top: 1px solid #b1b4b6; padding-top: 8px; }
+  .ukhab-details summary { cursor: pointer; color: #1d70b8; font-size: 14px; }
+  .ukhab-props { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 13px; }
+  .ukhab-props td { padding: 2px 6px; border-top: 1px solid #f3f2f1; vertical-align: top; }
+  .ukhab-props td:first-child { color: #505a5f; white-space: nowrap; }
+  .ukhab-layer-block { margin-top: 8px; }
+  .ukhab-layer-name { font-size: 13px; color: #0b0c0c; font-weight: 700; }
+  .ukhab-chip { display: inline-flex; align-items: center; gap: 5px; }
+  .ukhab-chip-sw {
+    width: 12px; height: 12px; border: 1px solid #505a5f; display: inline-block;
+  }
+  /* Property values: same font as everything else, just kept distinct by size. */
+  .ukhab-mono { font-family: inherit; }
+  .ukhab-empty { color: #505a5f; padding: 30px 0; }
+  .ukhab-map-controls { display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap; }
+  .ukhab-map {
+    height: 600px; width: 100%; margin-bottom: 30px;
+    border: 1px solid #b1b4b6; background: #ffffff;
+  }
+</style>
+
+<script id="ukhab-data" type="application/json">{{ ukhabData | safe }}</script>
+<script src="/public/javascripts/ukhab-styles.js"></script>
+<script src="/public/javascripts/ukhab-styles-map.js"></script>
+
+{% endblock %}

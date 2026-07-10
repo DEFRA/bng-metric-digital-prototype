@@ -40,6 +40,7 @@ const { registerProjectRoutes } = require('./routes/project')
 const { registerMetricResultsRoutes } = require('./routes/metric-results')
 const { registerTestRoutes } = require('./routes/test')
 const { registerGenGpkgRoutes } = require('./routes/gen-gpkg')
+const { registerUkhabStylesRoutes } = require('./routes/ukhab-styles')
 
 // Expose env-derived flags to every template render.
 router.use(function (req, res, next) {
@@ -59,6 +60,7 @@ registerOnSitePostInterventionRoutes(router)
 registerMetricResultsRoutes(router)
 registerTestRoutes(router)
 registerGenGpkgRoutes(router)
+registerUkhabStylesRoutes(router)
 
 router.get('/TradingRules', function (req, res) {
   if (req.query.v !== '9') {
