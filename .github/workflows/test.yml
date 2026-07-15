@@ -8,6 +8,12 @@ on:
   push:
     branches:
       - main
+  # Re-run the required checks when the merge queue tests a PR against the
+  # latest main. Without this trigger the queue has no status to wait on and
+  # nothing ever merges.
+  merge_group:
+    branches:
+      - main
 
 jobs:
   unit:
