@@ -23,7 +23,7 @@
     "test:features": "cucumber-js features/"
   },
   "dependencies": {
-    "@cucumber/cucumber": "13.1.0",
+    "@cucumber/cucumber": "13.1.1",
     "@defra/interactive-map": "0.0.1-alpha",
     "@govuk-prototype-kit/common-templates": "3.0.0",
     "@ministryofjustice/frontend": "9.0.0",
