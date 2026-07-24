@@ -1,0 +1,50 @@
+{% extends "layouts/main.html" %}
+
+{% set bodyClasses = "app-wide" %}
+
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/table/macro.njk" import govukTable %}
+{% from "govuk/components/phase-banner/macro.njk" import govukPhaseBanner %}
+{% from "dashboard/macro.njk" import appSideNav %}
+
+{% set pageName = "Flags" %}
+
+{% block pageTitle %}{{ pageName }} – {{ serviceName }} – GOV.UK{% endblock %}
+
+{% block beforeContent %}
+  {{ govukPhaseBanner({
+    tag: { text: "Beta" },
+    html: 'This is a new service. Help us improve it and <a class="govuk-link" href="#">give your feedback (opens in new tab)</a>.'
+  }) }}
+{% endblock %}
+
+{% block content %}
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-one-quarter">
+    {{ appSideNav(sideNav) }}
+  </div>
+
+  <div class="govuk-grid-column-three-quarters">
+
+    <div class="app-page-header">
+      <div>
+        <span class="govuk-caption-l">{{ data.projectName | default("Project name", true) }}</span>
+        <h1 class="govuk-heading-l">{{ pageName }}</h1>
+      </div>
+      <div class="app-page-header__actions">
+        {{ govukButton({ text: "Upload file", href: "/project-dashboard/upload/choose" }) }}
+      </div>
+    </div>
+
+    {% if filled %}
+      <h2 class="govuk-heading-m">Post-intervention</h2>
+      {{ govukTable(postInterventionTable) }}
+    {% else %}
+      <p class="govuk-body">
+        No flags yet. Flags are generated after you upload your post-intervention file.
+      </p>
+    {% endif %}
+
+  </div>
+</div>
+{% endblock %}

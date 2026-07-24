@@ -1,0 +1,73 @@
+{% extends "layouts/main.html" %}
+
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/input/macro.njk" import govukInput %}
+{% from "govuk/components/date-input/macro.njk" import govukDateInput %}
+{% from "govuk/components/phase-banner/macro.njk" import govukPhaseBanner %}
+
+{% set pageName = "Project details" %}
+
+{% block pageTitle %}{{ pageName }} – {{ serviceName }} – GOV.UK{% endblock %}
+
+{% block beforeContent %}
+  {{ govukPhaseBanner({
+    tag: { text: "Beta" },
+    html: 'This is a new service. Help us improve it and <a class="govuk-link" href="#">give your feedback (opens in new tab)</a>.'
+  }) }}
+{% endblock %}
+
+{% block content %}
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+
+    <h1 class="govuk-heading-xl">{{ pageName }}</h1>
+    <p class="govuk-body">Enter the details for the project</p>
+
+    <form method="post" action="/project-dashboard/project-details" novalidate>
+      {{ govukInput({
+        id: "projectName",
+        name: "projectName",
+        label: { text: "Project name", classes: "govuk-label--m" },
+        value: data.projectName
+      }) }}
+
+      {{ govukInput({
+        id: "surveyCompletedBy",
+        name: "surveyCompletedBy",
+        label: { text: "Survey completed by", classes: "govuk-label--m" }
+      }) }}
+
+      {{ govukDateInput({
+        id: "surveyDate",
+        namePrefix: "surveyDate",
+        fieldset: {
+          legend: { text: "Survey date", classes: "govuk-fieldset__legend--m" }
+        }
+      }) }}
+
+      {{ govukInput({
+        id: "planningPermissionApplicantName",
+        name: "planningPermissionApplicantName",
+        label: { text: "Planning permission applicant name", classes: "govuk-label--m" }
+      }) }}
+
+      {{ govukInput({
+        id: "localPlanningAuthority",
+        name: "localPlanningAuthority",
+        label: { text: "Local Planning Authority", classes: "govuk-label--m" }
+      }) }}
+
+      {{ govukInput({
+        id: "targetPercentage",
+        name: "targetPercentage",
+        label: { text: "Set a target for Biodiversity Net Gain", classes: "govuk-label--m" },
+        classes: "govuk-input--width-5",
+        value: "10%"
+      }) }}
+
+      {{ govukButton({ text: "Continue" }) }}
+    </form>
+
+  </div>
+</div>
+{% endblock %}

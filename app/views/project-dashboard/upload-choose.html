@@ -1,0 +1,58 @@
+{% extends "layouts/main.html" %}
+
+{% from "govuk/components/radios/macro.njk" import govukRadios %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/back-link/macro.njk" import govukBackLink %}
+{% from "govuk/components/phase-banner/macro.njk" import govukPhaseBanner %}
+{% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
+
+{% set pageName = "What would you like to upload?" %}
+
+{% block pageTitle %}{{ pageName }} – {{ serviceName }} – GOV.UK{% endblock %}
+
+{% block beforeContent %}
+  {{ govukPhaseBanner({
+    tag: { text: "Beta" },
+    html: 'This is a new service. Help us improve it and <a class="govuk-link" href="#">give your feedback (opens in new tab)</a>.'
+  }) }}
+  {{ govukBackLink({ text: "Back", href: "/project-dashboard/project-details" }) }}
+{% endblock %}
+
+{% block content %}
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+
+    {% if error %}
+      {{ govukErrorSummary({
+        titleText: "There is a problem",
+        errorList: [ { text: error, href: "#uploadChoice" } ]
+      }) }}
+    {% endif %}
+
+    <span class="govuk-caption-l">{{ data.projectName | default("Project name", true) }}</span>
+    <h1 class="govuk-heading-l">{{ pageName }}</h1>
+
+    <p class="govuk-body">Uploading a file will overwrite any previous files you have uploaded.</p>
+
+    <form method="post" action="/project-dashboard/upload/choose" novalidate>
+      {{ govukRadios({
+        name: "uploadChoice",
+        fieldset: {
+          legend: { text: pageName, classes: "govuk-visually-hidden" }
+        },
+        errorMessage: { text: error } if error else undefined,
+        items: [
+          { value: "baseline", text: "Baseline Biodiversity Net Gain GeoPackage (.gpkg) file" },
+          { value: "post-intervention", text: "Post-intervention Biodiversity Net Gain GeoPackage (.gpkg) file" }
+        ]
+      }) }}
+
+      <div class="govuk-button-group">
+        {{ govukButton({ text: "Continue" }) }}
+        <a class="govuk-link" href="/project-dashboard/summary">Cancel</a>
+      </div>
+    </form>
+
+  </div>
+</div>
+{% endblock %}

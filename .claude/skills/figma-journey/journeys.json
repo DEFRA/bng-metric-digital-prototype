@@ -42,6 +42,219 @@
           "wide": true
         }
       ]
+    },
+    {
+      "journey": "project-dashboard",
+      "fileKey": "MCZmgs6nNcuhXT00u5i9At",
+      "node": "3691:5254",
+      "figmaUrl": "https://www.figma.com/proto/MCZmgs6nNcuhXT00u5i9At/Private-Beta---Exploration-%F0%9F%94%8E?page-id=3691%3A5254&node-id=3691-12771&p=f&scaling=min-zoom&content-scaling=fixed&starting-point-node-id=3691%3A12724",
+      "viewsDir": "app/views/project-dashboard",
+      "routesFile": "app/routes/project-dashboard.js",
+      "frames": [
+        {
+          "id": "3760:4920",
+          "name": "1000 - 1280 Start page",
+          "view": "start.html",
+          "hash": "2fde9b67b2e7"
+        },
+        {
+          "id": "3760:4918",
+          "name": "1010 - 1280 Sign in",
+          "view": "sign-in.html",
+          "hash": "992748ff832e"
+        },
+        {
+          "id": "3760:4903",
+          "name": "1020 - 1280 Project details",
+          "view": "project-details.html",
+          "hash": "ed8f66043392"
+        },
+        {
+          "id": "3760:4893",
+          "name": "1030 - 1280 What file",
+          "view": "upload-choose.html",
+          "hash": "3f8ca8989fac"
+        },
+        {
+          "id": "3760:4880",
+          "name": "1040 - 1280 Fle upload - Step 1",
+          "view": "upload.html",
+          "hash": "8b193c1cb34f"
+        },
+        {
+          "id": "3760:4867",
+          "name": "1041 - 1280 File upload - Step 2",
+          "view": "upload.html",
+          "hash": "898e057587eb"
+        },
+        {
+          "id": "3799:7707",
+          "name": "2000 - 1280 Fle upload - Step 1",
+          "view": "upload.html",
+          "hash": "bf21ff41034a"
+        },
+        {
+          "id": "3799:7694",
+          "name": "2001 - 1280 File upload - Step 2",
+          "view": "upload.html",
+          "hash": "8520efd7dc69"
+        },
+        {
+          "id": "3760:4934",
+          "name": "1042 - 1280 File upload -Step 3",
+          "view": "upload-processing.html",
+          "hash": "dbfbc59afaf5"
+        },
+        {
+          "id": "3799:7680",
+          "name": "2002 - 1280 File upload - Step 3",
+          "view": "upload-processing.html",
+          "hash": "0c09a45cb0ef"
+        },
+        {
+          "id": "3691:12724",
+          "name": "1100 - 1280 - Project summary",
+          "view": "summary.html",
+          "hash": "6edc985fd65d",
+          "wide": true
+        },
+        {
+          "id": "3791:6981",
+          "name": "2100 - 1280 - Project summary",
+          "view": "summary.html",
+          "hash": "8c6a4cb0c1ee",
+          "wide": true
+        },
+        {
+          "id": "3691:12771",
+          "name": "1200 - 1280 - Area habitats - Summary",
+          "view": "area-habitats.html",
+          "hash": "531e7cac30f9",
+          "wide": true
+        },
+        {
+          "id": "3791:6893",
+          "name": "2200 - 1280 - Area habitats - Summary",
+          "view": "area-habitats.html",
+          "hash": "769eb03bd6a6",
+          "wide": true
+        },
+        {
+          "id": "3691:12871",
+          "name": "1300 - 1280 - Area habitats - Flags",
+          "view": "flags.html",
+          "hash": "58a605d50b07",
+          "wide": true
+        },
+        {
+          "id": "3791:6774",
+          "name": "2300 - 1280 - Area habitats - Flags",
+          "view": "flags.html",
+          "hash": "dccd318732c4",
+          "wide": true
+        },
+        {
+          "id": "3693:24744",
+          "name": "1400 - 1280 - Area habitats - Trading rules",
+          "view": "trading-rules.html",
+          "hash": "8d7a1bbad3a0",
+          "wide": true
+        },
+        {
+          "id": "3791:6558",
+          "name": "2400 - 1280 - Area habitats - Trading rules",
+          "view": "trading-rules.html",
+          "hash": "c3b6f58aa686",
+          "wide": true
+        },
+        {
+          "id": "3691:13156",
+          "name": "1500 - 1280 - Area habitats - Baseline habitats",
+          "view": "baseline.html",
+          "hash": "f5c48dfeb855",
+          "wide": true
+        },
+        {
+          "id": "3811:8349",
+          "name": "2500 - 1280 - Area habitats - Baseline habitats",
+          "view": "baseline.html",
+          "hash": "8353173aec00",
+          "wide": true
+        },
+        {
+          "id": "3788:5935",
+          "name": "1600 - 1280 - Area habitats - Post intervention habitats",
+          "view": "post-intervention.html",
+          "hash": "5e48ff96c4c8"
+        },
+        {
+          "id": "3791:7028",
+          "name": "2600 - 1280 - Area habitats - Post intervention habitats",
+          "view": "post-intervention.html",
+          "hash": "242bc6958318",
+          "wide": true
+        },
+        {
+          "id": "3691:12578",
+          "name": "1510 - 1280 - Area habitats - Baseline habitat details - B-A1",
+          "view": "habitat-edit.html",
+          "hash": "8cab86393b0e"
+        },
+        {
+          "id": "3842:9682",
+          "name": "2510 - 1280 - Area habitats - Baseline habitat details - B-A1",
+          "view": "habitat-edit.html",
+          "hash": "a65391da2fd3"
+        },
+        {
+          "id": "3791:8023",
+          "name": "1511 - 1280 - Area habitats - Baseline habitat details - B-A2",
+          "view": "habitat-edit.html",
+          "hash": "1dd783c7f442"
+        },
+        {
+          "id": "3842:9836",
+          "name": "2511 - 1280 - Area habitats - Baseline habitat details - B-A2",
+          "view": "habitat-edit.html",
+          "hash": "d06994e96c6f"
+        },
+        {
+          "id": "3791:9160",
+          "name": "2610 - 1280 - Post intervention habitat detail - P-A1",
+          "view": "post-intervention-habitat-edit.html",
+          "hash": "0543a3a910da"
+        },
+        {
+          "id": "3842:7853",
+          "name": "2611 - 1280 - Post intervention habitat detail - P-A2",
+          "view": "post-intervention-habitat-edit.html",
+          "hash": "3ca6e1e6279d"
+        },
+        {
+          "id": "3842:8579",
+          "name": "2612 - 1280 - Post intervention habitat detail - P-A3",
+          "view": "post-intervention-habitat-edit.html",
+          "hash": "05a90ee9db3a"
+        },
+        {
+          "id": "3842:8850",
+          "name": "2613 - 1280 - Post intervention habitat detail - P-A4",
+          "view": "post-intervention-habitat-edit.html",
+          "hash": "1940814a7610"
+        },
+        {
+          "id": "3842:9121",
+          "name": "2614 - 1280 - Post intervention habitat detail - P-A5",
+          "view": "post-intervention-habitat-edit.html",
+          "hash": "0396b5836a84"
+        },
+        {
+          "id": "3842:9392",
+          "name": "2615 - 1280 - Post intervention habitat detail - P-A6",
+          "view": "post-intervention-habitat-edit.html",
+          "hash": "5c9cc840445f"
+        }
+      ]
     }
   ]
 }

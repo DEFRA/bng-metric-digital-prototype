@@ -1308,6 +1308,11 @@
   }
 }
 
+.app-dashboard__caption {
+  @include govuk-font($size: 19, $weight: regular);
+  margin: 0 0 15px;
+}
+
 .app-dashboard__footer {
   margin-top: auto; // pin status tag to the bottom of the card
   padding-top: 15px;
@@ -1416,6 +1421,24 @@
   }
 }
 
+// App scrollable table — wraps a govukTable that's wider than its column so
+// it scrolls horizontally instead of wrapping its header text or overflowing
+// the page. Matches the Figma "Baseline-table" / "Post-table" components,
+// which are wider than their containing card and scroll within it.
+.app-scrollable-table {
+  overflow-x: auto;
+  margin-bottom: 30px;
+
+  .govuk-table {
+    margin-bottom: 0;
+  }
+
+  .govuk-table__header,
+  .govuk-table__cell {
+    white-space: nowrap;
+  }
+}
+
 // =========================================================================
 // Wide layout
 //
@@ -1428,6 +1451,13 @@
 
 $app-wide-page-width: 1280px;
 
+// A bare `max-width` override isn't enough: govuk-width-container's gutter
+// breakpoints are compiled against the default ~960px page width, so they
+// switch to auto-centering margins around 1020px viewport — long before a
+// 1280px container needs it. Between that switch-over and 1280px, auto
+// margins can't go negative and clamp to 0, so the content hits the browser
+// edges. Re-including the mixin with our width recomputes the breakpoints
+// against 1280px instead, restoring the gutters at every viewport size.
 .app-wide .govuk-width-container {
-  max-width: $app-wide-page-width;
+  @include govuk-width-container($app-wide-page-width);
 }
