@@ -1,0 +1,45 @@
+{% extends "layouts/main.html" %}
+
+{% set pageName="Developer tools" %}
+
+{% block content %}
+
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+
+    <h1 class="govuk-heading-xl">Developer tools</h1>
+
+    <p class="govuk-body-l">
+      Standalone tools and reference pages used during development. These are not part of any
+      user-facing journey.
+    </p>
+
+    <h2 class="govuk-heading-s govuk-!-margin-bottom-1">
+      <a href="/test-data/gen-gpkg" class="govuk-link">Generate test GeoPackage</a>
+    </h2>
+    <p class="govuk-body">Build a test GeoPackage file for use as baseline or post-intervention upload data.</p>
+
+    <h2 class="govuk-heading-s govuk-!-margin-bottom-1">
+      <a href="/tools/ukhab-styles" class="govuk-link">Symbology</a>
+    </h2>
+    <p class="govuk-body">Reference for UK Hab habitat map styling and colour symbology.</p>
+
+    <h2 class="govuk-heading-s govuk-!-margin-bottom-1">
+      <a href="/TradingRules?v=9" class="govuk-link">Trading rules</a>
+    </h2>
+    <p class="govuk-body">Reference for the biodiversity metric trading rules.</p>
+
+    <h2 class="govuk-heading-s govuk-!-margin-bottom-1">
+      <a href="/TradingRulesSimulator" class="govuk-link">Trading rules simulator</a>
+    </h2>
+    <p class="govuk-body">Interactively simulate trading rules outcomes across habitat combinations.</p>
+
+    <h2 class="govuk-heading-s govuk-!-margin-bottom-1">
+      <a href="/EnhancementRules" class="govuk-link">Enhancement rules</a>
+    </h2>
+    <p class="govuk-body">Reference for the biodiversity metric enhancement rules.</p>
+
+  </div>
+</div>
+
+{% endblock %}
