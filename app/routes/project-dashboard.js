@@ -916,11 +916,9 @@ function registerProjectDashboardRoutes(router) {
     if (req.params.kind === 'post-intervention') {
       req.session.data.postInterventionUploaded = true
     }
-    const destination =
-      req.params.kind === 'post-intervention'
-        ? '/project-dashboard/area-habitats/post-intervention'
-        : '/project-dashboard/area-habitats'
-    res.render('project-dashboard/upload-processing', { destination })
+    res.render('project-dashboard/upload-processing', {
+      destination: '/project-dashboard/summary'
+    })
   })
 
   router.get('/project-dashboard/summary', function (req, res) {

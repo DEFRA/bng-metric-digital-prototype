@@ -25,7 +25,11 @@
     <h1 class="govuk-heading-l">{{ pageName }}</h1>
 
     <p class="govuk-body">
-      Upload a GeoPackage (.gpkg) file containing a red line boundary and baseline habitat parcels.
+      {% if kind == "post-intervention" %}
+        Upload a GeoPackage (.gpkg) file containing a red line boundary and post intervention habitat parcels.
+      {% else %}
+        Upload a GeoPackage (.gpkg) file containing a red line boundary and baseline habitat parcels.
+      {% endif %}
     </p>
 
     <form method="post" action="/project-dashboard/upload/{{ kind }}" enctype="multipart/form-data" novalidate>
