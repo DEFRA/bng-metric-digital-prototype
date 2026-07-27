@@ -206,7 +206,7 @@ async function main() {
   }
   const document = entry.document
   const screens = collectScreens(document)
-  const startNodeId = (document.flowStartingPoints || [{}])[0].nodeId || null
+  const startNodeId = document.flowStartingPoints?.[0]?.nodeId || null
   const transitions = classify(collectTransitions(screens), buildIdIndex(screens))
   const screenMeta = screens.map((screen) => {
     const annotations = frameAnnotations(screen)

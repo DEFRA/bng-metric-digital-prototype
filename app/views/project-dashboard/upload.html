@@ -1,0 +1,52 @@
+{% extends "layouts/main.html" %}
+
+{% from "govuk/components/file-upload/macro.njk" import govukFileUpload %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/back-link/macro.njk" import govukBackLink %}
+{% from "govuk/components/phase-banner/macro.njk" import govukPhaseBanner %}
+
+{% set pageName = "Upload a Geopackage (.gpkg) file" %}
+
+{% block pageTitle %}{{ pageName }} – {{ serviceName }} – GOV.UK{% endblock %}
+
+{% block beforeContent %}
+  {{ govukPhaseBanner({
+    tag: { text: "Beta" },
+    html: 'This is a new service. Help us improve it and <a class="govuk-link" href="#">give your feedback (opens in new tab)</a>.'
+  }) }}
+  {{ govukBackLink({ text: "Back", href: "/project-dashboard/upload/choose" }) }}
+{% endblock %}
+
+{% block content %}
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+
+    <span class="govuk-caption-l">{{ data.projectName | default("Project name", true) }}</span>
+    <h1 class="govuk-heading-l">{{ pageName }}</h1>
+
+    <p class="govuk-body">
+      {% if kind == "post-intervention" %}
+        Upload a GeoPackage (.gpkg) file containing a red line boundary and post intervention habitat parcels.
+      {% else %}
+        Upload a GeoPackage (.gpkg) file containing a red line boundary and baseline habitat parcels.
+      {% endif %}
+    </p>
+
+    <form method="post" action="/project-dashboard/upload/{{ kind }}" enctype="multipart/form-data" novalidate>
+      {{ govukFileUpload({
+        id: "fileUpload",
+        name: "fileUpload",
+        javascript: true,
+        label: { text: "Upload a file", classes: "govuk-visually-hidden" },
+        attributes: { accept: ".gpkg" }
+      }) }}
+
+      <div class="govuk-button-group">
+        {{ govukButton({ text: "Continue" }) }}
+        <a class="govuk-link" href="/project-dashboard/upload/choose">Cancel</a>
+      </div>
+    </form>
+
+  </div>
+</div>
+{% endblock %}

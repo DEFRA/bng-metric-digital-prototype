@@ -1,0 +1,159 @@
+{% extends "layouts/main.html" %}
+
+{% from "govuk/components/back-link/macro.njk" import govukBackLink %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/select/macro.njk" import govukSelect %}
+{% from "govuk/components/input/macro.njk" import govukInput %}
+{% from "govuk/components/radios/macro.njk" import govukRadios %}
+{% from "govuk/components/textarea/macro.njk" import govukTextarea %}
+{% from "govuk/components/summary-list/macro.njk" import govukSummaryList %}
+{% from "govuk/components/phase-banner/macro.njk" import govukPhaseBanner %}
+
+{% set pageName = "Habitat " ~ habitat.ref %}
+
+{% block pageTitle %}{{ pageName }} – {{ serviceName }} – GOV.UK{% endblock %}
+
+{% block beforeContent %}
+  {{ govukPhaseBanner({
+    tag: { text: "Beta" },
+    html: 'This is a new service. Help us improve it and <a class="govuk-link" href="#">give your feedback (opens in new tab)</a>.'
+  }) }}
+  {{ govukBackLink({
+    text: "Back",
+    href: "/project-dashboard/area-habitats/post-intervention"
+  }) }}
+{% endblock %}
+
+{% block content %}
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+
+    <div class="app-page-header">
+      <div>
+        <span class="govuk-caption-l">{{ data.projectName | default("Project name", true) }}</span>
+        <h1 class="govuk-heading-l">{{ pageName }}</h1>
+      </div>
+      <div class="app-page-header__actions">
+        {{ govukButton({ text: "Upload file", href: "/project-dashboard/upload/choose" }) }}
+      </div>
+    </div>
+
+    <form method="post" action="/project-dashboard/area-habitats/post-intervention/habitat/{{ habitat.ref | lower | replace('–', '-') }}">
+      <h2 class="govuk-heading-m">Post-intervention habitat details</h2>
+
+      {{ govukSelect({
+        id: "intervention",
+        name: "intervention",
+        label: { text: "Intervention", classes: "govuk-label--s" },
+        items: [ { value: "Created", text: "Created" }, { value: "Enhanced", text: "Enhanced" }, { value: "Retained", text: "Retained" } ],
+        value: "Created"
+      }) }}
+
+      <h3 class="govuk-heading-s govuk-!-margin-bottom-1">Area</h3>
+      <p class="govuk-body">{{ habitat.area }}</p>
+
+      <h3 class="govuk-heading-s govuk-!-margin-bottom-1">Broad habitat</h3>
+      <p class="govuk-body">{{ habitat.broadHabitat }}</p>
+
+      <h3 class="govuk-heading-s govuk-!-margin-bottom-1">Habitat type</h3>
+      <p class="govuk-body">{{ habitat.habitatType }}</p>
+
+      <h3 class="govuk-heading-s govuk-!-margin-bottom-1">Distinctiveness</h3>
+      <p class="govuk-body">{{ habitat.distinctiveness }}</p>
+
+      <h3 class="govuk-heading-s govuk-!-margin-bottom-1">Strategic significance</h3>
+      <p class="govuk-body">Learn about <a class="govuk-link" href="#">strategic significance</a>.</p>
+      {{ govukSelect({
+        id: "strategic_significance",
+        name: "strategic_significance",
+        label: { text: "Strategic significance", classes: "govuk-visually-hidden" },
+        items: strategicSignificanceItems,
+        value: habitat.strategicSignificance
+      }) }}
+
+      <h2 class="govuk-heading-m govuk-!-margin-top-6">Time to target / difficulty</h2>
+
+      {{ govukSelect({
+        id: "target_condition",
+        name: "target_condition",
+        label: { text: "Target condition", classes: "govuk-label--s" },
+        items: targetConditionItems,
+        value: habitat.targetCondition
+      }) }}
+
+      <h3 class="govuk-heading-s govuk-!-margin-bottom-1">Standard time to target condition</h3>
+      <p class="govuk-body">{{ habitat.standardTime }}</p>
+
+      <h3 class="govuk-heading-s govuk-!-margin-bottom-1">Standard difficulty</h3>
+      <p class="govuk-body">{{ habitat.standardDifficulty }}</p>
+
+      {% set delayYearsHtml %}
+        {{ govukInput({
+          id: "delay_years",
+          name: "delayYears",
+          classes: "govuk-input--width-3",
+          label: { text: "Years" },
+          value: habitat.delayYears
+        }) }}
+      {% endset %}
+
+      {{ govukRadios({
+        name: "advanceOrDelay",
+        fieldset: {
+          legend: { text: "Advance or delay?", classes: "govuk-fieldset__legend--s" }
+        },
+        items: [
+          {
+            value: "advance",
+            text: "Habitat created in advance",
+            checked: habitat.advanceOrDelay == "advance"
+          },
+          {
+            value: "delay",
+            text: "Delay in starting habitat creation",
+            checked: habitat.advanceOrDelay == "delay",
+            conditional: { html: delayYearsHtml }
+          },
+          {
+            value: "neither",
+            text: "Neither",
+            checked: habitat.advanceOrDelay == "neither"
+          }
+        ]
+      }) }}
+
+      <h3 class="govuk-heading-s govuk-!-margin-bottom-1">Final time to target condition</h3>
+      <p class="govuk-body">{{ habitat.finalTime }}</p>
+
+      <h3 class="govuk-heading-s govuk-!-margin-bottom-1">Applied difficulty multiplier</h3>
+      <p class="govuk-body">{{ habitat.appliedDifficulty }}</p>
+
+      {{ govukSummaryList({
+        classes: "govuk-!-margin-bottom-7",
+        rows: [
+          { key: { text: "Habitat units delivered" }, value: { text: habitat.unitsDelivered } }
+        ]
+      }) }}
+
+      <h2 class="govuk-heading-m">Supporting information</h2>
+      <p class="govuk-body">
+        Add information to help the Local Planning Authority understand the baseline metric.
+      </p>
+
+      {{ govukTextarea({
+        name: "supporting_information",
+        id: "supporting_information",
+        label: { text: "Supporting information", classes: "govuk-visually-hidden" },
+        rows: 5,
+        value: habitat.supportingInformation
+      }) }}
+
+      <div class="govuk-button-group">
+        {{ govukButton({ text: "Save" }) }}
+        <a class="govuk-link" href="/project-dashboard/area-habitats/post-intervention">Cancel</a>
+      </div>
+    </form>
+
+  </div>
+</div>
+{% endblock %}

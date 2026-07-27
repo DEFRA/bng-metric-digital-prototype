@@ -1,0 +1,56 @@
+{% extends "layouts/main.html" %}
+
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/phase-banner/macro.njk" import govukPhaseBanner %}
+
+{% set pageName = "Biodiversity Net Gain metric" %}
+
+{% block pageTitle %}{{ pageName }} – {{ serviceName }} – GOV.UK{% endblock %}
+
+{% block beforeContent %}
+  {{ govukPhaseBanner({
+    tag: { text: "Beta" },
+    html: 'This is a new service. Help us improve it and <a class="govuk-link" href="#">give your feedback (opens in new tab)</a>.'
+  }) }}
+{% endblock %}
+
+{% block content %}
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+
+    <h1 class="govuk-heading-xl">{{ pageName }}</h1>
+
+    <p class="govuk-body">
+      Use this service to upload GeoPackage files (.gpkg) and check your Biodiversity Net Gain (BNG)
+      metric for baseline and post intervention.
+    </p>
+
+    <p class="govuk-body">This service is only available for:</p>
+    <ul class="govuk-list govuk-list--bullet">
+      <li>Very Low, Low and Medium Distinctiveness habitats</li>
+      <li>on-site Biodiversity Net Gain</li>
+    </ul>
+
+    <p class="govuk-body">
+      You can use this service to edit your information to meet your Biodiversity Net Gain target.
+      You can also check for any flags and ensure you have met trading rules.
+    </p>
+
+    {{ govukButton({
+      text: "Start now",
+      href: "/project-dashboard/sign-in",
+      isStartButton: true
+    }) }}
+
+    <h2 class="govuk-heading-m">What you need</h2>
+    <p class="govuk-body">To use the Biodiversity Net Gain metric you will need:</p>
+    <ul class="govuk-list govuk-list--bullet">
+      <li>the name of your project and project details</li>
+      <li>a Biodiversity Net Gain account using DefraID</li>
+      <li>a baseline Biodiversity Net Gain GeoPackage (.gpkg) file</li>
+      <li>a post-intervention Biodiversity Net Gain GeoPackage (.gpkg) file</li>
+    </ul>
+
+  </div>
+</div>
+{% endblock %}

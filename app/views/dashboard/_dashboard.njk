@@ -6,12 +6,23 @@
     headingLevel   (number, optional, default 3) heading level for card titles/labels
     cards          (array) each item is one of:
 
-    Metric card (default):
+    Metric card (default, heading above value):
       {
         heading: { text: "On-site baseline", href: "/..." },   # href optional -> renders a link
         value:   "4.00 units",                                  # optional big number
         valueModifier: "primary" | "success" | "error",         # optional colour
-        tag: { text: "Complete", classes: "govuk-tag--green" }  # optional govukTag, pinned to card foot
+        tag: { text: "Complete", classes: "govuk-tag--green" }, # optional govukTag, pinned to card foot
+        link:    { text: "View flags", href: "/..." }           # optional link line below the heading
+                                                                 # (heading stays plain text when link is used)
+      }
+
+    Metric card (value above caption, { valueFirst: true }):
+      {
+        valueFirst: true,
+        value:   "10.56%",                                      # big number/word, rendered first
+        valueModifier: "primary" | "success" | "error",
+        caption: { text: "Total on-site net percentage change", href: "/..." },  # href optional -> link
+        tag: { text: "Met", classes: "govuk-tag--green" }
       }
 
     Composite/wide card ({ wide: true }):
@@ -62,6 +73,26 @@
           </dl>
         {% endif %}
 
+      {% elif card.valueFirst %}
+
+        {% if card.value %}
+          <p class="app-dashboard__value{{ ' app-dashboard__value--' + card.valueModifier if card.valueModifier }}">{{ card.value }}</p>
+        {% endif %}
+
+        {% if card.caption %}
+          <p class="app-dashboard__caption">
+            {% if card.caption.href %}
+              <a class="govuk-link" href="{{ card.caption.href }}">{{ card.caption.text }}</a>
+            {% else %}
+              {{ card.caption.text }}
+            {% endif %}
+          </p>
+        {% endif %}
+
+        {% if card.tag %}
+          <div class="app-dashboard__footer">{{ govukTag(card.tag) }}</div>
+        {% endif %}
+
       {% else %}
 
         {% if card.heading %}
@@ -72,6 +103,12 @@
               {{ card.heading.text }}
             {% endif %}
           </h{{ headingLevel }}>
+        {% endif %}
+
+        {% if card.link %}
+          <p class="app-dashboard__caption">
+            <a class="govuk-link" href="{{ card.link.href }}">{{ card.link.text }}</a>
+          </p>
         {% endif %}
 
         {% if card.value %}
