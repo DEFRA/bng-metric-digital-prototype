@@ -41,10 +41,6 @@ function getGenerator() {
   return genPromise
 }
 
-function isEnabled() {
-  return process.env.SHOW_TOOLS === 'true'
-}
-
 function parseIntInRange(value, fallback, min, max) {
   const parsed = Number.parseInt(value, 10)
   if (!Number.isFinite(parsed)) return fallback
@@ -208,7 +204,6 @@ async function handleWorkbook(req, res, gen) {
 
 function registerGenGpkgRoutes(router) {
   router.get('/test-data/gen-gpkg', async function (req, res) {
-    if (!isEnabled()) return res.status(404).send('Not found')
     const gen = await getGenerator()
     res.render('gen-gpkg/index', { flawGroups: groupFlaws(gen.listFlaws()) })
   })
@@ -217,7 +212,6 @@ function registerGenGpkgRoutes(router) {
     '/test-data/gen-gpkg',
     upload.single('workbook'),
     async function (req, res, next) {
-      if (!isEnabled()) return res.status(404).send('Not found')
       try {
         const gen = await getGenerator()
         const mode = req.body.source === 'workbook' ? 'workbook' : 'synthetic'

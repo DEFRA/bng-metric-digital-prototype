@@ -43,12 +43,6 @@ const { registerTestRoutes } = require('./routes/test')
 const { registerGenGpkgRoutes } = require('./routes/gen-gpkg')
 const { registerUkhabStylesRoutes } = require('./routes/ukhab-styles')
 
-// Expose env-derived flags to every template render.
-router.use(function (req, res, next) {
-  res.locals.showTools = process.env.SHOW_TOOLS === 'true'
-  next()
-})
-
 // Register all route modules
 registerOsApiRoutes(router)
 registerBoundaryRoutes(router)
@@ -63,6 +57,10 @@ registerProjectDashboardRoutes(router)
 registerTestRoutes(router)
 registerGenGpkgRoutes(router)
 registerUkhabStylesRoutes(router)
+
+router.get('/dev', function (req, res) {
+  res.render('dev');
+});
 
 router.get('/TradingRules', function (req, res) {
   if (req.query.v !== '9') {
