@@ -28,7 +28,7 @@
     "@govuk-prototype-kit/common-templates": "3.0.0",
     "@ministryofjustice/frontend": "9.0.0",
     "archiver": "^8.0.0",
-    "better-sqlite3": "12.11.1",
+    "better-sqlite3": "13.0.1",
     "bng-library": "github:DEFRA/bng-library#414c0d90e469f9af1b877ec8893e8a20dd3ff907",
     "dotenv": "^17.2.3",
     "govuk-frontend": "6.4.0",
