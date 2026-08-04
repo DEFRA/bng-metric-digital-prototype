@@ -35,7 +35,7 @@
     "govuk-prototype-kit": "13.20.2",
     "lru-cache": "11.5.2",
     "multer": "^2.2.0",
-    "ol": "^10.7.0",
+    "ol": "^10.10.0",
     "ol-mapbox-style": "^13.4.2",
     "shpjs": "^6.1.0",
     "undici": "8.9.0",
