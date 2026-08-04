@@ -1,0 +1,14 @@
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Prototype allowlist"
+paths = [
+  '''node_modules/''',
+  '''package-lock\.json''',
+  '''\.tmp/''',
+  # Figma file keys are document identifiers from figma.com URLs, not credentials.
+  '''\.claude/skills/figma-journey/journeys\.json''',
+  # LikeC4 architecture DSL: `x -> y "label"` relationships false-positive as api keys.
+  '''.*\.likec4''',
+]
