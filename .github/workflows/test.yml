@@ -30,7 +30,15 @@ jobs:
           cache: npm
 
       - name: Install dependencies
-        run: npm ci
+        # npm's release-age cooldown (min-release-age in .npmrc) collides with
+        # the git-dependency prepare step that npm always runs for bng-library:
+        # it injects --before and then rejects it against min-release-age
+        # (npm/cli#9005). npm ci installs the exact locked versions, so the
+        # cooldown is redundant here — strip it for this step only. It stays in
+        # .npmrc for npm install / local dev / Dependabot.
+        run: |
+          sed -i '/^min-release-age=/d' .npmrc
+          npm ci
 
       # Only the node:test unit suite runs here. The cucumber suite
       # (npm run test:features) has pre-existing failing scenarios and is
