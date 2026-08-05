@@ -18,6 +18,9 @@
     "likec4:export": "docker run --rm -v \"$PWD:/data\" -w /data likec4/likec4 export png -o ./arch-diagrams",
     "format": "prettier --write \"**/*.{cjs,js,json,md}\"",
     "format:check": "prettier --check \"**/*.{cjs,js,json,md}\"",
+    "postinstall": "node scripts/postinstall.mjs",
+    "setup:husky": "node -e \"try { (await import('husky')).default() } catch (e) { if (e.code !== 'ERR_MODULE_NOT_FOUND') throw e }\" --input-type module",
+    "install:gitleaks": "node scripts/install-gitleaks.mjs",
     "test": "npm run test:unit && npm run test:features",
     "test:unit": "node --test \"test/**/*.test.js\"",
     "test:features": "cucumber-js features/"
@@ -43,6 +46,7 @@
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
+    "husky": "9.1.7",
     "prettier": "3.9.6"
   }
 }
