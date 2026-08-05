@@ -30,15 +30,15 @@ jobs:
           cache: npm
 
       - name: Install dependencies
-        # The release-age cooldown (min-release-age in .npmrc) is incompatible
-        # with preparing a git dependency (bng-library): npm injects --before
-        # for the git-dep prepare and then rejects it against min-release-age
-        # (npm/cli#9005). --ignore-scripts skips that prepare step; the native
-        # better-sqlite3 addon (needed by the GeoPackage reader) is rebuilt
-        # explicitly afterwards.
+        # npm's release-age cooldown (min-release-age in .npmrc) collides with
+        # the git-dependency prepare step that npm always runs for bng-library:
+        # it injects --before and then rejects it against min-release-age
+        # (npm/cli#9005). npm ci installs the exact locked versions, so the
+        # cooldown is redundant here — strip it for this step only. It stays in
+        # .npmrc for npm install / local dev / Dependabot.
         run: |
-          npm ci --ignore-scripts
-          npm rebuild better-sqlite3
+          sed -i '/^min-release-age=/d' .npmrc
+          npm ci
 
       # Only the node:test unit suite runs here. The cucumber suite
       # (npm run test:features) has pre-existing failing scenarios and is
