@@ -18,6 +18,9 @@
     "likec4:export": "docker run --rm -v \"$PWD:/data\" -w /data likec4/likec4 export png -o ./arch-diagrams",
     "format": "prettier --write \"**/*.{cjs,js,json,md}\"",
     "format:check": "prettier --check \"**/*.{cjs,js,json,md}\"",
+    "postinstall": "node scripts/postinstall.mjs",
+    "setup:husky": "node -e \"try { (await import('husky')).default() } catch (e) { if (e.code !== 'ERR_MODULE_NOT_FOUND') throw e }\" --input-type module",
+    "install:gitleaks": "node scripts/install-gitleaks.mjs",
     "test": "npm run test:unit && npm run test:features",
     "test:unit": "node --test \"test/**/*.test.js\"",
     "test:features": "cucumber-js features/"
@@ -28,7 +31,7 @@
     "@govuk-prototype-kit/common-templates": "3.0.0",
     "@ministryofjustice/frontend": "9.0.0",
     "archiver": "^8.0.0",
-    "better-sqlite3": "12.11.1",
+    "better-sqlite3": "13.0.1",
     "bng-library": "github:DEFRA/bng-library#c281fd332b619a36e1817fa13f4cd4146df27500",
     "dotenv": "^17.2.3",
     "govuk-frontend": "6.4.0",
@@ -42,6 +45,10 @@
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
+    "husky": "9.1.7",
     "prettier": "3.9.6"
+  },
+  "overrides": {
+    "better-sqlite3": "$better-sqlite3"
   }
 }
