@@ -26,7 +26,7 @@
     "test:features": "cucumber-js features/"
   },
   "dependencies": {
-    "@cucumber/cucumber": "13.2.0",
+    "@cucumber/cucumber": "13.2.1",
     "@defra/interactive-map": "0.0.1-alpha",
     "@govuk-prototype-kit/common-templates": "3.0.0",
     "@ministryofjustice/frontend": "9.0.0",
@@ -41,7 +41,7 @@
     "ol": "^10.10.0",
     "ol-mapbox-style": "^13.4.2",
     "shpjs": "^6.1.0",
-    "undici": "8.9.0",
+    "undici": "8.10.0",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
