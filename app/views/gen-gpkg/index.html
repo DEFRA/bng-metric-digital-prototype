@@ -78,6 +78,29 @@
       }) }}
     {% endset %}
 
+    {% set permutationsBlock %}
+      <p class="govuk-body">
+        Generates the whole scenario catalogue as a set of paired baseline / post-intervention GeoPackages — intervention types across area, hedgerow and watercourse; conditions; strategic significance; met and unmet 10% net gain; low→medium trading; advance/delay years; and complete vs incomplete data. They download as a single .zip, organised into a folder per purpose, with a manifest.json.
+      </p>
+
+      <div class="govuk-form-group">
+        <label class="govuk-label" for="purpose">Purpose</label>
+        <div class="govuk-hint">Restrict to one testing theme, or generate the whole catalogue.</div>
+        <select class="govuk-select" id="purpose" name="purpose">
+          <option value="all">All purposes</option>
+          {% for p in purposes %}
+            <option value="{{ p }}">{{ p }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="govuk-form-group">
+        <label class="govuk-label" for="seed">Seed (optional)</label>
+        <div class="govuk-hint">An integer makes the output reproducible — the same seed always produces byte-identical files. Leave blank for fresh random geometry each time.</div>
+        <input class="govuk-input govuk-input--width-10" id="seed" name="seed" type="number" step="1">
+      </div>
+    {% endset %}
+
     {% set workbookBlock %}
       <div class="govuk-form-group">
         <label class="govuk-label" for="workbook">Workbook file</label>
@@ -122,6 +145,11 @@
             value: "workbook",
             text: "From a metric workbook (.xlsx / .xlsm)",
             conditional: { html: workbookBlock }
+          },
+          {
+            value: "permutations",
+            text: "Permutations — the full scenario catalogue as a .zip",
+            conditional: { html: permutationsBlock }
           }
         ]
       }) }}
