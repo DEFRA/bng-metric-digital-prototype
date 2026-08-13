@@ -26,12 +26,12 @@
     "test:features": "cucumber-js features/"
   },
   "dependencies": {
-    "@cucumber/cucumber": "13.2.0",
+    "@cucumber/cucumber": "13.2.1",
     "@defra/interactive-map": "0.0.1-alpha",
     "@govuk-prototype-kit/common-templates": "3.0.0",
     "@ministryofjustice/frontend": "9.0.0",
     "archiver": "^8.0.0",
-    "better-sqlite3": "13.0.2",
+    "better-sqlite3": "13.0.3",
     "bng-library": "github:DEFRA/bng-library#af307d543e0dd0a1e6d1fe9a90496d63beedc2c3",
     "dotenv": "^17.2.3",
     "govuk-frontend": "6.4.0",
@@ -41,7 +41,7 @@
     "ol": "^10.10.0",
     "ol-mapbox-style": "^13.4.2",
     "shpjs": "^6.1.0",
-    "undici": "8.9.0",
+    "undici": "8.10.0",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
