@@ -159,6 +159,12 @@ To view them in your command line run:
 npm run
 ```
 
+### Supply-chain hardening (`ignore-scripts`)
+
+`.npmrc` sets `ignore-scripts=true`, so `npm install` / `npm ci` no longer auto-run preinstall/install/postinstall/prepare scripts for this package or any dependency — the mechanism recent npm supply-chain worms (e.g. Shai-Hulud) used to execute arbitrary code at install time. It applies uniformly to local installs and Docker builds, since both read this committed `.npmrc`.
+
+Scripts run explicitly via `npm run <name>` are unaffected — only npm's automatic triggering during install is disabled. If a dependency genuinely needs its own install script to function (e.g. to build a native addon), run it for just that package with `npm rebuild <package>`, or override for a single command with `npm install --ignore-scripts=false`. Note the override and its justification in the PR, and record any standing exception in Confluence.
+
 ## Updating dependencies
 
 To update dependencies use [npm-check-updates](https://github.com/raineorshine/npm-check-updates):
