@@ -202,10 +202,67 @@ async function handleWorkbook(req, res, gen) {
   return sendZip(res, files, `bng-from-workbook-${Date.now()}.zip`)
 }
 
+// Flatten generated scenarios into the { buffer, filenameHint } entries sendZip
+// expects, preserving the purpose/ folder layout, and append a manifest.json
+// describing the set. Pure and exported so it can be unit-tested.
+function permutationsZipFiles({ scenarios, manifest }) {
+  const files = []
+  for (const scenario of scenarios) {
+    files.push({
+      buffer: scenario.baseline.buffer,
+      filenameHint: scenario.baseline.path
+    })
+    files.push({
+      buffer: scenario.postIntervention.buffer,
+      filenameHint: scenario.postIntervention.path
+    })
+  }
+  files.push({
+    buffer: Buffer.from(`${JSON.stringify(manifest, null, 2)}\n`),
+    filenameHint: 'manifest.json'
+  })
+  return files
+}
+
+// Parse the optional seed field. Blank → undefined (non-deterministic);
+// a valid integer → that seed; anything else → undefined (ignored).
+function parseSeed(value) {
+  if (value === undefined || value === null) {
+    return undefined
+  }
+  const trimmed = String(value).trim()
+  if (trimmed === '') {
+    return undefined
+  }
+  const parsed = Number.parseInt(trimmed, 10)
+  return Number.isInteger(parsed) && String(parsed) === trimmed
+    ? parsed
+    : undefined
+}
+
+async function handlePermutations(req, res, gen) {
+  const centre = parseCentre(req.body.centreEasting, req.body.centreNorthing)
+  const seed = parseSeed(req.body.seed)
+  const requested = req.body.purpose
+  const only =
+    requested &&
+    requested !== 'all' &&
+    gen.PERMUTATION_PURPOSES.includes(requested)
+      ? requested
+      : undefined
+
+  const result = gen.generatePermutations({ seed, only, centre })
+  const files = permutationsZipFiles(result)
+  return sendZip(res, files, `bng-permutations-${Date.now()}.zip`)
+}
+
 function registerGenGpkgRoutes(router) {
   router.get('/test-data/gen-gpkg', async function (req, res) {
     const gen = await getGenerator()
-    res.render('gen-gpkg/index', { flawGroups: groupFlaws(gen.listFlaws()) })
+    res.render('gen-gpkg/index', {
+      flawGroups: groupFlaws(gen.listFlaws()),
+      purposes: gen.PERMUTATION_PURPOSES
+    })
   })
 
   router.post(
@@ -214,9 +271,12 @@ function registerGenGpkgRoutes(router) {
     async function (req, res, next) {
       try {
         const gen = await getGenerator()
-        const mode = req.body.source === 'workbook' ? 'workbook' : 'synthetic'
-        if (mode === 'workbook') {
+        const source = req.body.source
+        if (source === 'workbook') {
           return await handleWorkbook(req, res, gen)
+        }
+        if (source === 'permutations') {
+          return await handlePermutations(req, res, gen)
         }
         return await handleSynthetic(req, res, gen)
       } catch (err) {
@@ -226,6 +286,7 @@ function registerGenGpkgRoutes(router) {
           const gen = await getGenerator()
           return res.status(400).render('gen-gpkg/index', {
             flawGroups: groupFlaws(gen.listFlaws()),
+            purposes: gen.PERMUTATION_PURPOSES,
             error: err.message,
             form: req.body
           })
@@ -236,4 +297,4 @@ function registerGenGpkgRoutes(router) {
   )
 }
 
-module.exports = { registerGenGpkgRoutes, sendZip }
+module.exports = { registerGenGpkgRoutes, sendZip, permutationsZipFiles }
