@@ -80,7 +80,7 @@
 
     {% set permutationsBlock %}
       <p class="govuk-body">
-        Generates the whole scenario catalogue as a set of paired baseline / post-intervention GeoPackages — intervention types across area, hedgerow and watercourse; conditions; strategic significance; met and unmet 10% net gain; low→medium trading; advance/delay years; and complete vs incomplete data. They download as a single .zip, organised into a folder per purpose, with a manifest.json.
+        Generates the full scenario catalogue as paired baseline / post-intervention GeoPackages, covering every testing theme. Downloads as one .zip with a folder per purpose.
       </p>
 
       <div class="govuk-form-group">
@@ -136,20 +136,20 @@
         fieldset: { legend: { text: "What kind of GeoPackage?", classes: "govuk-fieldset__legend--m" } },
         items: [
           {
+            value: "permutations",
+            text: "Permutations — the full scenario catalogue as a .zip",
+            checked: true,
+            conditional: { html: permutationsBlock }
+          },
+          {
             value: "synthetic",
             text: "Synthetic — random geometry and attributes",
-            checked: true,
             conditional: { html: syntheticBlock }
           },
           {
             value: "workbook",
             text: "From a metric workbook (.xlsx / .xlsm)",
             conditional: { html: workbookBlock }
-          },
-          {
-            value: "permutations",
-            text: "Permutations — the full scenario catalogue as a .zip",
-            conditional: { html: permutationsBlock }
           }
         ]
       }) }}
