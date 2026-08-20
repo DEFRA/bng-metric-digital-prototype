@@ -35,7 +35,7 @@
     "bng-library": "github:DEFRA/bng-library#af307d543e0dd0a1e6d1fe9a90496d63beedc2c3",
     "dotenv": "^17.2.3",
     "govuk-frontend": "6.4.0",
-    "govuk-prototype-kit": "13.20.2",
+    "govuk-prototype-kit": "13.20.3",
     "lru-cache": "11.5.2",
     "multer": "^2.2.0",
     "ol": "^10.10.0",
