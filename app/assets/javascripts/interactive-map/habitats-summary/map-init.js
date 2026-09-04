@@ -26,13 +26,43 @@
   var HOVER_LINE_LAYER_ID = 'habitats-summary-hover-line';
   var HABITAT_DETAILS_PANEL_ID = 'habitatDetailsPanel';
   var HABITAT_HELP_PANEL_ID = 'habitatHelpBanner';
+  var AREA_HABITAT_STYLES = [
+    { id: 'cropland', label: 'Cropland', color: '#e6c87a' },
+    { id: 'grassland', label: 'Grassland', color: '#98f05d' },
+    { id: 'heathland-and-shrub', label: 'Heathland and shrub', color: '#8268d6' },
+    { id: 'lakes', label: 'Lakes', color: '#27edf5' },
+    { id: 'sparsely-vegetated-land', label: 'Sparsely vegetated land', color: '#a8a8a4' },
+    { id: 'urban', label: 'Urban', color: '#ec2244' },
+    { id: 'wetland', label: 'Wetland', color: '#fd7bee' },
+    { id: 'woodland-and-forest', label: 'Woodland and forest', color: '#33a02c' }
+  ];
+  var HABITAT_FILL_PATTERNS = [
+    'diagonal-cross-hatch',
+    'dot',
+    'horizontal-hatch',
+    'vertical-hatch',
+    'forward-diagonal-hatch',
+    'backward-diagonal-hatch',
+    'cross-hatch',
+    'diamond'
+  ];
+  var AREA_HABITAT_FILL_LAYER_IDS = AREA_HABITAT_STYLES.flatMap(function (habitat) {
+    return [habitat.id].concat(HABITAT_FILL_PATTERNS.map(function (pattern, index) {
+      return habitat.id + '-pattern-' + index;
+    }));
+  }).map(function (id) {
+    return 'habitat-parcels-im-' + id;
+  }).concat([
+    'habitat-parcels-im-unclassified'
+  ]);
+  var AREA_HABITAT_LAYER_IDS = AREA_HABITAT_FILL_LAYER_IDS.flatMap(function (id) {
+    return [id, id + '-stroke'];
+  });
   var HOVERABLE_LAYER_IDS = [
-    'habitat-parcels-im',
-    'habitat-parcels-im-stroke',
     'hedgerows-im',
     'watercourses-im',
     'trees-im'
-  ];
+  ].concat(AREA_HABITAT_LAYER_IDS);
 
   document.addEventListener('DOMContentLoaded', function () {
     initInteractiveMapPreview();
@@ -84,7 +114,7 @@
       !window.defra.maplibreProvider ||
       !window.defra.datasetsPlugin ||
       !window.defra.interactPlugin ||
-      (!isDashboardMap && !window.defra.mapKeyPlugin)
+      !window.defra.mapKeyPlugin
     ) {
       showMapPlaceholder(mapContainer, 'Interactive map library not available');
       return;
@@ -143,11 +173,9 @@
         geojson: normalizedParcels,
         idProperty: '__imFeatureKey',
         style: {
-          fill: '#1d70b8',
-          stroke: '#1d70b8',
-          strokeWidth: 2,
-          opacity: 0.3
+          opacity: 0.55
         },
+        sublayers: buildAreaHabitatSublayers(),
         showInMenu: true,
         showInKey: true
       });
@@ -224,6 +252,10 @@
       });
     }
 
+    if (isDashboardMap) {
+      datasets = datasets.concat(buildHabitatKeyDatasets());
+    }
+
     if (!datasets.length) {
       showMapPlaceholder(mapContainer, 'No valid layers to display');
       return;
@@ -238,15 +270,18 @@
     var interactPlugin = window.defra.interactPlugin({
       interactionModes: ['selectFeature'],
       closeOnAction: false,
-      layers: [
-        {
-          layerId: 'habitat-parcels-im',
-          idProperty: '__imFeatureKey',
-          labelProperty: '__imFeatureKey',
-          selectedStroke: '#ffdd00',
-          selectedFill: 'rgba(255, 221, 0, 0.35)',
-          selectedStrokeWidth: 4
-        },
+      layers: AREA_HABITAT_FILL_LAYER_IDS
+        .map(function (layerId) {
+          return {
+            layerId: layerId,
+            idProperty: '__imFeatureKey',
+            labelProperty: '__imFeatureKey',
+            selectedStroke: '#ffdd00',
+            selectedFill: 'rgba(255, 221, 0, 0.35)',
+            selectedStrokeWidth: 4
+          };
+        })
+        .concat([
         {
           layerId: 'hedgerows-im',
           idProperty: '__imFeatureKey',
@@ -269,7 +304,7 @@
           selectedFill: '#ffdd00',
           selectedStrokeWidth: 4
         }
-      ]
+      ])
     });
 
     interactiveMapState.interactPlugin = interactPlugin;
@@ -319,6 +354,7 @@
           interactiveMapState.map =
             event && event.map ? event.map : getMapInstance();
 
+          scheduleReadableHabitatPatterns(interactiveMapState.map);
           setupHoverInteractions(interactiveMapState.map);
 
           if (!interactiveMapState.map) {
@@ -343,11 +379,12 @@
         });
 
         var markDetailsAsTemporarilyHidden = function (event) {
-          if (
-            event &&
-            event.panelId &&
-            event.panelId !== HABITAT_DETAILS_PANEL_ID
-          ) {
+          if (event && event.panelId === HABITAT_DETAILS_PANEL_ID) {
+            window.habitatsSummaryInteractiveMap.hidePanel('mapKey');
+            return;
+          }
+
+          if (event && event.panelId === 'mapKey') {
             interactiveMapState.preserveSelectionOnDetailsClose = true;
             if (interactiveMapState.pendingSelectionClearTimer) {
               window.clearTimeout(
@@ -355,6 +392,10 @@
               );
               interactiveMapState.pendingSelectionClearTimer = null;
             }
+
+            window.habitatsSummaryInteractiveMap.hidePanel(
+              HABITAT_DETAILS_PANEL_ID
+            );
           }
         };
 
@@ -408,7 +449,10 @@
                   if (parsed && interactiveMapState.interactPlugin) {
                     interactiveMapState.interactPlugin.unselectFeature({
                       featureId: featureKey,
-                      layerId: getLayerIdForFeatureType(parsed.featureType),
+                      layerId: getLayerIdForFeatureType(
+                        parsed.featureType,
+                        parsed.featureIndex
+                      ),
                       idProperty: '__imFeatureKey'
                     });
                   }
@@ -441,11 +485,591 @@
       interactPlugin
     ];
 
-    if (mapContainer.getAttribute('data-map-layout') !== 'dashboard') {
-      plugins.push(window.defra.mapKeyPlugin());
-    }
+    plugins.push(createMapKeyPlugin());
 
     return plugins;
+  }
+
+  function buildAreaHabitatSublayers() {
+    var classifiedLabels = AREA_HABITAT_STYLES.map(function (habitat) {
+      return habitat.label;
+    });
+    var sublayers = AREA_HABITAT_STYLES.flatMap(function (habitat) {
+      var foreground = darkenHexColor(habitat.color, 0.35);
+      var layers = [{
+        id: habitat.id,
+        label: habitat.label,
+        filter: ['all',
+          ['==', ['get', '__imBroadHabitat'], habitat.label],
+          ['==', ['get', '__imHabitatPatternIndex'], -1]
+        ],
+        showInKey: false,
+        showInMenu: false,
+        style: {
+          fill: habitat.color,
+          stroke: foreground,
+          strokeWidth: 2
+        }
+      }];
+
+      HABITAT_FILL_PATTERNS.forEach(function (pattern, index) {
+        layers.push({
+          id: habitat.id + '-pattern-' + index,
+          label: habitat.label,
+          filter: ['all',
+            ['==', ['get', '__imBroadHabitat'], habitat.label],
+            ['==', ['get', '__imHabitatPatternIndex'], index]
+          ],
+          showInKey: false,
+          showInMenu: false,
+          style: {
+            fillPattern: pattern,
+            fillPatternForegroundColor: foreground,
+            fillPatternBackgroundColor: habitat.color,
+            stroke: foreground,
+            strokeWidth: 2
+          }
+        });
+      });
+
+      return layers;
+    });
+
+    sublayers.push({
+      id: 'unclassified',
+      label: 'Unclassified area habitat',
+      filter: ['!', ['in', ['get', '__imBroadHabitat'], ['literal', classifiedLabels]]],
+      showInKey: false,
+      showInMenu: false,
+      style: {
+        fill: '#b1b4b6',
+        stroke: '#505a5f',
+        strokeWidth: 2
+      }
+    });
+
+    return sublayers;
+  }
+
+  function scheduleReadableHabitatPatterns(map) {
+    [0, 250, 750, 1500, 3000].forEach(function (delay) {
+      window.setTimeout(function () {
+        applyReadableHabitatPatterns(map);
+      }, delay);
+    });
+
+    if (map && typeof map.once === 'function') {
+      map.once('idle', function () {
+        applyReadableHabitatPatterns(map);
+      });
+    }
+  }
+
+  function applyReadableHabitatPatterns(map) {
+    if (!map || typeof map.addImage !== 'function') {
+      return;
+    }
+
+    var logicalSize = 32;
+    var pixelRatio = Math.max(1, Math.ceil(window.devicePixelRatio || 1));
+
+    AREA_HABITAT_STYLES.forEach(function (habitat) {
+      var foreground = darkenHexColor(habitat.color, 0.45);
+
+      HABITAT_FILL_PATTERNS.forEach(function (pattern, patternIndex) {
+        var layerId =
+          'habitat-parcels-im-' + habitat.id + '-pattern-' + patternIndex;
+        if (!map.getLayer(layerId)) {
+          return;
+        }
+
+        var imageId = 'bng-readable-' + habitat.id + '-' + patternIndex;
+        if (!map.hasImage(imageId)) {
+          map.addImage(
+            imageId,
+            drawHabitatPattern(
+              logicalSize,
+              pixelRatio,
+              pattern,
+              foreground,
+              habitat.color
+            ),
+            { pixelRatio: pixelRatio }
+          );
+        }
+
+        map.setPaintProperty(layerId, 'fill-pattern', imageId);
+      });
+    });
+  }
+
+  function drawHabitatPattern(size, pixelRatio, pattern, foreground, background) {
+    var patternSize = 20;
+    var canvas = document.createElement('canvas');
+    canvas.width = size * pixelRatio;
+    canvas.height = size * pixelRatio;
+    var context = canvas.getContext('2d');
+    var unit = pixelRatio;
+
+    context.scale(unit, unit);
+    context.fillStyle = background;
+    context.fillRect(0, 0, size, size);
+    context.scale(size / patternSize, size / patternSize);
+    context.strokeStyle = foreground;
+    context.fillStyle = foreground;
+    context.lineWidth = 1.6;
+    var midpoint = patternSize / 2;
+
+    if (pattern === 'dot') {
+      [[5, 5], [15, 15]].forEach(function (point) {
+        context.beginPath();
+        context.arc(point[0], point[1], 2.4, 0, Math.PI * 2);
+        context.fill();
+      });
+    } else if (pattern === 'horizontal-hatch') {
+      [5, 15].forEach(function (position) {
+        drawPatternLine(context, 0, position, patternSize, position);
+      });
+    } else if (pattern === 'vertical-hatch') {
+      [5, 15].forEach(function (position) {
+        drawPatternLine(context, position, 0, position, patternSize);
+      });
+    } else if (pattern === 'forward-diagonal-hatch') {
+      drawPatternLine(context, -midpoint, patternSize, midpoint, 0);
+      drawPatternLine(context, midpoint, patternSize, patternSize + midpoint, 0);
+    } else if (pattern === 'backward-diagonal-hatch') {
+      drawPatternLine(context, -midpoint, 0, midpoint, patternSize);
+      drawPatternLine(context, midpoint, 0, patternSize + midpoint, patternSize);
+    } else if (pattern === 'cross-hatch') {
+      drawPatternLine(context, midpoint, 0, midpoint, patternSize);
+      drawPatternLine(context, 0, midpoint, patternSize, midpoint);
+    } else if (pattern === 'diamond') {
+      context.beginPath();
+      context.moveTo(midpoint, 2);
+      context.lineTo(patternSize - 2, midpoint);
+      context.lineTo(midpoint, patternSize - 2);
+      context.lineTo(2, midpoint);
+      context.closePath();
+      context.stroke();
+    } else {
+      drawPatternLine(context, -midpoint, 0, midpoint, patternSize);
+      drawPatternLine(context, midpoint, 0, patternSize + midpoint, patternSize);
+      drawPatternLine(context, -midpoint, patternSize, midpoint, 0);
+      drawPatternLine(context, midpoint, patternSize, patternSize + midpoint, 0);
+    }
+
+    return context.getImageData(0, 0, canvas.width, canvas.height);
+  }
+
+  function drawPatternLine(context, x1, y1, x2, y2) {
+    context.beginPath();
+    context.moveTo(x1, y1);
+    context.lineTo(x2, y2);
+    context.stroke();
+  }
+
+  function getAreaBroadHabitat(properties) {
+    var value = firstDefinedValue([
+      properties['Proposed Broad Habitat Type'],
+      properties['Baseline Broad Habitat Type'],
+      properties['Broad Habitat Type'],
+      properties.broadHabitat,
+      properties.broad_habitat
+    ]);
+
+    if (!value) {
+      var detailedHabitat = firstDefinedValue([
+        properties['Proposed Habitat Type'],
+        properties['Baseline Habitat Type'],
+        properties.habitatType,
+        properties.habitat_type
+      ]);
+      if (detailedHabitat && detailedHabitat.indexOf(' - ') !== -1) {
+        value = detailedHabitat.split(' - ')[0];
+      }
+    }
+
+    var normalized = String(value || '').trim().toLowerCase();
+    var match = AREA_HABITAT_STYLES.find(function (habitat) {
+      return habitat.label.toLowerCase() === normalized;
+    });
+
+    return match ? match.label : '';
+  }
+
+  function getDetailedHabitat(properties) {
+    var value = firstDefinedValue([
+      properties['Proposed Habitat Type'],
+      properties['Baseline Habitat Type'],
+      properties.habitatType,
+      properties.habitat_type
+    ]);
+    var habitat = String(value || '').trim();
+
+    if (habitat.indexOf(' - ') !== -1) {
+      habitat = habitat.split(' - ').slice(1).join(' - ').trim();
+    }
+
+    return habitat;
+  }
+
+  function getHabitatPatternIndex(habitat) {
+    if (!habitat) {
+      return -1;
+    }
+
+    var hash = 0;
+    String(habitat).toLowerCase().split('').forEach(function (character) {
+      hash = ((hash << 5) - hash + character.charCodeAt(0)) | 0;
+    });
+
+    return Math.abs(hash) % HABITAT_FILL_PATTERNS.length;
+  }
+
+  function buildHabitatKeyDatasets() {
+    var emptyGeoJson = { type: 'FeatureCollection', features: [] };
+    var groups = [
+      {
+        label: 'Coastal lagoons',
+        color: '#27edf5',
+        habitats: ['Coastal lagoons']
+      },
+      {
+        label: 'Coastal saltmarsh',
+        color: '#1b53d6',
+        habitats: [
+          'Saltmarshes and saline reedbeds',
+          'Artificial saltmarshes and saline reedbeds'
+        ]
+      },
+      {
+        label: 'Cropland',
+        color: '#e6c87a',
+        habitats: [
+          'Arable field margins cultivated annually',
+          'Arable field margins game bird mix',
+          'Arable field margins pollen and nectar',
+          'Arable field margins tussocky',
+          'Cereal crops',
+          'Winter stubble',
+          'Horticulture',
+          'Intensive orchards',
+          'Non-cereal crops',
+          'Temporary grass and clover leys'
+        ]
+      },
+      {
+        label: 'Grassland',
+        color: '#98f05d',
+        habitats: [
+          'Traditional orchards',
+          'Bracken',
+          'Floodplain wetland mosaic and CFGM',
+          'Lowland calcareous grassland',
+          'Lowland dry acid grassland',
+          'Lowland meadows',
+          'Modified grassland',
+          'Other lowland acid grassland',
+          'Other neutral grassland',
+          'Tall herb communities (H6430)',
+          'Upland acid grassland',
+          'Upland calcareous grassland',
+          'Upland hay meadows'
+        ]
+      },
+      {
+        label: 'Heathland and shrub',
+        color: '#8268d6',
+        habitats: [
+          'Blackthorn scrub',
+          'Bramble scrub',
+          'Gorse scrub',
+          'Hawthorn scrub',
+          'Hazel scrub',
+          'Willow scrub',
+          'Lowland heathland',
+          'Mixed scrub',
+          'Mountain heaths and willow scrub',
+          'Rhododendron scrub',
+          'Dunes with sea buckthorn (H2160)',
+          'Other sea buckthorn scrub',
+          'Upland heathland'
+        ]
+      },
+      {
+        label: 'Intertidal sediment',
+        color: '#fbfd81',
+        habitats: [
+          'Artificial littoral biogenic reefs',
+          'Artificial littoral coarse sediment',
+          'Artificial littoral mixed sediments',
+          'Artificial littoral muddy sand',
+          'Artificial littoral seagrass',
+          'Features of littoral sediment',
+          'Littoral biogenic reefs - Sabellaria',
+          'Littoral coarse sediment',
+          'Littoral mixed sediments',
+          'Littoral mud',
+          'Littoral seagrass',
+          'Littoral seagrass on peat, clay or chalk',
+          'Littoral sand',
+          'Littoral muddy sand',
+          'Littoral biogenic reefs - Mussels',
+          'Artificial littoral mud',
+          'Artificial littoral sand'
+        ]
+      },
+      {
+        label: 'Lakes',
+        color: '#27edf5',
+        habitats: [
+          'Aquifer fed naturally fluctuating water bodies',
+          'Ornamental lake or pond',
+          'High alkalinity lakes',
+          'Low alkalinity lakes',
+          'Marl lakes',
+          'Moderate alkalinity lakes',
+          'Peat lakes',
+          'Ponds (non-priority habitat)',
+          'Ponds (priority habitat)',
+          'Reservoirs',
+          'Temporary lakes ponds and pools (H3170)'
+        ]
+      },
+      {
+        label: 'Rocky shore',
+        color: '#a8a8a4',
+        habitats: [
+          'Features of littoral rock',
+          'Features of littoral rock - on peat, clay or chalk',
+          'High energy littoral rock',
+          'High energy littoral rock - on peat, clay or chalk',
+          'Low energy littoral rock',
+          'Low energy littoral rock - on peat, clay or chalk',
+          'Moderate energy littoral rock',
+          'Moderate energy littoral rock - on peat, clay or chalk'
+        ]
+      },
+      {
+        label: 'Sparsely vegetated land',
+        color: '#a8a8a4',
+        habitats: [
+          'Calaminarian grasslands',
+          'Coastal sand dunes',
+          'Coastal vegetated shingle',
+          'Inland rock outcrop and scree habitats',
+          'Limestone pavement',
+          'Maritime cliff and slopes',
+          'Other inland rock and scree',
+          'Ruderal/Ephemeral',
+          'Tall forbs'
+        ]
+      },
+      {
+        label: 'Urban',
+        color: '#ec2244',
+        habitats: [
+          'Vacant or derelict land',
+          'Bare ground',
+          'Allotments',
+          'Artificial unvegetated, unsealed surface',
+          'Bioswale',
+          'Intensive green roof',
+          'Built linear features',
+          'Cemeteries and churchyards',
+          'Developed land; sealed surface',
+          'Other green roof',
+          'Facade-bound green wall',
+          'Ground based green wall',
+          'Ground level planters',
+          'Biodiverse green roof',
+          'Introduced shrub',
+          'Open mosaic habitats on previously developed land',
+          'Rain garden',
+          'Actively worked sand pit quarry or open cast mine',
+          'Sustainable drainage system',
+          'Unvegetated garden',
+          'Vegetated garden'
+        ]
+      },
+      {
+        label: 'Wetland',
+        color: '#fd7bee',
+        habitats: [
+          'Blanket bog',
+          'Depressions on peat substrates (H7150)',
+          'Fens (upland and lowland)',
+          'Lowland raised bog',
+          'Oceanic valley mire[1] (D2.1)',
+          'Purple moor grass and rush pastures',
+          'Reedbeds',
+          'Transition mires and quaking bogs (H7140)'
+        ]
+      },
+      {
+        label: 'Woodland and forest',
+        color: '#33a02c',
+        habitats: [
+          'Felled',
+          'Lowland beech and yew woodland',
+          'Lowland mixed deciduous woodland',
+          'Native pine woodlands',
+          'Other coniferous woodland',
+          "Other Scot's pine woodland",
+          'Other woodland; broadleaved',
+          'Other woodland; mixed',
+          'Upland birchwoods',
+          'Upland mixed ashwoods',
+          'Upland oakwood',
+          'Wet woodland',
+          'Wood-pasture and parkland'
+        ]
+      },
+      {
+        label: 'Intertidal hard structures',
+        color: '#8c9692',
+        habitats: [
+          'Artificial hard structures',
+          'Artificial features of hard structures',
+          'Artificial hard structures with integrated greening of grey infrastructure (IGGI)'
+        ]
+      }
+    ];
+    var areaHabitatLabels = [
+      'Cropland',
+      'Grassland',
+      'Heathland and shrub',
+      'Lakes',
+      'Sparsely vegetated land',
+      'Urban',
+      'Wetland',
+      'Woodland and forest'
+    ];
+
+    groups = groups.filter(function (group) {
+      return areaHabitatLabels.indexOf(group.label) !== -1;
+    });
+
+    var areaHabitats = groups.map(function (group) {
+      return {
+        id: slugifyKeyLabel(group.label),
+        label: group.label,
+        filter: ['==', ['get', '__habitatKey'], group.label],
+        showInKey: true,
+        showInMenu: false,
+        style: {
+          fill: group.color,
+          stroke: darkenHexColor(group.color, 0.35),
+          strokeWidth: 1
+        }
+      };
+    });
+    var detailedHabitats = groups.flatMap(function (group) {
+      var foreground = darkenHexColor(group.color, 0.35);
+
+      return group.habitats.map(function (habitat) {
+        return {
+          id: slugifyKeyLabel(group.label + '-' + habitat),
+          label: habitat,
+          filter: ['==', ['get', '__habitatKey'], habitat],
+          showInKey: true,
+          showInMenu: false,
+          style: {
+            fillPattern:
+              HABITAT_FILL_PATTERNS[getHabitatPatternIndex(habitat)],
+            fillPatternForegroundColor: foreground,
+            fillPatternBackgroundColor: group.color,
+            stroke: foreground,
+            strokeWidth: 1
+          }
+        };
+      });
+    });
+
+    return [
+      {
+        id: 'habitat-key-area-habitats',
+        label: 'Area habitats',
+        geojson: emptyGeoJson,
+        showInKey: true,
+        showInMenu: false,
+        style: { fill: 'transparent' },
+        sublayers: areaHabitats
+      },
+      {
+        id: 'habitat-key-detailed-habitats',
+        label: 'Detailed habitats',
+        geojson: emptyGeoJson,
+        showInKey: true,
+        showInMenu: false,
+        style: { fill: 'transparent' },
+        sublayers: detailedHabitats
+      }
+    ];
+  }
+
+  function slugifyKeyLabel(value) {
+    return String(value || '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '');
+  }
+
+  function darkenHexColor(hex, amount) {
+    var value = String(hex || '').replace('#', '');
+    var factor = 1 - amount;
+
+    if (!/^[0-9a-f]{6}$/i.test(value)) {
+      return '#0b0c0c';
+    }
+
+    return (
+      '#' +
+      [0, 2, 4]
+        .map(function (offset) {
+          var channel = Math.round(
+            parseInt(value.slice(offset, offset + 2), 16) * factor
+          );
+          return channel.toString(16).padStart(2, '0');
+        })
+        .join('')
+    );
+  }
+
+  function createMapKeyPlugin() {
+    var plugin = window.defra.mapKeyPlugin();
+    var loadPlugin = plugin.load;
+
+    plugin.load = async function () {
+      var manifest = await loadPlugin();
+      var panels = (manifest.panels || []).map(function (panel) {
+        if (panel.id !== 'mapKey') {
+          return panel;
+        }
+
+        return Object.assign({}, panel, {
+          mobile: Object.assign({}, panel.mobile, {
+            exclusive: false,
+            modal: false,
+            width: '340px'
+          }),
+          tablet: Object.assign({}, panel.tablet, {
+            exclusive: false,
+            modal: false,
+            width: '380px'
+          }),
+          desktop: Object.assign({}, panel.desktop, {
+            exclusive: false,
+            modal: false,
+            width: '420px'
+          })
+        });
+      });
+
+      return Object.assign({}, manifest, { panels: panels });
+    };
+
+    return plugin;
   }
 
   function createDatasetsPlugin(datasets, mapContainer) {
@@ -497,23 +1121,25 @@
 
     mapApp.addPanel('dashboardLayers', {
       label: 'Map information and layers',
-      showLabel: false,
       mobile: {
         slot: 'bottom',
-        initiallyOpen: false,
-        dismissable: true,
-        modal: true
+        open: true,
+        dismissible: false,
+        showLabel: false,
+        modal: false
       },
       tablet: {
         slot: 'side',
-        initiallyOpen: true,
-        dismissable: false,
+        open: true,
+        dismissible: false,
+        showLabel: false,
         modal: false
       },
       desktop: {
         slot: 'side',
-        initiallyOpen: true,
-        dismissable: false,
+        open: true,
+        dismissible: false,
+        showLabel: false,
         modal: false
       },
       html: buildDashboardLayersPanelHtml(mapContainer, datasets)
@@ -569,6 +1195,9 @@
     var interventionSection =
       mapView === 'baseline' ? '' : buildDashboardInterventionSection();
     var layerControls = datasets
+      .filter(function (dataset) {
+        return dataset.showInMenu !== false;
+      })
       .map(function (dataset) {
         var inputId = 'dashboard-map-layer-' + dataset.id;
         var style = dataset.style || {};
@@ -908,11 +1537,20 @@
 
   function buildFeatureMetadataBuilder(featureType) {
     return function (properties, index) {
-      return {
+      var metadata = {
         __imFeatureType: featureType,
         __imFeatureIndex: index,
         __imFeatureKey: featureType + ':' + index
       };
+
+      if (featureType === 'parcel') {
+        metadata.__imBroadHabitat = getAreaBroadHabitat(properties);
+        metadata.__imHabitatPatternIndex = getHabitatPatternIndex(
+          getDetailedHabitat(properties)
+        );
+      }
+
+      return metadata;
     };
   }
 
@@ -1142,10 +1780,7 @@
   }
 
   function inferFeatureTypeFromLayer(layerId) {
-    if (
-      layerId === 'habitat-parcels-im' ||
-      layerId === 'habitat-parcels-im-stroke'
-    ) {
+    if (String(layerId || '').indexOf('habitat-parcels-im-') === 0) {
       return 'parcel';
     }
     if (layerId === 'hedgerows-im') {
@@ -1161,9 +1796,26 @@
     return null;
   }
 
-  function getLayerIdForFeatureType(featureType) {
+  function getLayerIdForFeatureType(featureType, featureIndex) {
     if (featureType === 'parcel') {
-      return 'habitat-parcels-im';
+      var feature = getFeatureByTypeAndIndex(featureType, featureIndex);
+      var broadHabitat =
+        feature && feature.properties
+          ? feature.properties.__imBroadHabitat
+          : '';
+      var habitat = AREA_HABITAT_STYLES.find(function (item) {
+        return item.label === broadHabitat;
+      });
+      if (!habitat) {
+        return 'habitat-parcels-im-unclassified';
+      }
+
+      var patternIndex = feature.properties.__imHabitatPatternIndex;
+      return (
+        'habitat-parcels-im-' +
+        habitat.id +
+        (patternIndex >= 0 ? '-pattern-' + patternIndex : '')
+      );
     }
 
     if (featureType === 'hedgerow') {
@@ -1283,7 +1935,7 @@
     interactiveMapState.lastInteractionSource = 'table';
     interactiveMapState.interactPlugin.selectFeature({
       featureId: featureKey,
-      layerId: getLayerIdForFeatureType(featureType),
+      layerId: getLayerIdForFeatureType(featureType, featureIndex),
       idProperty: '__imFeatureKey'
     });
 
@@ -1311,24 +1963,26 @@
 
     mapApp.addPanel(HABITAT_HELP_PANEL_ID, {
       label: 'Map help',
-      showLabel: false,
       mobile: {
         slot: 'banner',
-        dismissable: true,
+        dismissible: true,
         exclusive: false,
-        initiallyOpen: true
+        open: true,
+        showLabel: false
       },
       tablet: {
         slot: 'banner',
-        dismissable: true,
+        dismissible: true,
         exclusive: false,
-        initiallyOpen: true
+        open: true,
+        showLabel: false
       },
       desktop: {
         slot: 'banner',
-        dismissable: true,
+        dismissible: true,
         exclusive: false,
-        initiallyOpen: true
+        open: true,
+        showLabel: false
       },
       html:
         '<div class="habitat-help-banner-content" role="status">' +
@@ -1485,21 +2139,24 @@
         escapeHtml(details.titlePrefix || 'Habitat ') +
         escapeHtml(details.reference || ''),
       mobile: {
-        slot: 'inset',
-        dismissable: true,
-        exclusive: true,
+        slot: 'drawer',
+        dismissible: true,
+        exclusive: false,
+        modal: false,
         width: '340px'
       },
       tablet: {
-        slot: 'inset',
-        dismissable: true,
-        exclusive: true,
+        slot: 'left-top',
+        dismissible: true,
+        exclusive: false,
+        modal: false,
         width: '380px'
       },
       desktop: {
-        slot: 'inset',
-        dismissable: true,
-        exclusive: true,
+        slot: 'left-top',
+        dismissible: true,
+        exclusive: false,
+        modal: false,
         width: '420px'
       },
       html: buildHabitatDetailsPanelHtml(details)

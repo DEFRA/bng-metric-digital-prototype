@@ -181,7 +181,7 @@
             window.defra.datasetsPlugin({
               datasets: datasets
             }),
-            window.defra.mapKeyPlugin()
+            createMapKeyPlugin()
           ]
         }
       );
@@ -255,6 +255,42 @@
       );
       showMapPlaceholder(mapContainer, 'Could not load interactive map');
     }
+  }
+
+  function createMapKeyPlugin() {
+    var plugin = window.defra.mapKeyPlugin();
+    var loadPlugin = plugin.load;
+
+    plugin.load = async function () {
+      var manifest = await loadPlugin();
+      var panels = (manifest.panels || []).map(function (panel) {
+        if (panel.id !== 'mapKey') {
+          return panel;
+        }
+
+        return Object.assign({}, panel, {
+          mobile: Object.assign({}, panel.mobile, {
+            exclusive: false,
+            modal: false,
+            width: '340px'
+          }),
+          tablet: Object.assign({}, panel.tablet, {
+            exclusive: false,
+            modal: false,
+            width: '380px'
+          }),
+          desktop: Object.assign({}, panel.desktop, {
+            exclusive: false,
+            modal: false,
+            width: '420px'
+          })
+        });
+      });
+
+      return Object.assign({}, manifest, { panels: panels });
+    };
+
+    return plugin;
   }
 
   function hasFeatures(geoJson) {
@@ -337,21 +373,24 @@
     mapApp.addPanel(HABITAT_DETAILS_PANEL_ID, {
       label: escapeHtml('Habitat ' + (details.reference || '')),
       mobile: {
-        slot: 'inset',
-        dismissable: false,
+        slot: 'drawer',
+        dismissible: false,
         exclusive: false,
+        modal: false,
         width: '340px'
       },
       tablet: {
-        slot: 'inset',
-        dismissable: false,
+        slot: 'left-top',
+        dismissible: false,
         exclusive: false,
+        modal: false,
         width: '380px'
       },
       desktop: {
-        slot: 'inset',
-        dismissable: false,
+        slot: 'left-top',
+        dismissible: false,
         exclusive: false,
+        modal: false,
         width: '420px'
       },
       html: buildHabitatDetailsPanelHtml(details)

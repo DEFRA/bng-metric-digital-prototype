@@ -23,6 +23,7 @@
   {{ super() }}
   <link rel="stylesheet" href="/plugin-assets/%40defra%2Finteractive-map/dist/css/index.css">
   <link rel="stylesheet" href="/plugin-assets/%40defra%2Finteractive-map/plugins/datasets/dist/css/index.css">
+  <link rel="stylesheet" href="/plugin-assets/%40defra%2Finteractive-map/plugins/map-key/dist/css/index.css">
   <style>
     .app-map-page {
       margin: 0;
@@ -101,6 +102,11 @@
       border-radius: 3px;
       box-shadow: none;
       min-width: 0;
+    }
+
+    .project-dashboard-map .im-o-app--tablet .im-o-app__banner,
+    .project-dashboard-map .im-o-app--desktop .im-o-app__banner {
+      top: var(--primary-gap) !important;
     }
 
     .project-dashboard-map [id$='-panel-habitat-help-banner'] .im-c-panel__body {
@@ -259,6 +265,7 @@
   <script src="/plugin-assets/%40defra%2Finteractive-map/dist/umd/index.js"></script>
   <script src="/plugin-assets/%40defra%2Finteractive-map/providers/maplibre/dist/umd/index.js"></script>
   <script src="/plugin-assets/%40defra%2Finteractive-map/plugins/datasets/dist/umd/index.js"></script>
+  <script src="/plugin-assets/%40defra%2Finteractive-map/plugins/map-key/dist/umd/index.js"></script>
   <script src="/plugin-assets/%40defra%2Finteractive-map/plugins/interact/dist/umd/index.js"></script>
   <script src="/public/javascripts/interactive-map/habitats-summary/map-init.js"></script>
 {% endblock %}
