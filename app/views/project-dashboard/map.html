@@ -21,7 +21,8 @@
 
 {% block head %}
   {{ super() }}
-  <link rel="stylesheet" href="/public/javascripts/interactive-map/vendor/core/index.css">
+  <link rel="stylesheet" href="/plugin-assets/%40defra%2Finteractive-map/dist/css/index.css">
+  <link rel="stylesheet" href="/plugin-assets/%40defra%2Finteractive-map/plugins/datasets/dist/css/index.css">
   <style>
     .app-map-page {
       margin: 0;
@@ -255,9 +256,9 @@
 
 {% block pageScripts %}
   <script src="https://cdn.jsdelivr.net/npm/proj4@2.9.0/dist/proj4.js"></script>
-  <script src="/public/javascripts/interactive-map/vendor/core/index.js"></script>
-  <script src="/public/javascripts/interactive-map/vendor/maplibre/index.js"></script>
-  <script src="/public/javascripts/interactive-map/vendor/datasets/index.js"></script>
-  <script src="/public/javascripts/interactive-map/vendor/interact/index.js"></script>
+  <script src="/plugin-assets/%40defra%2Finteractive-map/dist/umd/index.js"></script>
+  <script src="/plugin-assets/%40defra%2Finteractive-map/providers/maplibre/dist/umd/index.js"></script>
+  <script src="/plugin-assets/%40defra%2Finteractive-map/plugins/datasets/dist/umd/index.js"></script>
+  <script src="/plugin-assets/%40defra%2Finteractive-map/plugins/interact/dist/umd/index.js"></script>
   <script src="/public/javascripts/interactive-map/habitats-summary/map-init.js"></script>
 {% endblock %}

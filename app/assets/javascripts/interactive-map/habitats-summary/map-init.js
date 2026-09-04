@@ -58,6 +58,9 @@
       return;
     }
 
+    var isDashboardMap =
+      mapContainer.getAttribute('data-map-layout') === 'dashboard';
+
     interactiveMapState.fullBounds = null;
     interactiveMapState.map = null;
     interactiveMapState.interactPlugin = null;
@@ -80,7 +83,8 @@
       !window.defra.InteractiveMap ||
       !window.defra.maplibreProvider ||
       !window.defra.datasetsPlugin ||
-      !window.defra.interactPlugin
+      !window.defra.interactPlugin ||
+      (!isDashboardMap && !window.defra.mapKeyPlugin)
     ) {
       showMapPlaceholder(mapContainer, 'Interactive map library not available');
       return;
@@ -109,19 +113,18 @@
     var hedgerowsGeoJson = mapData.hedgerows || null;
     var watercoursesGeoJson = mapData.watercourses || null;
     var treesGeoJson = mapData.trees || null;
-    var isDashboardMap =
-      mapContainer.getAttribute('data-map-layout') === 'dashboard';
-
     if (hasFeatures(boundaryGeoJson)) {
       datasets.push({
         id: 'site-boundary-im',
         label: isDashboardMap ? 'Red line boundary' : 'Site boundary',
-        data: normalizeToWgs84(boundaryGeoJson),
-        fill: 'transparent',
-        stroke: '#d4351c',
-        strokeWidth: 3,
-        strokeDashArray: [3, 2],
-        showInLayers: true,
+        geojson: normalizeToWgs84(boundaryGeoJson),
+        style: {
+          fill: 'transparent',
+          stroke: '#d4351c',
+          strokeWidth: 3,
+          strokeDashArray: [3, 2]
+        },
+        showInMenu: true,
         showInKey: true
       });
     }
@@ -137,12 +140,15 @@
       datasets.push({
         id: 'habitat-parcels-im',
         label: isDashboardMap ? 'Vertical area habitats' : 'Habitat parcels',
-        data: normalizedParcels,
-        fill: '#1d70b8',
-        stroke: '#1d70b8',
-        strokeWidth: 2,
-        opacity: 0.3,
-        showInLayers: true,
+        geojson: normalizedParcels,
+        idProperty: '__imFeatureKey',
+        style: {
+          fill: '#1d70b8',
+          stroke: '#1d70b8',
+          strokeWidth: 2,
+          opacity: 0.3
+        },
+        showInMenu: true,
         showInKey: true
       });
     }
@@ -153,16 +159,20 @@
         buildFeatureMetadataBuilder('hedgerow')
       );
 
-      interactiveMapState.datasetsByType.hedgerow = normalizedHedgerows.features;
+      interactiveMapState.datasetsByType.hedgerow =
+        normalizedHedgerows.features;
 
       datasets.push({
         id: 'hedgerows-im',
         label: 'Hedgerows',
-        data: normalizedHedgerows,
-        stroke: '#00703c',
-        strokeWidth: 3,
-        keySymbolShape: 'line',
-        showInLayers: true,
+        geojson: normalizedHedgerows,
+        idProperty: '__imFeatureKey',
+        style: {
+          stroke: '#00703c',
+          strokeWidth: 3,
+          keySymbolShape: 'line'
+        },
+        showInMenu: true,
         showInKey: true
       });
     }
@@ -173,16 +183,20 @@
         buildFeatureMetadataBuilder('watercourse')
       );
 
-      interactiveMapState.datasetsByType.watercourse = normalizedWatercourses.features;
+      interactiveMapState.datasetsByType.watercourse =
+        normalizedWatercourses.features;
 
       datasets.push({
         id: 'watercourses-im',
         label: 'Watercourses',
-        data: normalizedWatercourses,
-        stroke: '#1d70b8',
-        strokeWidth: 3,
-        keySymbolShape: 'line',
-        showInLayers: true,
+        geojson: normalizedWatercourses,
+        idProperty: '__imFeatureKey',
+        style: {
+          stroke: '#1d70b8',
+          strokeWidth: 3,
+          keySymbolShape: 'line'
+        },
+        showInMenu: true,
         showInKey: true
       });
     }
@@ -198,11 +212,14 @@
       datasets.push({
         id: 'trees-im',
         label: 'Trees',
-        data: normalizedTrees,
-        fill: '#00703c',
-        stroke: '#004b29',
-        strokeWidth: 2,
-        showInLayers: true,
+        geojson: normalizedTrees,
+        idProperty: '__imFeatureKey',
+        style: {
+          symbol: 'circle',
+          symbolBackgroundColor: '#00703c',
+          symbolForegroundColor: '#004b29'
+        },
+        showInMenu: true,
         showInKey: true
       });
     }
@@ -213,46 +230,44 @@
     }
 
     var mapBounds = getCombinedBounds(datasets);
-    interactiveMapState.fullBounds = mapBounds || [[-7.57, 49.96], [1.68, 58.64]];
+    interactiveMapState.fullBounds = mapBounds || [
+      [-7.57, 49.96],
+      [1.68, 58.64]
+    ];
 
     var interactPlugin = window.defra.interactPlugin({
-      interactionMode: 'select',
-      closeOnDone: false,
-      closeOnCancel: false,
-      dataLayers: [
+      interactionModes: ['selectFeature'],
+      closeOnAction: false,
+      layers: [
         {
           layerId: 'habitat-parcels-im',
           idProperty: '__imFeatureKey',
-          selectedFeatureStyle: {
-            stroke: '#ffdd00',
-            fill: 'rgba(255, 221, 0, 0.35)',
-            strokeWidth: 4
-          }
+          labelProperty: '__imFeatureKey',
+          selectedStroke: '#ffdd00',
+          selectedFill: 'rgba(255, 221, 0, 0.35)',
+          selectedStrokeWidth: 4
         },
         {
           layerId: 'hedgerows-im',
           idProperty: '__imFeatureKey',
-          selectedFeatureStyle: {
-            stroke: '#ffdd00',
-            strokeWidth: 6
-          }
+          labelProperty: '__imFeatureKey',
+          selectedStroke: '#ffdd00',
+          selectedStrokeWidth: 6
         },
         {
           layerId: 'watercourses-im',
           idProperty: '__imFeatureKey',
-          selectedFeatureStyle: {
-            stroke: '#ffdd00',
-            strokeWidth: 6
-          }
+          labelProperty: '__imFeatureKey',
+          selectedStroke: '#ffdd00',
+          selectedStrokeWidth: 6
         },
         {
           layerId: 'trees-im',
           idProperty: '__imFeatureKey',
-          selectedFeatureStyle: {
-            stroke: '#ffdd00',
-            fill: '#ffdd00',
-            strokeWidth: 4
-          }
+          labelProperty: '__imFeatureKey',
+          selectedStroke: '#ffdd00',
+          selectedFill: '#ffdd00',
+          selectedStrokeWidth: 4
         }
       ]
     });
@@ -274,10 +289,7 @@
           mapStyle: {
             url: '/api/os/tiles/style/3857'
           },
-          plugins: [
-            createDatasetsPlugin(datasets, mapContainer),
-            interactPlugin
-          ]
+          plugins: buildMapPlugins(datasets, mapContainer, interactPlugin)
         }
       );
 
@@ -294,7 +306,8 @@
           window.habitatsSummaryInteractiveMap.addButton('fitToExtent', {
             group: 'zoom',
             label: 'Fit to full extent',
-            iconSvgContent: '<path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/>',
+            iconSvgContent:
+              '<path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/>',
             onClick: function () {
               zoomToFullExtent();
             },
@@ -303,7 +316,8 @@
             desktop: { slot: 'right-top', showLabel: false }
           });
 
-          interactiveMapState.map = event && event.map ? event.map : getMapInstance();
+          interactiveMapState.map =
+            event && event.map ? event.map : getMapInstance();
 
           setupHoverInteractions(interactiveMapState.map);
 
@@ -329,17 +343,29 @@
         });
 
         var markDetailsAsTemporarilyHidden = function (event) {
-          if (event && event.panelId && event.panelId !== HABITAT_DETAILS_PANEL_ID) {
+          if (
+            event &&
+            event.panelId &&
+            event.panelId !== HABITAT_DETAILS_PANEL_ID
+          ) {
             interactiveMapState.preserveSelectionOnDetailsClose = true;
             if (interactiveMapState.pendingSelectionClearTimer) {
-              window.clearTimeout(interactiveMapState.pendingSelectionClearTimer);
+              window.clearTimeout(
+                interactiveMapState.pendingSelectionClearTimer
+              );
               interactiveMapState.pendingSelectionClearTimer = null;
             }
           }
         };
 
-        window.habitatsSummaryInteractiveMap.on('app:panelopened', markDetailsAsTemporarilyHidden);
-        window.habitatsSummaryInteractiveMap.on('app:panelopen', markDetailsAsTemporarilyHidden);
+        window.habitatsSummaryInteractiveMap.on(
+          'app:panelopened',
+          markDetailsAsTemporarilyHidden
+        );
+        window.habitatsSummaryInteractiveMap.on(
+          'app:panelopen',
+          markDetailsAsTemporarilyHidden
+        );
 
         window.habitatsSummaryInteractiveMap.on(
           'interact:selectionchange',
@@ -354,51 +380,72 @@
           zoomToFullExtent();
         });
 
-        window.habitatsSummaryInteractiveMap.on('app:panelclosed', function (event) {
-          if (event && event.panelId === HABITAT_DETAILS_PANEL_ID) {
-            var featureKey = interactiveMapState.selectedFeatureKey;
-            var parsed = featureKey ? parseFeatureKey(featureKey, null) : null;
+        window.habitatsSummaryInteractiveMap.on(
+          'app:panelclosed',
+          function (event) {
+            if (event && event.panelId === HABITAT_DETAILS_PANEL_ID) {
+              var featureKey = interactiveMapState.selectedFeatureKey;
+              var parsed = featureKey
+                ? parseFeatureKey(featureKey, null)
+                : null;
 
-            if (interactiveMapState.pendingSelectionClearTimer) {
-              window.clearTimeout(interactiveMapState.pendingSelectionClearTimer);
-              interactiveMapState.pendingSelectionClearTimer = null;
+              if (interactiveMapState.pendingSelectionClearTimer) {
+                window.clearTimeout(
+                  interactiveMapState.pendingSelectionClearTimer
+                );
+                interactiveMapState.pendingSelectionClearTimer = null;
+              }
+
+              interactiveMapState.pendingSelectionClearTimer =
+                window.setTimeout(function () {
+                  interactiveMapState.pendingSelectionClearTimer = null;
+
+                  if (interactiveMapState.preserveSelectionOnDetailsClose) {
+                    return;
+                  }
+
+                  clearSelectedRow();
+                  if (parsed && interactiveMapState.interactPlugin) {
+                    interactiveMapState.interactPlugin.unselectFeature({
+                      featureId: featureKey,
+                      layerId: getLayerIdForFeatureType(parsed.featureType),
+                      idProperty: '__imFeatureKey'
+                    });
+                  }
+                }, 0);
+
+              return;
             }
 
-            interactiveMapState.pendingSelectionClearTimer = window.setTimeout(function () {
-              interactiveMapState.pendingSelectionClearTimer = null;
-
-              if (interactiveMapState.preserveSelectionOnDetailsClose) {
-                return;
-              }
-
-              clearSelectedRow();
-              if (parsed && interactiveMapState.interactPlugin) {
-                interactiveMapState.interactPlugin.unselectFeature({
-                  featureId: featureKey,
-                  layerId: getLayerIdForFeatureType(parsed.featureType),
-                  idProperty: '__imFeatureKey'
-                });
-              }
-            }, 0);
-
-            return;
+            if (
+              event &&
+              event.panelId &&
+              event.panelId !== HABITAT_DETAILS_PANEL_ID &&
+              interactiveMapState.preserveSelectionOnDetailsClose
+            ) {
+              interactiveMapState.preserveSelectionOnDetailsClose = false;
+              restoreSelectedDetailsPanel();
+            }
           }
-
-          if (
-            event &&
-            event.panelId &&
-            event.panelId !== HABITAT_DETAILS_PANEL_ID &&
-            interactiveMapState.preserveSelectionOnDetailsClose
-          ) {
-            interactiveMapState.preserveSelectionOnDetailsClose = false;
-            restoreSelectedDetailsPanel();
-          }
-        });
+        );
       }
     } catch (error) {
       console.error('Failed to initialize interactive map:', error);
       showMapPlaceholder(mapContainer, 'Could not load interactive map');
     }
+  }
+
+  function buildMapPlugins(datasets, mapContainer, interactPlugin) {
+    var plugins = [
+      createDatasetsPlugin(datasets, mapContainer),
+      interactPlugin
+    ];
+
+    if (mapContainer.getAttribute('data-map-layout') !== 'dashboard') {
+      plugins.push(window.defra.mapKeyPlugin());
+    }
+
+    return plugins;
   }
 
   function createDatasetsPlugin(datasets, mapContainer) {
@@ -508,8 +555,7 @@
     var projectName =
       mapContainer.getAttribute('data-project-name') || 'Project name';
     var mapView = mapContainer.getAttribute('data-map-view') || 'baseline';
-    var hasBaseline =
-      mapContainer.getAttribute('data-has-baseline') === 'true';
+    var hasBaseline = mapContainer.getAttribute('data-has-baseline') === 'true';
     var hasPostIntervention =
       mapContainer.getAttribute('data-has-post-intervention') === 'true';
     var mapTitle =
@@ -520,15 +566,23 @@
           : 'Baseline';
     var layerDescription =
       'Red line boundary, Vertical area habitats, Hedgerows, Watercourses, Trees';
-    var interventionSection = mapView === 'baseline'
-      ? ''
-      : buildDashboardInterventionSection();
+    var interventionSection =
+      mapView === 'baseline' ? '' : buildDashboardInterventionSection();
     var layerControls = datasets
       .map(function (dataset) {
         var inputId = 'dashboard-map-layer-' + dataset.id;
-        var swatchStyle = dataset.keySymbolShape === 'line'
-          ? 'background:linear-gradient(transparent 45%,' + dataset.stroke + ' 45%,' + dataset.stroke + ' 55%,transparent 55%)'
-          : 'background:' + dataset.fill + ';border-color:' + dataset.stroke;
+        var style = dataset.style || {};
+        var swatchStyle =
+          style.keySymbolShape === 'line'
+            ? 'background:linear-gradient(transparent 45%,' +
+              style.stroke +
+              ' 45%,' +
+              style.stroke +
+              ' 55%,transparent 55%)'
+            : 'background:' +
+              (style.fill || style.symbolBackgroundColor || 'transparent') +
+              ';border-color:' +
+              (style.stroke || style.symbolForegroundColor || 'transparent');
 
         return (
           '<div class="dashboard-map-panel__layer">' +
@@ -540,7 +594,9 @@
           '">' +
           '<label class="govuk-label govuk-checkboxes__label" for="' +
           escapeAttribute(inputId) +
-          '">' + escapeHtml(dataset.label) + '</label>' +
+          '">' +
+          escapeHtml(dataset.label) +
+          '</label>' +
           '</div></div>' +
           '<span class="dashboard-map-panel__swatch" style="' +
           escapeAttribute(swatchStyle) +
@@ -557,22 +613,43 @@
       '</div>' +
       '<div class="dashboard-map-panel__section">' +
       '<p class="dashboard-map-panel__heading">Title</p>' +
-      '<div class="dashboard-map-panel__title-value">' + escapeHtml(mapTitle) + '</div>' +
+      '<div class="dashboard-map-panel__title-value">' +
+      escapeHtml(mapTitle) +
+      '</div>' +
       '<button class="dashboard-map-panel__toggle" type="button" data-panel-toggle="dashboard-map-title-options" aria-expanded="true">' +
       '<span class="dashboard-map-panel__toggle-icon" aria-hidden="true"></span><span data-panel-toggle-label>Hide</span></button>' +
       '<div id="dashboard-map-title-options"><div class="govuk-radios govuk-radios--small" data-module="govuk-radios">' +
-      buildDashboardMapRadio('baseline', 'Baseline', mapView === 'baseline', !hasBaseline) +
-      buildDashboardMapRadio('post-intervention', 'Post intervention', mapView === 'post-intervention', !hasPostIntervention) +
-      buildDashboardMapRadio('both', 'Both', mapView === 'both', !(hasBaseline && hasPostIntervention)) +
+      buildDashboardMapRadio(
+        'baseline',
+        'Baseline',
+        mapView === 'baseline',
+        !hasBaseline
+      ) +
+      buildDashboardMapRadio(
+        'post-intervention',
+        'Post intervention',
+        mapView === 'post-intervention',
+        !hasPostIntervention
+      ) +
+      buildDashboardMapRadio(
+        'both',
+        'Both',
+        mapView === 'both',
+        !(hasBaseline && hasPostIntervention)
+      ) +
       '</div>' +
       '</div></div>' +
       interventionSection +
       '<div class="dashboard-map-panel__section">' +
       '<p class="dashboard-map-panel__heading">Layers</p>' +
-      '<div>' + escapeHtml(layerDescription) + '</div>' +
+      '<div>' +
+      escapeHtml(layerDescription) +
+      '</div>' +
       '<button class="dashboard-map-panel__toggle" type="button" data-panel-toggle="dashboard-map-layer-options" aria-expanded="true">' +
       '<span class="dashboard-map-panel__toggle-icon" aria-hidden="true"></span><span data-panel-toggle-label>Hide</span></button>' +
-      '<div id="dashboard-map-layer-options">' + layerControls + '</div>' +
+      '<div id="dashboard-map-layer-options">' +
+      layerControls +
+      '</div>' +
       '</div>' +
       '</div>'
     );
@@ -592,7 +669,9 @@
           '">' +
           '<label class="govuk-label govuk-checkboxes__label" for="' +
           escapeAttribute(id) +
-          '">' + escapeHtml(label) + '</label>' +
+          '">' +
+          escapeHtml(label) +
+          '</label>' +
           '</div></div>'
         );
       })
@@ -625,15 +704,15 @@
       '>' +
       '<label class="govuk-label govuk-radios__label" for="' +
       escapeAttribute(id) +
-      '">' + escapeHtml(label) + '</label>' +
+      '">' +
+      escapeHtml(label) +
+      '</label>' +
       '</div>'
     );
   }
 
   function bindDashboardLayersPanel() {
-    var panel = document.querySelector(
-      '[id$="-panel-dashboard-layers"]'
-    );
+    var panel = document.querySelector('[id$="-panel-dashboard-layers"]');
 
     if (!panel || panel.getAttribute('data-dashboard-panel-bound') === 'true') {
       return;
@@ -647,7 +726,9 @@
         return;
       }
 
-      var content = panel.querySelector('#' + toggle.getAttribute('data-panel-toggle'));
+      var content = panel.querySelector(
+        '#' + toggle.getAttribute('data-panel-toggle')
+      );
       var isExpanded = toggle.getAttribute('aria-expanded') === 'true';
       var label = toggle.querySelector('[data-panel-toggle-label]');
       toggle.setAttribute('aria-expanded', isExpanded ? 'false' : 'true');
@@ -660,9 +741,7 @@
     });
 
     panel.addEventListener('change', function (event) {
-      var viewInput = event.target.closest(
-        'input[name="dashboard-map-title"]'
-      );
+      var viewInput = event.target.closest('input[name="dashboard-map-title"]');
       if (viewInput && viewInput.checked && !viewInput.disabled) {
         var url = new URL(window.location.href);
         url.searchParams.set('view', viewInput.value);
@@ -684,10 +763,10 @@
         return;
       }
 
-      if (input.checked && typeof plugin.showDataset === 'function') {
-        plugin.showDataset(input.value);
-      } else if (!input.checked && typeof plugin.hideDataset === 'function') {
-        plugin.hideDataset(input.value);
+      if (typeof plugin.setDatasetVisibility === 'function') {
+        plugin.setDatasetVisibility(input.checked, {
+          datasetId: input.value
+        });
       }
     });
   }
@@ -699,7 +778,11 @@
     }
 
     var selectedCategories = Array.prototype.slice
-      .call(panel.querySelectorAll('.dashboard-map-panel__intervention-input:checked'))
+      .call(
+        panel.querySelectorAll(
+          '.dashboard-map-panel__intervention-input:checked'
+        )
+      )
       .map(function (input) {
         return input.value;
       });
@@ -714,46 +797,52 @@
       var featureIdsToShow = [];
       var featureIdsToHide = [];
 
-      (interactiveMapState.datasetsByType[featureType] || []).forEach(function (feature) {
-        var properties = feature.properties || {};
-        var category = normalizeInterventionCategory(
-          properties['Retention Category'] ||
-          properties.retention_category ||
-          properties.Intervention ||
-          properties.intervention
-        );
-        var featureId = properties.__imFeatureKey;
+      (interactiveMapState.datasetsByType[featureType] || []).forEach(
+        function (feature) {
+          var properties = feature.properties || {};
+          var category = normalizeInterventionCategory(
+            properties['Retention Category'] ||
+              properties.retention_category ||
+              properties.Intervention ||
+              properties.intervention
+          );
+          var featureId = properties.__imFeatureKey;
 
-        if (!category || !featureId) {
-          return;
+          if (!category || !featureId) {
+            return;
+          }
+
+          if (selectedCategories.includes(category)) {
+            featureIdsToShow.push(featureId);
+          } else {
+            featureIdsToHide.push(featureId);
+          }
         }
+      );
 
-        if (selectedCategories.includes(category)) {
-          featureIdsToShow.push(featureId);
-        } else {
-          featureIdsToHide.push(featureId);
-        }
-      });
-
-      if (featureIdsToShow.length && typeof plugin.showFeatures === 'function') {
-        plugin.showFeatures({
-          datasetId: datasets[featureType],
-          idProperty: '__imFeatureKey',
-          featureIds: featureIdsToShow
+      if (
+        featureIdsToShow.length &&
+        typeof plugin.setFeatureVisibility === 'function'
+      ) {
+        plugin.setFeatureVisibility(true, featureIdsToShow, {
+          datasetId: datasets[featureType]
         });
       }
-      if (featureIdsToHide.length && typeof plugin.hideFeatures === 'function') {
-        plugin.hideFeatures({
-          datasetId: datasets[featureType],
-          idProperty: '__imFeatureKey',
-          featureIds: featureIdsToHide
+      if (
+        featureIdsToHide.length &&
+        typeof plugin.setFeatureVisibility === 'function'
+      ) {
+        plugin.setFeatureVisibility(false, featureIdsToHide, {
+          datasetId: datasets[featureType]
         });
       }
     });
   }
 
   function normalizeInterventionCategory(value) {
-    var category = String(value || '').trim().toLowerCase();
+    var category = String(value || '')
+      .trim()
+      .toLowerCase();
 
     if (category === 'enhanced' || category === 'enhancement') {
       return 'retained';
@@ -765,9 +854,7 @@
       return 'created';
     }
 
-    return ['retained', 'lost', 'created'].includes(category)
-      ? category
-      : null;
+    return ['retained', 'lost', 'created'].includes(category) ? category : null;
   }
 
   function hasFeatures(geoJson) {
@@ -780,7 +867,12 @@
   }
 
   function clearPersistedMapView(mapId) {
-    if (!mapId || !window.history || !window.history.replaceState || !window.location) {
+    if (
+      !mapId ||
+      !window.history ||
+      !window.history.replaceState ||
+      !window.location
+    ) {
       return;
     }
 
@@ -800,7 +892,8 @@
     }
 
     var nextSearch = searchParams.toString();
-    var nextUrl = url.pathname + (nextSearch ? '?' + nextSearch : '') + url.hash;
+    var nextUrl =
+      url.pathname + (nextSearch ? '?' + nextSearch : '') + url.hash;
 
     window.history.replaceState(window.history.state, '', nextUrl);
   }
@@ -862,9 +955,14 @@
 
     window.setTimeout(function () {
       var link = getTableLink(parsed.featureType, parsed.featureIndex);
-      handleTableSelection(parsed.featureType, parsed.featureIndex, link || null, {
-        skipScroll: true
-      });
+      handleTableSelection(
+        parsed.featureType,
+        parsed.featureIndex,
+        link || null,
+        {
+          skipScroll: true
+        }
+      );
     }, 100);
   }
 
@@ -889,7 +987,10 @@
       try {
         ensureHoverLayers(map);
       } catch (error) {
-        console.warn('Failed to setup hover layers, will retry on next style event:', error);
+        console.warn(
+          'Failed to setup hover layers, will retry on next style event:',
+          error
+        );
         return;
       }
 
@@ -1017,9 +1118,13 @@
       };
     }
 
-    var featureType = inferFeatureTypeFromLayer(feature.layer && feature.layer.id);
+    var featureType = inferFeatureTypeFromLayer(
+      feature.layer && feature.layer.id
+    );
     var featureIndex = parseInt(
-      properties.__imFeatureIndex != null ? properties.__imFeatureIndex : feature.id,
+      properties.__imFeatureIndex != null
+        ? properties.__imFeatureIndex
+        : feature.id,
       10
     );
 
@@ -1037,7 +1142,10 @@
   }
 
   function inferFeatureTypeFromLayer(layerId) {
-    if (layerId === 'habitat-parcels-im' || layerId === 'habitat-parcels-im-stroke') {
+    if (
+      layerId === 'habitat-parcels-im' ||
+      layerId === 'habitat-parcels-im-stroke'
+    ) {
       return 'parcel';
     }
     if (layerId === 'hedgerows-im') {
@@ -1116,7 +1224,9 @@
 
   function handleSelectionChange(event) {
     var selectedFeatures =
-      event && Array.isArray(event.selectedFeatures) ? event.selectedFeatures : [];
+      event && Array.isArray(event.selectedFeatures)
+        ? event.selectedFeatures
+        : [];
 
     if (!selectedFeatures.length) {
       clearSelectedRow();
@@ -1150,7 +1260,12 @@
     interactiveMapState.lastInteractionSource = null;
   }
 
-  function handleTableSelection(featureType, featureIndex, linkElement, options) {
+  function handleTableSelection(
+    featureType,
+    featureIndex,
+    linkElement,
+    options
+  ) {
     if (!featureType || !isFinite(featureIndex)) {
       return;
     }
@@ -1235,7 +1350,10 @@
       return null;
     }
 
-    var feature = getFeatureByTypeAndIndex(parsed.featureType, parsed.featureIndex);
+    var feature = getFeatureByTypeAndIndex(
+      parsed.featureType,
+      parsed.featureIndex
+    );
     var properties = feature && feature.properties ? feature.properties : {};
     var row = link ? link.closest('tr') : null;
     var cells = row
@@ -1295,41 +1413,45 @@
       habitatType: habitatType || '-',
       metricLabel: metricLabel,
       metricValue: metricValue,
-      position: toSentenceCase(firstDefinedValue([
-        properties.Position,
-        properties.position,
-        properties.positionType,
-        properties.position_type,
-        properties['Baseline Position'],
-        properties['Baseline position'],
-        properties['Proposed Position'],
-        properties['Proposed position']
-      ]) || '-'),
-      adjacentTo: firstDefinedValue([
-        properties['Adjacent To'],
-        properties['Adjacent to'],
-        properties.adjacentTo,
-        properties.adjacent_to,
-        properties.AdjacentTo,
-        properties['Adjent To'],
-        properties['Baseline Adjacent To'],
-        properties['Baseline Adjacent to'],
-        properties['Proposed Adjacent To'],
-        properties['Proposed Adjacent to']
-      ]) || '-',
-      boundaryEdge: firstDefinedValue([
-        properties['Boundary edge'],
-        properties['Boundary Edge'],
-        properties['Boundary-edge'],
-        properties.boundaryEdge,
-        properties.boundary_edge,
-        properties.BoundaryEdge,
-        properties['On boundary edge'],
-        properties['Baseline Boundary edge'],
-        properties['Baseline Boundary Edge'],
-        properties['Proposed Boundary edge'],
-        properties['Proposed Boundary Edge']
-      ]) || '-',
+      position: toSentenceCase(
+        firstDefinedValue([
+          properties.Position,
+          properties.position,
+          properties.positionType,
+          properties.position_type,
+          properties['Baseline Position'],
+          properties['Baseline position'],
+          properties['Proposed Position'],
+          properties['Proposed position']
+        ]) || '-'
+      ),
+      adjacentTo:
+        firstDefinedValue([
+          properties['Adjacent To'],
+          properties['Adjacent to'],
+          properties.adjacentTo,
+          properties.adjacent_to,
+          properties.AdjacentTo,
+          properties['Adjent To'],
+          properties['Baseline Adjacent To'],
+          properties['Baseline Adjacent to'],
+          properties['Proposed Adjacent To'],
+          properties['Proposed Adjacent to']
+        ]) || '-',
+      boundaryEdge:
+        firstDefinedValue([
+          properties['Boundary edge'],
+          properties['Boundary Edge'],
+          properties['Boundary-edge'],
+          properties.boundaryEdge,
+          properties.boundary_edge,
+          properties.BoundaryEdge,
+          properties['On boundary edge'],
+          properties['Baseline Boundary edge'],
+          properties['Baseline Boundary Edge'],
+          properties['Proposed Boundary edge'],
+          properties['Proposed Boundary Edge']
+        ]) || '-',
       editUrl:
         parsed.featureType === 'parcel' && row
           ? withQueryParam(getRowActionHref(row), 'returnSource', 'map')
@@ -1359,7 +1481,9 @@
     }
 
     mapApp.addPanel(HABITAT_DETAILS_PANEL_ID, {
-      label: escapeHtml(details.titlePrefix || 'Habitat ') + escapeHtml(details.reference || ''),
+      label:
+        escapeHtml(details.titlePrefix || 'Habitat ') +
+        escapeHtml(details.reference || ''),
       mobile: {
         slot: 'inset',
         dismissable: true,
@@ -1526,7 +1650,9 @@
   function parseFeatureKey(featureKey, properties) {
     var key =
       featureKey ||
-      (properties && properties.__imFeatureKey ? properties.__imFeatureKey : null);
+      (properties && properties.__imFeatureKey
+        ? properties.__imFeatureKey
+        : null);
 
     if (!key || typeof key !== 'string') {
       return null;
@@ -1674,7 +1800,10 @@
       return coordinates;
     }
 
-    if (typeof coordinates[0] === 'number' && typeof coordinates[1] === 'number') {
+    if (
+      typeof coordinates[0] === 'number' &&
+      typeof coordinates[1] === 'number'
+    ) {
       return transformCoordinate(coordinates);
     }
 
@@ -1721,11 +1850,11 @@
     var bounds = null;
 
     datasets.forEach(function (dataset) {
-      if (!dataset.data || !dataset.data.features) {
+      if (!dataset.geojson || !dataset.geojson.features) {
         return;
       }
 
-      dataset.data.features.forEach(function (feature) {
+      dataset.geojson.features.forEach(function (feature) {
         if (!feature.geometry) {
           return;
         }
@@ -1749,7 +1878,10 @@
       return bounds;
     }
 
-    if (typeof coordinates[0] === 'number' && typeof coordinates[1] === 'number') {
+    if (
+      typeof coordinates[0] === 'number' &&
+      typeof coordinates[1] === 'number'
+    ) {
       return includeCoordinate(bounds, coordinates[0], coordinates[1]);
     }
 

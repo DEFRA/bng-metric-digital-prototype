@@ -34,7 +34,8 @@
       !window.defra ||
       !window.defra.InteractiveMap ||
       !window.defra.maplibreProvider ||
-      !window.defra.datasetsPlugin
+      !window.defra.datasetsPlugin ||
+      !window.defra.mapKeyPlugin
     ) {
       showMapPlaceholder(mapContainer, 'Interactive map library not available');
       return;
@@ -85,12 +86,14 @@
       datasets.push({
         id: 'site-boundary-im',
         label: 'Site boundary',
-        data: normalizeToWgs84(siteBoundary),
-        fill: 'transparent',
-        stroke: '#d4351c',
-        strokeWidth: 3,
-        strokeDashArray: [3, 2],
-        showInLayers: true,
+        geojson: normalizeToWgs84(siteBoundary),
+        style: {
+          fill: 'transparent',
+          stroke: '#d4351c',
+          strokeWidth: 3,
+          strokeDashArray: [3, 2]
+        },
+        showInMenu: true,
         showInKey: true
       });
     }
@@ -99,12 +102,14 @@
       datasets.push({
         id: 'habitat-parcels-im',
         label: 'Habitat parcels',
-        data: normalizeToWgs84(allParcels),
-        fill: '#1d70b8',
-        stroke: '#1d70b8',
-        strokeWidth: 2,
-        opacity: 0.3,
-        showInLayers: true,
+        geojson: normalizeToWgs84(allParcels),
+        style: {
+          fill: '#1d70b8',
+          stroke: '#1d70b8',
+          strokeWidth: 2,
+          opacity: 0.3
+        },
+        showInMenu: true,
         showInKey: true
       });
     }
@@ -113,11 +118,13 @@
       datasets.push({
         id: 'hedgerows-im',
         label: 'Hedgerows',
-        data: normalizeToWgs84(hedgerows),
-        stroke: '#00703c',
-        strokeWidth: 3,
-        keySymbolShape: 'line',
-        showInLayers: true,
+        geojson: normalizeToWgs84(hedgerows),
+        style: {
+          stroke: '#00703c',
+          strokeWidth: 3,
+          keySymbolShape: 'line'
+        },
+        showInMenu: true,
         showInKey: true
       });
     }
@@ -126,11 +133,13 @@
       datasets.push({
         id: 'watercourses-im',
         label: 'Watercourses',
-        data: normalizeToWgs84(watercourses),
-        stroke: '#1d70b8',
-        strokeWidth: 3,
-        keySymbolShape: 'line',
-        showInLayers: true,
+        geojson: normalizeToWgs84(watercourses),
+        style: {
+          stroke: '#1d70b8',
+          strokeWidth: 3,
+          keySymbolShape: 'line'
+        },
+        showInMenu: true,
         showInKey: true
       });
     }
@@ -138,11 +147,13 @@
     datasets.push({
       id: 'selected-parcel-im',
       label: 'Selected parcel',
-      data: normalizeToWgs84(selectedParcel),
-      fill: 'rgba(255, 221, 0, 0.35)',
-      stroke: '#ffdd00',
-      strokeWidth: 4,
-      showInLayers: true,
+      geojson: normalizeToWgs84(selectedParcel),
+      style: {
+        fill: 'rgba(255, 221, 0, 0.35)',
+        stroke: '#ffdd00',
+        strokeWidth: 4
+      },
+      showInMenu: true,
       showInKey: false
     });
 
@@ -156,7 +167,10 @@
           behaviour: 'inline',
           mapLabel: 'Habitat parcel map preview',
           containerHeight: '540px',
-          bounds: mapBounds || [[-7.57, 49.96], [1.68, 58.64]],
+          bounds: mapBounds || [
+            [-7.57, 49.96],
+            [1.68, 58.64]
+          ],
           minZoom: 5,
           maxZoom: 20,
           enableZoomControls: true,
@@ -166,7 +180,8 @@
           plugins: [
             window.defra.datasetsPlugin({
               datasets: datasets
-            })
+            }),
+            window.defra.mapKeyPlugin()
           ]
         }
       );
@@ -176,7 +191,8 @@
           window.habitatDetailsInteractiveMap.addButton('fitToExtent', {
             group: 'zoom',
             label: 'Fit to full extent',
-            iconSvgContent: '<path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/>',
+            iconSvgContent:
+              '<path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/>',
             onClick: function (event, context) {
               if (mapBounds && context && context.mapProvider) {
                 context.mapProvider.fitToBounds(mapBounds);
@@ -187,18 +203,28 @@
             desktop: { slot: 'right-top', showLabel: false }
           });
 
-          cachedHabitatDetails = buildSelectedHabitatDetails(selectedParcel.features[0], panelData);
+          cachedHabitatDetails = buildSelectedHabitatDetails(
+            selectedParcel.features[0],
+            panelData
+          );
 
           showHabitatDetailsPanel(cachedHabitatDetails);
         });
 
-        window.habitatDetailsInteractiveMap.on('app:panelclosed', function (event) {
-          if (event && event.panelId && event.panelId !== HABITAT_DETAILS_PANEL_ID) {
-            if (cachedHabitatDetails) {
-              showHabitatDetailsPanel(cachedHabitatDetails);
+        window.habitatDetailsInteractiveMap.on(
+          'app:panelclosed',
+          function (event) {
+            if (
+              event &&
+              event.panelId &&
+              event.panelId !== HABITAT_DETAILS_PANEL_ID
+            ) {
+              if (cachedHabitatDetails) {
+                showHabitatDetailsPanel(cachedHabitatDetails);
+              }
             }
           }
-        });
+        );
 
         var hideDetailsWhenOtherPanelOpens = function (event) {
           if (
@@ -207,15 +233,26 @@
             event.panelId !== HABITAT_DETAILS_PANEL_ID &&
             typeof window.habitatDetailsInteractiveMap.hidePanel === 'function'
           ) {
-            window.habitatDetailsInteractiveMap.hidePanel(HABITAT_DETAILS_PANEL_ID);
+            window.habitatDetailsInteractiveMap.hidePanel(
+              HABITAT_DETAILS_PANEL_ID
+            );
           }
         };
 
-        window.habitatDetailsInteractiveMap.on('app:panelopened', hideDetailsWhenOtherPanelOpens);
-        window.habitatDetailsInteractiveMap.on('app:panelopen', hideDetailsWhenOtherPanelOpens);
+        window.habitatDetailsInteractiveMap.on(
+          'app:panelopened',
+          hideDetailsWhenOtherPanelOpens
+        );
+        window.habitatDetailsInteractiveMap.on(
+          'app:panelopen',
+          hideDetailsWhenOtherPanelOpens
+        );
       }
     } catch (error) {
-      console.error('Failed to initialize habitat details interactive map:', error);
+      console.error(
+        'Failed to initialize habitat details interactive map:',
+        error
+      );
       showMapPlaceholder(mapContainer, 'Could not load interactive map');
     }
   }
@@ -234,7 +271,8 @@
 
     return {
       reference:
-        firstDefinedValue([panelData.reference, properties['Parcel Ref']]) || 'Habitat',
+        firstDefinedValue([panelData.reference, properties['Parcel Ref']]) ||
+        'Habitat',
       habitatType:
         firstDefinedValue([
           panelData.habitatType,
@@ -244,8 +282,8 @@
         ]) || '-',
       metricLabel: 'Area',
       metricValue: firstDefinedValue([panelData.area]) || '-',
-      position:
-        toSentenceCase(firstDefinedValue([
+      position: toSentenceCase(
+        firstDefinedValue([
           properties.Position,
           properties.position,
           properties.positionType,
@@ -254,7 +292,8 @@
           properties['Baseline position'],
           properties['Proposed Position'],
           properties['Proposed position']
-        ]) || '-'),
+        ]) || '-'
+      ),
       adjacentTo:
         firstDefinedValue([
           properties['Adjacent To'],
@@ -422,7 +461,9 @@
         return feature;
       }
 
-      feature.geometry.coordinates = transformCoordinates(feature.geometry.coordinates);
+      feature.geometry.coordinates = transformCoordinates(
+        feature.geometry.coordinates
+      );
       return feature;
     });
 
@@ -479,11 +520,11 @@
     var bounds = null;
 
     datasets.forEach(function (dataset) {
-      if (!dataset || !dataset.data || !dataset.data.features) {
+      if (!dataset || !dataset.geojson || !dataset.geojson.features) {
         return;
       }
 
-      dataset.data.features.forEach(function (feature) {
+      dataset.geojson.features.forEach(function (feature) {
         if (!feature || !feature.geometry) {
           return;
         }
@@ -522,23 +563,25 @@
     }
 
     if (!bounds) {
-      return [[lng, lat], [lng, lat]];
+      return [
+        [lng, lat],
+        [lng, lat]
+      ];
     }
 
     return [
-      [
-        Math.min(bounds[0][0], lng),
-        Math.min(bounds[0][1], lat)
-      ],
-      [
-        Math.max(bounds[1][0], lng),
-        Math.max(bounds[1][1], lat)
-      ]
+      [Math.min(bounds[0][0], lng), Math.min(bounds[0][1], lat)],
+      [Math.max(bounds[1][0], lng), Math.max(bounds[1][1], lat)]
     ];
   }
 
   function clearPersistedMapView(mapId) {
-    if (!mapId || !window.history || !window.history.replaceState || !window.location) {
+    if (
+      !mapId ||
+      !window.history ||
+      !window.history.replaceState ||
+      !window.location
+    ) {
       return;
     }
 
@@ -558,7 +601,8 @@
     }
 
     var nextSearch = searchParams.toString();
-    var nextUrl = url.pathname + (nextSearch ? '?' + nextSearch : '') + url.hash;
+    var nextUrl =
+      url.pathname + (nextSearch ? '?' + nextSearch : '') + url.hash;
 
     window.history.replaceState(window.history.state, '', nextUrl);
   }
