@@ -644,13 +644,9 @@
       drawPatternLine(context, midpoint, 0, midpoint, patternSize);
       drawPatternLine(context, 0, midpoint, patternSize, midpoint);
     } else if (pattern === 'diamond') {
-      context.beginPath();
-      context.moveTo(midpoint, 2);
-      context.lineTo(patternSize - 2, midpoint);
-      context.lineTo(midpoint, patternSize - 2);
-      context.lineTo(2, midpoint);
-      context.closePath();
-      context.stroke();
+      [[5, 5], [15, 5], [5, 15], [15, 15]].forEach(function (point) {
+        drawFilledPatternDiamond(context, point[0], point[1], 4.4);
+      });
     } else {
       drawPatternLine(context, -midpoint, 0, midpoint, patternSize);
       drawPatternLine(context, midpoint, 0, patternSize + midpoint, patternSize);
@@ -666,6 +662,16 @@
     context.moveTo(x1, y1);
     context.lineTo(x2, y2);
     context.stroke();
+  }
+
+  function drawFilledPatternDiamond(context, centerX, centerY, radius) {
+    context.beginPath();
+    context.moveTo(centerX, centerY - radius);
+    context.lineTo(centerX + radius, centerY);
+    context.lineTo(centerX, centerY + radius);
+    context.lineTo(centerX - radius, centerY);
+    context.closePath();
+    context.fill();
   }
 
   function getAreaBroadHabitat(properties) {
@@ -1065,8 +1071,22 @@
           })
         });
       });
+      var buttons = (manifest.buttons || []).map(function (button) {
+        if (button.id !== 'mapKey') {
+          return button;
+        }
 
-      return Object.assign({}, manifest, { panels: panels });
+        return Object.assign({}, button, {
+          mobile: Object.assign({}, button.mobile, {
+            showLabel: true
+          })
+        });
+      });
+
+      return Object.assign({}, manifest, {
+        panels: panels,
+        buttons: buttons
+      });
     };
 
     return plugin;
@@ -1122,9 +1142,9 @@
     mapApp.addPanel('dashboardLayers', {
       label: 'Map information and layers',
       mobile: {
-        slot: 'bottom',
-        open: true,
-        dismissible: false,
+        slot: 'drawer',
+        open: false,
+        dismissible: true,
         showLabel: false,
         modal: false
       },
@@ -1150,12 +1170,7 @@
         label: 'Layers',
         panelId: 'dashboardLayers',
         iconId: 'layers',
-        excludeWhen: function (context) {
-          return context.appState.breakpoint !== 'mobile';
-        },
-        mobile: { slot: 'top-left', showLabel: true },
-        tablet: { slot: 'top-left', showLabel: true },
-        desktop: { slot: 'top-left', showLabel: true }
+        mobile: { slot: 'top-left', showLabel: true }
       });
     }
 
@@ -1536,7 +1551,7 @@
   }
 
   function buildFeatureMetadataBuilder(featureType) {
-    return function (properties, index) {
+    return function (properties, index, feature) {
       var metadata = {
         __imFeatureType: featureType,
         __imFeatureIndex: index,
@@ -1548,10 +1563,49 @@
         metadata.__imHabitatPatternIndex = getHabitatPatternIndex(
           getDetailedHabitat(properties)
         );
+        metadata.__imAreaHa = calculateGeometryAreaHectares(
+          feature && feature.geometry
+        );
       }
 
       return metadata;
     };
+  }
+
+  function calculateGeometryAreaHectares(geometry) {
+    if (!geometry || !Array.isArray(geometry.coordinates)) {
+      return null;
+    }
+
+    var polygons =
+      geometry.type === 'Polygon'
+        ? [geometry.coordinates]
+        : geometry.type === 'MultiPolygon'
+          ? geometry.coordinates
+          : [];
+    var areaSquareMetres = polygons.reduce(function (total, polygon) {
+      return total + polygon.reduce(function (polygonArea, ring, ringIndex) {
+        var ringArea = Math.abs(calculateRingArea(ring));
+        return polygonArea + (ringIndex === 0 ? ringArea : -ringArea);
+      }, 0);
+    }, 0);
+
+    return areaSquareMetres > 0 ? areaSquareMetres / 10000 : null;
+  }
+
+  function calculateRingArea(ring) {
+    if (!Array.isArray(ring) || ring.length < 3) {
+      return 0;
+    }
+
+    var area = 0;
+    for (var index = 0; index < ring.length; index += 1) {
+      var current = ring[index];
+      var next = ring[(index + 1) % ring.length];
+      area += current[0] * next[1] - next[0] * current[1];
+    }
+
+    return area / 2;
   }
 
   function normalizeToWgs84(geoJson, metadataBuilder) {
@@ -2020,7 +2074,21 @@
         : parsed.featureType === 'tree'
           ? 'Size'
           : 'Length';
-    var metricValue = getCellText(cells, 2) || '-';
+    var metricValue = getCellText(cells, 2);
+    if (!metricValue && parsed.featureType === 'parcel') {
+      var storedArea = firstDefinedValue([
+        properties['Area (ha)'],
+        properties['Area ha'],
+        properties.area_ha,
+        properties.areaHa
+      ]);
+      var calculatedArea = Number(properties.__imAreaHa);
+      metricValue = storedArea ||
+        (isFinite(calculatedArea) && calculatedArea > 0
+          ? calculatedArea.toFixed(2) + ' ha'
+          : 'Not available');
+    }
+    metricValue = metricValue || 'Not available';
 
     var habitatType = getCellText(cells, 1);
     if (!habitatType) {
@@ -2054,8 +2122,16 @@
       featureType: parsed.featureType,
       reference:
         (link && getTrimmedText(link.textContent)) ||
-        firstDefinedValue([properties['Parcel Ref']]) ||
-        parsed.featureType + ' ' + (parsed.featureIndex + 1),
+        firstDefinedValue([
+          properties['Parcel Ref'],
+          properties['Feature Ref'],
+          properties.reference,
+          properties.ref,
+          properties.id
+        ]) ||
+        (parsed.featureType === 'parcel'
+          ? 'HP-' + String(parsed.featureIndex + 1).padStart(3, '0')
+          : parsed.featureType + ' ' + (parsed.featureIndex + 1)),
       titlePrefix:
         parsed.featureType === 'parcel'
           ? 'Habitat '
@@ -2065,6 +2141,10 @@
               ? 'Watercourse '
               : 'Tree ',
       habitatType: habitatType || '-',
+      broadHabitat:
+        parsed.featureType === 'parcel'
+          ? properties.__imBroadHabitat || getAreaBroadHabitat(properties) || '-'
+          : '',
       metricLabel: metricLabel,
       metricValue: metricValue,
       position: toSentenceCase(
@@ -2192,6 +2272,7 @@
 
   function buildHabitatDetailsPanelHtml(details) {
     var safeHabitatType = escapeHtml(details.habitatType || '-');
+    var safeBroadHabitat = escapeHtml(details.broadHabitat || '-');
     var safeMetricLabel = escapeHtml(details.metricLabel || 'Area');
     var safeMetricValue = escapeHtml(details.metricValue || '-');
     var safePosition = escapeHtml(details.position || '-');
@@ -2206,6 +2287,11 @@
       '</p>' +
       '<table class="govuk-table govuk-!-margin-bottom-4">' +
       '<tbody class="govuk-table__body">' +
+      (details.featureType === 'parcel'
+        ? '<tr class="govuk-table__row"><th scope="row" class="govuk-table__header">Broad habitat</th><td class="govuk-table__cell">' +
+          safeBroadHabitat +
+          '</td></tr>'
+        : '') +
       '<tr class="govuk-table__row"><th scope="row" class="govuk-table__header">Position</th><td class="govuk-table__cell">' +
       safePosition +
       '</td></tr>' +
