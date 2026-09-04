@@ -35,6 +35,15 @@
       </div>
       <div class="app-page-header__actions">
         {{ govukButton({ text: "Upload file", href: "/project-dashboard/upload/choose" }) }}
+        {{ govukButton({
+          html: 'View map<span class="govuk-visually-hidden"> (opens in new tab)</span>',
+          href: "/project-dashboard/map",
+          classes: "govuk-button--secondary",
+          attributes: {
+            target: "_blank",
+            rel: "noopener noreferrer"
+          }
+        }) }}
       </div>
     </div>
 
