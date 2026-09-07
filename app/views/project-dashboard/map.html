@@ -214,8 +214,12 @@
     }
 
     .dashboard-map-panel__layer {
-      justify-content: space-between;
       margin-bottom: 12px;
+    }
+
+    .dashboard-map-panel__layer > .govuk-checkboxes {
+      flex: 1 1 0;
+      min-width: 0;
     }
 
     .dashboard-map-panel__interventions .govuk-checkboxes {
@@ -226,6 +230,7 @@
       border: 1px solid #0b0c0c;
       box-sizing: border-box;
       display: inline-block;
+      flex: 0 0 24px;
       height: 24px;
       width: 24px;
     }

@@ -169,7 +169,7 @@
 
       datasets.push({
         id: 'habitat-parcels-im',
-        label: isDashboardMap ? 'Vertical area habitats' : 'Habitat parcels',
+        label: 'Habitat parcels',
         geojson: normalizedParcels,
         idProperty: '__imFeatureKey',
         style: {
@@ -1206,7 +1206,7 @@
           ? 'Both'
           : 'Baseline';
     var layerDescription =
-      'Red line boundary, Vertical area habitats, Hedgerows, Watercourses, Trees';
+      'Red line boundary, Area habitats, Hedgerows, Watercourses, Trees';
     var interventionSection =
       mapView === 'baseline' ? '' : buildDashboardInterventionSection();
     var layerControls = datasets
@@ -1274,12 +1274,6 @@
         'Post intervention',
         mapView === 'post-intervention',
         !hasPostIntervention
-      ) +
-      buildDashboardMapRadio(
-        'both',
-        'Both',
-        mapView === 'both',
-        !(hasBaseline && hasPostIntervention)
       ) +
       '</div>' +
       '</div></div>' +
@@ -2029,14 +2023,16 @@
         dismissible: true,
         exclusive: false,
         open: true,
-        showLabel: false
+        showLabel: false,
+        width: '380px'
       },
       desktop: {
         slot: 'banner',
         dismissible: true,
         exclusive: false,
         open: true,
-        showLabel: false
+        showLabel: false,
+        width: '380px'
       },
       html:
         '<div class="habitat-help-banner-content" role="status">' +
