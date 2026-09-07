@@ -37,7 +37,7 @@
     "govuk-frontend": "6.5.0",
     "govuk-prototype-kit": "13.20.4",
     "lru-cache": "11.5.2",
-    "multer": "^2.2.0",
+    "multer": "^2.3.0",
     "ol": "^10.10.0",
     "ol-mapbox-style": "^13.4.3",
     "shpjs": "^6.1.0",
