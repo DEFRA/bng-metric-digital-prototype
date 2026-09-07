@@ -169,7 +169,7 @@
 
       datasets.push({
         id: 'habitat-parcels-im',
-        label: 'Habitat parcels',
+        label: isDashboardMap ? 'Area habitats' : 'Habitat parcels',
         geojson: normalizedParcels,
         idProperty: '__imFeatureKey',
         style: {
