@@ -41,7 +41,7 @@
     "ol": "^10.10.0",
     "ol-mapbox-style": "^13.4.3",
     "shpjs": "^6.1.0",
-    "undici": "8.10.0",
+    "undici": "8.10.1",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
