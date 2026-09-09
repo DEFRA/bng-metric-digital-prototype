@@ -138,6 +138,7 @@
     }
 
     var datasets = [];
+    var areaHabitatDataset = null;
     var boundaryGeoJson = mapData.siteBoundary || null;
     var parcelsGeoJson = mapData.parcels || null;
     var hedgerowsGeoJson = mapData.hedgerows || null;
@@ -167,7 +168,7 @@
 
       interactiveMapState.datasetsByType.parcel = normalizedParcels.features;
 
-      datasets.push({
+      areaHabitatDataset = {
         id: 'habitat-parcels-im',
         label: isDashboardMap ? 'Area habitats' : 'Habitat parcels',
         geojson: normalizedParcels,
@@ -178,7 +179,11 @@
         sublayers: buildAreaHabitatSublayers(),
         showInMenu: true,
         showInKey: true
-      });
+      };
+
+      if (!isDashboardMap) {
+        datasets.push(areaHabitatDataset);
+      }
     }
 
     if (hasFeatures(hedgerowsGeoJson)) {
@@ -253,6 +258,11 @@
     }
 
     if (isDashboardMap) {
+      // Put flat key entries before the grouped habitat entries while retaining
+      // the real area habitat dataset in both the map and the key.
+      if (areaHabitatDataset) {
+        datasets.push(areaHabitatDataset);
+      }
       datasets = datasets.concat(buildHabitatKeyDatasets());
     }
 
