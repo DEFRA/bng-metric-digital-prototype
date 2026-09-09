@@ -1,4 +1,4 @@
-const { ProxyAgent } = require('undici')
+const { fetch, ProxyAgent } = require('undici')
 
 /**
  * Fetch with optional proxy support
