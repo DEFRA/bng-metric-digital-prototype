@@ -877,13 +877,27 @@ const postInterventionHabitats = {
   }
 }
 
+// "Reports" — the outstanding tasks that stand between the user and a final
+// report. Static placeholder rows for User Research: the journey has no task
+// engine, so nothing here is derived from the uploaded file.
+const reportsTasksTable = {
+  head: [{ text: 'Task' }, { text: 'Action' }],
+  rows: [
+    ['Task 1', 'Add project details', '/project-dashboard/project-details'],
+    ['Task 2', 'Example action', '#']
+  ].map(([task, action, href]) => [
+    { text: task },
+    { html: `<a class="govuk-link" href="${href}">${action}</a>` }
+  ])
+}
+
 /**
  * Build the side navigation, marking the current top-level section and,
  * when inside Area habitats, the current sub-section. "Flags" and
  * "Post-intervention" only appear once a post-intervention file has been
  * uploaded — matching the Figma design, where those sub-items and their
  * screens don't exist until then.
- * @param {string} section - "summary" or "area-habitats"
+ * @param {string} section - "summary", "area-habitats" or "reports"
  * @param {string} [sub] - "flags", "trading-rules", "baseline" or "post-intervention"
  * @param {boolean} filled - whether a post-intervention file has been uploaded
  */
@@ -926,6 +940,11 @@ function sideNav(section, sub, filled) {
         href: '/project-dashboard/area-habitats',
         current: section === 'area-habitats' && !sub,
         items: section === 'area-habitats' ? areaHabitatsItems : undefined
+      },
+      {
+        text: 'Reports',
+        href: '/project-dashboard/reports',
+        current: section === 'reports'
       }
     ]
   }
@@ -1058,6 +1077,14 @@ function registerProjectDashboardRoutes(router) {
         headingLevel: 3,
         cards: areaHabitatsBreakdownCards(filled)
       }
+    })
+  })
+
+  router.get('/project-dashboard/reports', function (req, res) {
+    const filled = Boolean(req.session.data.postInterventionUploaded)
+    res.render('project-dashboard/reports', {
+      sideNav: sideNav('reports', null, filled),
+      tasksTable: reportsTasksTable
     })
   })
 
