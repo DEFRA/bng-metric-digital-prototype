@@ -176,6 +176,33 @@ To update dependencies use [npm-check-updates](https://github.com/raineorshine/n
 ncu --interactive --format group
 ```
 
+## PDF site report
+
+`/test-data/pdf-report` (linked from `/dev`) turns a baseline and a post-intervention
+GeoPackage into a printable site summary: two site maps over an Ordnance Survey basemap,
+then one card per habitat parcel carrying every attribute the file records.
+
+Nothing is calculated — every number on the report is read from the uploaded files or
+measured from their geometry, and there are no biodiversity unit figures on it. The tool
+exists to show what the data and the layout look like on a page.
+
+The engine in `app/lib/pdf-report/` is a port of the BMD-984 spike
+(`bng-metric-harness`, `spikes/bmd-984-pdf-export/`), which is also what the report route
+in `bng-metric-backend` is built from. See
+[plans/pdf-report-export-tool.md](./plans/pdf-report-export-tool.md) for the reasoning.
+
+Two things about the output are easy to get wrong because they are invisible on the page:
+
+- **Typefaces.** PDF/UA-1 requires every font to be embedded in the file. GDS Transport
+  (read from the installed `govuk-frontend` package, never committed here — this is a
+  public repository and its licence does not permit republishing it) and the bundled Noto
+  Sans both embed. The two PDF built-in options, Helvetica and Times, do not, so they
+  produce a non-conformant file. The form and the result page both say so.
+- **The basemap.** It needs `OS_PROJECT_API_KEY` with the _OS NGD API – Tiles_ product —
+  the same key and product the interactive map pages already use, so no new secret is
+  needed. Without it, or if OS cannot be reached, the report is drawn over a generated
+  British National Grid instead and the result page says that it was.
+
 ## Environment Variables and Secrets
 
 Environment variables and Secrets are used to configure your prototype. Where you set them can be seen in the table
