@@ -178,9 +178,17 @@ ncu --interactive --format group
 
 ## PDF site report
 
-`/test-data/pdf-report` (linked from `/dev`) turns a baseline and a post-intervention
-GeoPackage into a printable site summary: two site maps over an Ordnance Survey basemap,
-then one card per habitat parcel carrying every attribute the file records.
+There are two ways to produce one, and they draw through the same code:
+
+- **`/test-data/pdf-report`** (linked from `/dev`) — the developer tool. Upload a baseline
+  and a post-intervention GeoPackage, choose a typeface, a basemap and a parcel layout.
+- **The "Download report" button on `/project-dashboard/summary`** — the journey's own
+  entry point. No form and no options; it reports on whatever the session has already
+  uploaded, and falls back to committed demo data on a cold session, so it always
+  produces something to look at. It reads no files.
+
+Either way the output is the same report: two site maps over an Ordnance Survey basemap,
+then one card per habitat parcel carrying every attribute the data records.
 
 Nothing is calculated — every number on the report is read from the uploaded files or
 measured from their geometry, and there are no biodiversity unit figures on it. The tool
@@ -188,8 +196,7 @@ exists to show what the data and the layout look like on a page.
 
 The engine in `app/lib/pdf-report/` is a port of the BMD-984 spike
 (`bng-metric-harness`, `spikes/bmd-984-pdf-export/`), which is also what the report route
-in `bng-metric-backend` is built from. See
-[plans/pdf-report-export-tool.md](./plans/pdf-report-export-tool.md) for the reasoning.
+in `bng-metric-backend` is built from.
 
 Two things about the output are easy to get wrong because they are invisible on the page:
 

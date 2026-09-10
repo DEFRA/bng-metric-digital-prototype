@@ -44,6 +44,14 @@
             rel: "noopener noreferrer"
           }
         }) }}
+        {{ govukButton({
+          html: 'Download report<span class="govuk-visually-hidden"> as a PDF</span>',
+          href: "/project-dashboard/report.pdf",
+          classes: "govuk-button--secondary",
+          attributes: {
+            download: "site-summary.pdf"
+          }
+        }) }}
       </div>
     </div>
 

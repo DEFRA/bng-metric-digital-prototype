@@ -71,12 +71,14 @@ function getEngine() {
       import('../lib/pdf-report/document.mjs'),
       import('../lib/pdf-report/gpkg.mjs'),
       import('../lib/pdf-report/fonts.mjs'),
-      import('../lib/pdf-report/basemap.mjs')
-    ]).then(([document, gpkg, fonts, basemap]) => ({
+      import('../lib/pdf-report/basemap.mjs'),
+      import('../lib/pdf-report/journey-site.mjs')
+    ]).then(([document, gpkg, fonts, basemap, journeySite]) => ({
       document,
       gpkg,
       fonts,
-      basemap
+      basemap,
+      journeySite
     }))
   }
   return enginePromise
@@ -173,6 +175,64 @@ function toBuffer(doc) {
   })
 }
 
+/**
+ * Draw a report. The single path both entry points go through — the developer
+ * tool, which gets its site from an uploaded GeoPackage, and the summary
+ * page's button, which gets its site from the session or the demo data.
+ *
+ * Keeping one builder is the point of having two entry points: if the button
+ * ever renders through different code, it has stopped demonstrating the
+ * report the tool produces.
+ */
+async function buildReport(
+  engine,
+  { baseline, postIntervention, font, basemapSource, layout }
+) {
+  const fonts = engine.fonts.resolveFonts(font)
+  const basemap = await engine.basemap.resolveBasemap({
+    source: basemapSource,
+    apiKey: process.env.OS_PROJECT_API_KEY
+  })
+
+  const started = Date.now()
+  const { doc, stats } = await engine.document.buildSummaryPdf({
+    baseline,
+    postIntervention,
+    grid: basemap.grid,
+    tileSource: basemap.tileSource,
+    layout,
+    fonts
+  })
+
+  return {
+    buffer: await toBuffer(doc),
+    stats,
+    fonts,
+    basemap,
+    elapsedMs: Date.now() - started
+  }
+}
+
+/** `Test Area` → `test-area-summary.pdf`. */
+function attachmentName(siteName) {
+  const name = (siteName ?? 'site')
+    .replace(/[^a-zA-Z0-9-_ ]/g, '')
+    .trim()
+    .replaceAll(' ', '-')
+    .toLowerCase()
+  return `${name || 'site'}-summary.pdf`
+}
+
+function sendPdf(res, buffer, siteName) {
+  res.set('Content-Type', 'application/pdf')
+  res.set(
+    'Content-Disposition',
+    `attachment; filename="${attachmentName(siteName)}"`
+  )
+  res.set('Content-Length', String(buffer.length))
+  res.send(buffer)
+}
+
 function registerPdfReportRoutes(router) {
   router.get('/test-data/pdf-report', async function (req, res, next) {
     try {
@@ -221,22 +281,16 @@ function registerPdfReportRoutes(router) {
           ? engine.gpkg.readSite(postPath)
           : null
 
-        const fonts = engine.fonts.resolveFonts(submitted.font)
-        const basemap = await engine.basemap.resolveBasemap({
-          source: submitted.basemap,
-          apiKey: process.env.OS_PROJECT_API_KEY
-        })
-
-        const started = Date.now()
-        const { doc, stats } = await engine.document.buildSummaryPdf({
-          baseline,
-          postIntervention,
-          grid: basemap.grid,
-          tileSource: basemap.tileSource,
-          layout: submitted.layout,
-          fonts
-        })
-        const buffer = await toBuffer(doc)
+        const { buffer, stats, fonts, basemap, elapsedMs } = await buildReport(
+          engine,
+          {
+            baseline,
+            postIntervention,
+            font: submitted.font,
+            basemapSource: submitted.basemap,
+            layout: submitted.layout
+          }
+        )
 
         const id = crypto.randomUUID()
         reports.set(id, { buffer, siteName: baseline.siteName })
@@ -245,7 +299,7 @@ function registerPdfReportRoutes(router) {
           id,
           siteName: baseline.siteName ?? 'Unnamed site',
           sizeKb: (buffer.length / 1024).toFixed(1),
-          elapsedSeconds: ((Date.now() - started) / 1000).toFixed(1),
+          elapsedSeconds: (elapsedMs / 1000).toFixed(1),
           stats,
           layout: submitted.layout,
           fonts,
@@ -270,20 +324,52 @@ function registerPdfReportRoutes(router) {
     if (!report) {
       return res.status(404).render('pdf-report/expired')
     }
+    sendPdf(res, report.buffer, report.siteName)
+  })
 
-    const name = (report.siteName ?? 'site')
-      .replace(/[^a-zA-Z0-9-_ ]/g, '')
-      .trim()
-      .replaceAll(' ', '-')
-      .toLowerCase()
+  /**
+   * The journey's own "Download report" button, on the project summary page.
+   *
+   * No form and no options: one click, one file. It draws through exactly the
+   * same `buildReport` as the developer tool, with the choices a real service
+   * would have made for the user — GDS Transport, OS mapping, cards — so what
+   * comes out is the report, not a reduced version of it.
+   *
+   * The site comes from whatever the session already holds: an uploaded
+   * GeoPackage from `/project-dashboard/upload`, or the committed demo data
+   * when the session is cold. Nothing is read from a file here and nothing is
+   * calculated; see `app/lib/pdf-report/journey-site.mjs`.
+   */
+  router.get('/project-dashboard/report.pdf', async function (req, res, next) {
+    try {
+      const engine = await getEngine()
+      const { baseline, postIntervention, source } =
+        engine.journeySite.siteForJourney(req.session?.data ?? {})
 
-    res.set('Content-Type', 'application/pdf')
-    res.set(
-      'Content-Disposition',
-      `attachment; filename="${name || 'site'}-summary.pdf"`
-    )
-    res.set('Content-Length', String(report.buffer.length))
-    res.send(report.buffer)
+      const { buffer, stats, fonts, basemap, elapsedMs } = await buildReport(
+        engine,
+        {
+          baseline,
+          postIntervention,
+          font: engine.fonts.DEFAULT_FONT_CHOICE,
+          basemapSource: engine.basemap.DEFAULT_BASEMAP_CHOICE,
+          layout: 'cards'
+        }
+      )
+
+      // The one line that says which of the two data sources was used, which
+      // typeface was embedded and whether OS answered. A download has nowhere
+      // to put that, and all three are invisible in the file.
+      console.log(
+        `[pdf-report] summary report: ${source} data, ${stats.habitats} parcels, ` +
+          `${fonts.name}, ${basemap.kind}, ${(buffer.length / 1024).toFixed(1)} kB ` +
+          `in ${elapsedMs} ms`
+      )
+
+      sendPdf(res, buffer, baseline.siteName)
+    } catch (error) {
+      next(error)
+    }
   })
 }
 

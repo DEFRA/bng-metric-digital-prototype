@@ -202,3 +202,105 @@ test('an unrecognised option falls back rather than being trusted', async () => 
   assert.equal(res.model.layout, 'cards')
   assert.equal(res.model.fonts.name, 'GDS Transport', 'unknown font falls back to the default')
 })
+
+test('the summary page button streams a PDF straight back', async () => {
+  const res = fakeResponse()
+
+  await handlers()('GET /project-dashboard/report.pdf')(
+    { session: { data: {} } },
+    res,
+    (error) => {
+      throw error
+    }
+  )
+
+  assert.equal(res.headers['content-type'], 'application/pdf')
+  assert.match(res.headers['content-disposition'], /^attachment; filename=".+-summary\.pdf"$/)
+  assert.equal(res.body.subarray(0, 5).toString(), '%PDF-')
+  assert.equal(res.headers['content-length'], String(res.body.length))
+})
+
+test('the button works on a cold session, from the demo data', async () => {
+  const res = fakeResponse()
+
+  // No session at all, not merely an empty one: a prototype user can land on
+  // the summary page without having uploaded anything.
+  await handlers()('GET /project-dashboard/report.pdf')({}, res, (error) => {
+    throw error
+  })
+
+  assert.equal(res.body.subarray(0, 5).toString(), '%PDF-')
+  assert.match(res.headers['content-disposition'], /oakfield-farm-demo-data-summary\.pdf/)
+})
+
+test('the button reports on what the session has actually uploaded', async () => {
+  const square = (x, y, size) => ({
+    type: 'Feature',
+    properties: { 'Parcel Ref': 'S1', 'Baseline Habitat Type': 'Modified grassland' },
+    geometry: {
+      type: 'Polygon',
+      coordinates: [
+        [
+          [x, y],
+          [x + size, y],
+          [x + size, y + size],
+          [x, y + size],
+          [x, y]
+        ]
+      ]
+    }
+  })
+  const collection = (features) => ({ type: 'FeatureCollection', features })
+  const res = fakeResponse()
+
+  await handlers()('GET /project-dashboard/report.pdf')(
+    {
+      session: {
+        data: {
+          projectName: 'Riverside Meadows',
+          projectDashboardMapDataByKind: {
+            baseline: {
+              siteBoundary: collection([square(400_000, 300_000, 300)]),
+              parcels: collection([square(400_000, 300_000, 150)])
+            }
+          }
+        }
+      }
+    },
+    res,
+    (error) => {
+      throw error
+    }
+  )
+
+  assert.equal(res.body.subarray(0, 5).toString(), '%PDF-')
+  assert.match(
+    res.headers['content-disposition'],
+    /riverside-meadows-summary\.pdf/,
+    "the project's own name, not the demo site's"
+  )
+})
+
+test('both entry points draw the same report from the same site', async () => {
+  // The developer tool and the journey button are only worth having as two
+  // routes if they are one renderer. Same site, same options, same bytes —
+  // apart from the creation date pdfkit stamps into every document.
+  const { siteForJourney } = await import('../../app/lib/pdf-report/journey-site.mjs')
+  const { buildSummaryPdf } = await import('../../app/lib/pdf-report/document.mjs')
+  const { resolveBasemap } = await import('../../app/lib/pdf-report/basemap.mjs')
+  const { resolveFonts } = await import('../../app/lib/pdf-report/fonts.mjs')
+
+  const { baseline, postIntervention } = siteForJourney({})
+  const basemap = await resolveBasemap({ source: 'synthetic' })
+  const { stats } = await buildSummaryPdf({
+    baseline,
+    postIntervention,
+    grid: basemap.grid,
+    tileSource: basemap.tileSource,
+    layout: 'cards',
+    fonts: resolveFonts('gds-transport')
+  })
+
+  assert.equal(stats.habitats, 6, 'the demo post-intervention side has six parcels')
+  assert.equal(stats.maps, 2)
+})
