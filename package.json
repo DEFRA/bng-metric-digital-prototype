@@ -22,7 +22,7 @@
     "setup:husky": "node -e \"try { (await import('husky')).default() } catch (e) { if (e.code !== 'ERR_MODULE_NOT_FOUND') throw e }\" --input-type module",
     "install:gitleaks": "node scripts/install-gitleaks.mjs",
     "test": "npm run test:unit && npm run test:features",
-    "test:unit": "node --test \"test/**/*.test.js\"",
+    "test:unit": "node --test \"test/**/*.test.{js,mjs}\"",
     "test:features": "cucumber-js features/"
   },
   "dependencies": {
@@ -40,6 +40,7 @@
     "multer": "^2.3.0",
     "ol": "^10.10.0",
     "ol-mapbox-style": "^13.4.3",
+    "pdfkit": "0.20.1",
     "shpjs": "^6.1.0",
     "undici": "8.10.1",
     "xlsx": "^0.18.5"

@@ -1,0 +1,577 @@
+/**
+ * The PDF itself: a tagged, PDF/UA-targeted site summary.
+ *
+ * Structure of the output:
+ *   Page 1  site heading, key figures (pdfkit's built-in tagged table),
+ *           baseline and post-intervention site maps side by side, legend
+ *   Page 2+ the habitat parcels, in one of two layouts:
+ *             cards (default) — one card per parcel, every recorded attribute
+ *                               on its own line, in `habitat-cards.mjs`
+ *             table           — one row per parcel: mini-map, ref, type,
+ *                               condition, area. Here, in `addHabitatPages`
+ *
+ * Every map is a `Figure` with a bbox and alt text, and every map is followed
+ * by the same information as real text — a map conveys nothing to a screen
+ * reader, so the rows or the card lines are what carry the content.
+ */
+
+import PDFDocument from 'pdfkit'
+
+import {
+  drawBasemap, drawGeometry, drawGraticule, drawScaleBar, fetchTiles,
+  withFrameClip, HABITAT_STYLES
+} from './map.mjs'
+import { gridIntervalMetres } from './tiles.mjs'
+import { envelopeOfAll, polygonAreaSqm, lineLengthMetres } from './geometry.mjs'
+import { pickZoom, effectiveDpi } from './grid.mjs'
+import { projectorFor } from './projector.mjs'
+import { addHabitatCards } from './habitat-cards.mjs'
+import { drawMiniMap, prepareThumbnails } from './thumbnail.mjs'
+import { BODY, BOLD, labelAsArtifact, plural, registerFonts } from './page-furniture.mjs'
+import {
+  A4_PORTRAIT, BORDER, CONTENT_WIDTH, HABITAT_ROW_HEIGHT, INK, MAP_PAD, MARGIN,
+  MINI_MAP_SIZE, MUTED, SITE_MAP_HEIGHT
+} from './layout.mjs'
+
+// Re-exported: the alt-text test imports it from here, and this is still the
+// module that decides what a map's alt text says.
+export { plural }
+
+/**
+ * Build the PDF.
+ *
+ * @param {object} options
+ * @param {object} options.baseline    site read by readSite()
+ * @param {object|null} options.postIntervention
+ * @param {object} options.grid        tile matrix set
+ * @param {Function} options.tileSource
+ * @param {boolean} options.graticule  draw the registration proof overlay
+ * @param {boolean} options.habitatBasemap  basemap behind each parcel thumbnail
+ * @param {'cards'|'table'} options.layout  how the parcels are presented
+ * @param {object} [options.fonts]  resolved body fonts; see fonts.mjs
+ * @returns {Promise<{ doc: PDFDocument, stats: object }>}
+ */
+export async function buildSummaryPdf({
+  baseline,
+  postIntervention = null,
+  grid,
+  tileSource,
+  graticule = false,
+  habitatBasemap = true,
+  layout = 'cards',
+  fonts = undefined
+}) {
+  const siteName = baseline.siteName ?? 'BNG site'
+  const title = `Biodiversity net gain summary — ${siteName}`
+
+  const doc = new PDFDocument({
+    size: A4_PORTRAIT,
+    margin: MARGIN,
+    // PDF/UA checklist, from pdfkit's accessibility docs.
+    pdfVersion: '1.5',
+    subset: 'PDF/UA',
+    tagged: true,
+    displayTitle: true,
+    lang: 'en-GB',
+    info: {
+      Title: title,
+      Author: 'Defra — Biodiversity Net Gain service',
+      Subject: 'Site summary with baseline and post-intervention habitat mapping'
+    }
+  })
+
+  registerFonts(doc, fonts)
+
+  const stats = { maps: 0, tiles: 0, habitats: 0, zooms: [] }
+  const root = doc.struct('Document', { title })
+  doc.addStructure(root)
+
+  await addSummaryPage({ doc, root, baseline, postIntervention, grid, tileSource, graticule, stats, siteName })
+
+  // Same parcels, same mini-maps, same alt text; the layouts differ only in
+  // how much of the file they have room to show. See habitat-cards.mjs.
+  const addParcels = layout === 'table' ? addHabitatPages : addHabitatCards
+  await addParcels({
+    doc, root, baseline, postIntervention, grid, tileSource,
+    withBasemap: habitatBasemap, stats
+  })
+
+  root.end()
+  return { doc, stats }
+}
+
+/* ------------------------------------------------------------------ page 1 */
+
+async function addSummaryPage({
+  doc, root, baseline, postIntervention, grid, tileSource, graticule, stats, siteName
+}) {
+  const section = doc.struct('Sect', { title: 'Site summary' })
+  root.add(section)
+
+  section.add(
+    doc.struct('H1', () => {
+      doc.font(BOLD).fontSize(22).fillColor(INK)
+      doc.text(`${siteName} `, MARGIN, MARGIN, { width: CONTENT_WIDTH })
+    })
+  )
+
+  section.add(
+    doc.struct('P', () => {
+      doc.font(BODY).fontSize(10).fillColor(MUTED)
+      doc.text(
+        'Baseline and post-intervention habitat summary. All areas are measured from the ' +
+          'supplied geometry on the British National Grid (EPSG:27700). ',
+        { width: CONTENT_WIDTH }
+      )
+    })
+  )
+
+  doc.moveDown(0.8)
+  addKeyFiguresTable(doc, section, baseline, postIntervention)
+
+  doc.moveDown(1)
+  section.add(
+    doc.struct('H2', () => {
+      doc.font(BOLD).fontSize(14).fillColor(INK)
+      doc.text('Site maps ', { width: CONTENT_WIDTH })
+    })
+  )
+
+  const mapsTop = doc.y + 6
+  const gutter = 16
+  const mapWidth = (CONTENT_WIDTH - gutter) / 2
+
+  // A single shared extent for both maps, so they are directly comparable —
+  // the same ground at the same scale on both sides.
+  const sharedEnvelope = envelopeOfAll(
+    [baseline, postIntervention]
+      .filter(Boolean)
+      .map((site) => site.redLine?.geometry)
+      .filter(Boolean)
+  )
+
+  const panels = [
+    { label: 'Baseline', site: baseline, style: HABITAT_STYLES.baseline },
+    postIntervention && {
+      label: 'Post-intervention',
+      site: postIntervention,
+      style: HABITAT_STYLES.postIntervention
+    }
+  ].filter(Boolean)
+
+  for (const [index, panel] of panels.entries()) {
+    const frame = {
+      x: MARGIN + index * (mapWidth + gutter),
+      y: mapsTop + 14,
+      width: mapWidth,
+      height: SITE_MAP_HEIGHT
+    }
+
+    labelAsArtifact(doc, () => {
+      doc.font(BOLD).fontSize(9.5).fillColor(INK)
+      doc.text(`${panel.label} `, frame.x, mapsTop, { width: frame.width })
+    })
+
+    // All tile I/O happens before any drawing — see fetchTiles in map.mjs.
+    const projector = projectorFor(sharedEnvelope, frame, { pad: MAP_PAD })
+    const z = pickZoom(grid, projector.extent, frame.width)
+    const { tiles } = await fetchTiles(grid, z, projector.extent, tileSource)
+    // Derived from the grid, not read off a tile — see gridIntervalMetres.
+    const interval = gridIntervalMetres(grid.resolutions[z], grid.tileSize)
+
+    const drawn = drawSiteMap({
+      doc, frame, site: panel.site, style: panel.style, grid, z, tiles, interval,
+      graticule, projector
+    })
+    stats.maps += 1
+    stats.tiles += drawn.tileCount
+    stats.zooms.push(drawn.z)
+
+    section.add(
+      doc.struct('Figure', {
+        alt: siteMapAltText(panel.label, panel.site, drawn),
+        bbox: [frame.x, frame.y, frame.x + frame.width, frame.y + frame.height]
+      }, [drawn.content])
+    )
+  }
+
+  doc.y = mapsTop + 14 + SITE_MAP_HEIGHT + 26
+  section.add(buildLegend(doc, panels))
+  section.end()
+}
+
+/**
+ * Draw one site map: basemap, then habitat layers, then furniture.
+ *
+ * Synchronous by design. Tiles are already in hand, so nothing can interleave
+ * between the marked-content start and its end — which keeps both the visual
+ * layering and the tagged reading order intact.
+ *
+ * Returns the marked structure content so the caller can wrap it in a Figure.
+ */
+function drawSiteMap({
+  doc, frame, site, style, grid, z, tiles, interval, graticule, projector
+}) {
+  const content = doc.markStructureContent('Figure')
+
+  let tileCount = 0
+  withFrameClip(doc, frame, () => {
+    tileCount = drawBasemap(doc, { grid, z, projector, tiles }).tileCount
+
+    for (const habitat of site.layers.habitats?.features ?? []) {
+      drawGeometry(doc, habitat.geometry, projector, style)
+    }
+    for (const hedgerow of site.layers.hedgerows?.features ?? []) {
+      drawGeometry(doc, hedgerow.geometry, projector, HABITAT_STYLES.hedgerow)
+    }
+    for (const watercourse of site.layers.watercourses?.features ?? []) {
+      drawGeometry(doc, watercourse.geometry, projector, HABITAT_STYLES.watercourse)
+    }
+    for (const tree of site.layers.trees?.features ?? []) {
+      drawGeometry(doc, tree.geometry, projector, HABITAT_STYLES.tree)
+    }
+    if (site.redLine) {
+      drawGeometry(doc, site.redLine.geometry, projector, HABITAT_STYLES.redLine)
+    }
+    if (graticule && interval) {
+      drawGraticule(doc, projector, interval)
+    }
+  })
+
+  doc.endMarkedContent()
+
+  // Frame edge and scale bar are decoration, not content.
+  labelAsArtifact(doc, () => {
+    doc.save().lineWidth(0.6).strokeColor(BORDER)
+    doc.rect(frame.x, frame.y, frame.width, frame.height).stroke()
+    doc.restore()
+    drawScaleBar(doc, projector, {
+      x: frame.x + 6,
+      y: frame.y + frame.height - 14,
+      maxWidth: frame.width / 3
+    })
+  })
+
+  return {
+    content,
+    tileCount,
+    z,
+    dpi: effectiveDpi(grid, z, projector.extent, frame.width),
+    projector
+  }
+}
+
+function siteMapAltText(label, site, drawn) {
+  const habitats = site.layers.habitats?.features?.length ?? 0
+  const hedgerows = site.layers.hedgerows?.features?.length ?? 0
+  const watercourses = site.layers.watercourses?.features?.length ?? 0
+  const area = site.redLine ? polygonAreaSqm(site.redLine.geometry) : 0
+  const width = drawn.projector.extent.maxX - drawn.projector.extent.minX
+
+  // Alt text says what the map shows, not that a map exists. The parcel-level
+  // detail is in the table that follows, which is where a screen-reader user
+  // gets the actual data.
+  return (
+    `${label} site map. Red line boundary enclosing ${(area / 10_000).toFixed(2)} hectares, ` +
+    `containing ${plural(habitats, 'habitat parcel')}, ${plural(hedgerows, 'hedgerow')} ` +
+    `and ${plural(watercourses, 'watercourse')}. ` +
+    `The map covers approximately ${Math.round(width)} metres across. ` +
+    'Each parcel is listed with its area and condition in the habitat table that follows. '
+  )
+}
+
+/* --------------------------------------------------------- key figures */
+
+function addKeyFiguresTable(doc, section, baseline, postIntervention) {
+  const rows = [
+    ['Measure', 'Baseline', 'Post-intervention'],
+    ...['habitats', 'hedgerows', 'watercourses', 'trees'].map((role) => [
+      LAYER_LABELS[role],
+      describeLayer(baseline, role),
+      postIntervention ? describeLayer(postIntervention, role) : 'Not supplied'
+    ])
+  ]
+
+  // pdfkit's built-in table generation (added in 0.17.0).
+  //
+  // `structParent` is what makes it accessible, and it is easy to get wrong:
+  // pdfkit's table builds its OWN Table/TR/TH/TD structure and attaches it to
+  // the element given here. Wrapping the call in `doc.struct('Table', () => …)`
+  // instead looks right and renders identically, but emits a Table element
+  // containing no rows at all — the cells become one undifferentiated marked
+  // content sequence. Verified by counting /S /TD in the output.
+  doc.font(BODY).fontSize(9.5).fillColor(INK)
+  doc.table({
+      structParent: section,
+      columnStyles: ['*', 110, 110],
+      rowStyles: (index) =>
+        index === 0
+          ? { border: [0, 0, 1.5, 0], borderColor: INK, font: BOLD }
+          : { border: [0, 0, 0.5, 0], borderColor: BORDER },
+      // `type` and `scope` are pdfkit's accessibility hooks for tables. Scope
+      // is undocumented but supported ('Row' | 'Column' | 'Both'), and setting
+      // it also makes pdfkit emit a /Headers array linking each data cell to
+      // the headers that describe it — which is what a screen reader announces.
+      data: rows.map((row, rowIndex) =>
+        row.map((cell, columnIndex) => ({
+          text: `${cell} `,
+          ...headerRole(rowIndex, columnIndex)
+        }))
+      )
+  })
+}
+
+/** Column headers scope down their column; the stub column scopes its row. */
+function headerRole(rowIndex, columnIndex) {
+  if (rowIndex === 0) {
+    return { type: 'TH', scope: 'Column' }
+  }
+  if (columnIndex === 0) {
+    return { type: 'TH', scope: 'Row' }
+  }
+  return { type: 'TD' }
+}
+
+const LAYER_LABELS = {
+  habitats: 'Area habitats',
+  hedgerows: 'Hedgerows',
+  watercourses: 'Watercourses',
+  trees: 'Individual trees'
+}
+
+function describeLayer(site, role) {
+  const features = site.layers[role]?.features ?? []
+  if (features.length === 0) {
+    return 'None'
+  }
+  if (role === 'habitats') {
+    const area = features.reduce((sum, f) => sum + polygonAreaSqm(f.geometry), 0)
+    return `${features.length} parcels, ${(area / 10_000).toFixed(2)} ha`
+  }
+  if (role === 'trees') {
+    return `${features.length} trees`
+  }
+  const length = features.reduce((sum, f) => sum + lineLengthMetres(f.geometry), 0)
+  const noun = features.length === 1 ? 'feature' : 'features'
+  return `${features.length} ${noun} (${Math.round(length)} m)`
+}
+
+/* ------------------------------------------------------------- legend */
+
+function buildLegend(doc, panels) {
+  const entries = [
+    ['Red line boundary', HABITAT_STYLES.redLine.stroke],
+    ...panels.map((panel) => [`${panel.label} parcel`, panel.style.fill]),
+    ['Hedgerow', HABITAT_STYLES.hedgerow.stroke],
+    ['Watercourse', HABITAT_STYLES.watercourse.stroke]
+  ]
+
+  // Share the content width evenly so labels never collide, whatever the
+  // number of entries (a post-intervention file adds one).
+  const columnWidth = CONTENT_WIDTH / entries.length
+  const swatch = 8
+  const top = doc.y
+
+  labelAsArtifact(doc, () => {
+    entries.forEach(([, colour], index) => {
+      doc.save()
+      doc
+        .rect(MARGIN + index * columnWidth, top + 1, swatch, swatch)
+        .fillColor(colour)
+        .fillOpacity(0.75)
+        .fill()
+      doc.restore()
+    })
+  })
+
+  // The legend's meaning is carried by text, not only by the swatch colours —
+  // colour alone must never be the sole carrier of information.
+  return doc.struct('P', () => {
+    doc.font(BODY).fontSize(7.5).fillColor(MUTED)
+    entries.forEach(([label], index) => {
+      doc.text(`${label} `, MARGIN + swatch + 4 + index * columnWidth, top + 1, {
+        width: columnWidth - swatch - 8,
+        lineGap: -1
+      })
+    })
+    doc.y = top + 20
+  })
+}
+
+/* ------------------------------------------- habitat pages, table layout */
+
+/**
+ * One row per parcel: mini-map, ref, type, condition, area.
+ *
+ * Kept, and selectable with `--table`, because it is the compact answer —
+ * eleven parcels a page against the card layout's two. What it cannot do is
+ * carry more than about five attributes, which is what `--cards` is for.
+ */
+async function addHabitatPages({
+  doc, root, baseline, postIntervention, grid, tileSource, withBasemap, stats
+}) {
+  const site = postIntervention ?? baseline
+  const label = postIntervention ? 'Post-intervention' : 'Baseline'
+  const style = postIntervention ? HABITAT_STYLES.postIntervention : HABITAT_STYLES.baseline
+  const features = site.layers.habitats?.features ?? []
+  if (features.length === 0) {
+    return
+  }
+
+  const section = doc.struct('Sect', { title: 'Habitat parcels' })
+  root.add(section)
+
+  doc.addPage()
+  section.add(
+    doc.struct('H2', () => {
+      doc.font(BOLD).fontSize(15).fillColor(INK)
+      doc.text(`${label} habitat parcels `, MARGIN, MARGIN, { width: CONTENT_WIDTH })
+    })
+  )
+  section.add(
+    doc.struct('P', () => {
+      doc.font(BODY).fontSize(9).fillColor(MUTED)
+      doc.text(
+        'Each row shows one parcel: its shape and position among the neighbouring parcels, ' +
+          'and its recorded attributes. Every value shown on a mini-map is also given as text ' +
+          'in the same row, so no information depends on seeing the picture. ',
+        { width: CONTENT_WIDTH }
+      )
+    })
+  )
+
+  const table = doc.struct('Table')
+  section.add(table)
+
+  // Prefetch every thumbnail's tiles before drawing starts. A mini-map frame
+  // is always the same size, so its extent — and therefore its tile set — does
+  // not depend on where the row lands on the page.
+  const thumbnails = await prepareThumbnails({
+    features, grid, tileSource, withBasemap
+  })
+
+  const columns = habitatColumns()
+  let y = doc.y + 10
+  table.add(buildHeaderRow(doc, columns, y))
+  y += 20
+
+  for (const feature of features) {
+    if (y + HABITAT_ROW_HEIGHT > A4_PORTRAIT[1] - MARGIN) {
+      doc.addPage()
+      y = MARGIN
+      table.add(buildHeaderRow(doc, columns, y))
+      y += 20
+    }
+
+    table.add(buildHabitatRow({
+      doc, feature, columns, y, style, site, grid,
+      thumbnail: thumbnails.get(feature), stats
+    }))
+    y += HABITAT_ROW_HEIGHT
+    stats.habitats += 1
+  }
+
+  table.end()
+  section.end()
+}
+
+function habitatColumns() {
+  const mapWidth = MINI_MAP_SIZE + 10
+  const remaining = CONTENT_WIDTH - mapWidth
+  return [
+    { key: 'map', label: 'Location', width: mapWidth },
+    { key: 'ref', label: 'Ref', width: remaining * 0.12 },
+    { key: 'type', label: 'Habitat type', width: remaining * 0.4 },
+    { key: 'condition', label: 'Condition', width: remaining * 0.26 },
+    { key: 'area', label: 'Area (ha)', width: remaining * 0.22 }
+  ]
+}
+
+function buildHeaderRow(doc, columns, y) {
+  const cells = columns.map((column, index) =>
+    doc.struct('TH', { title: column.label, scope: 'Column' }, () => {
+      doc.font(BOLD).fontSize(8.5).fillColor(INK)
+      doc.text(`${column.label} `, columnX(columns, index), y, { width: column.width - 6 })
+    })
+  )
+
+  labelAsArtifact(doc, () => {
+    doc.save().lineWidth(1).strokeColor(INK)
+    doc.moveTo(MARGIN, y + 14).lineTo(MARGIN + CONTENT_WIDTH, y + 14).stroke()
+    doc.restore()
+  })
+
+  return doc.struct('TR', cells)
+}
+
+function buildHabitatRow({
+  doc, feature, columns, y, style, site, grid, thumbnail, stats
+}) {
+  const properties = feature.properties
+  const areaHectares = polygonAreaSqm(feature.geometry) / 10_000
+  const values = {
+    ref: properties['Parcel Ref'] ?? '—',
+    type:
+      properties['Proposed Habitat Type'] ??
+      properties['Baseline Habitat Type'] ??
+      '—',
+    condition:
+      properties['Proposed Condition'] ?? properties['Baseline Condition'] ?? '—',
+    area: areaHectares.toFixed(3)
+  }
+
+  const frame = {
+    x: MARGIN + 2,
+    y: y + 3,
+    width: MINI_MAP_SIZE,
+    height: MINI_MAP_SIZE
+  }
+
+  // Order matters, and getting it wrong is silent: the marked-content sequence
+  // must be OPEN before anything is drawn into it. Drawing first and marking
+  // afterwards yields a Figure wrapping an empty sequence, with every drawing
+  // operation left as untagged, unartifacted content — PDF/UA 7.1-3. That is
+  // exactly what this did until the veraPDF check caught it (512 occurrences,
+  // all on the habitat pages; the site map, which marks first, was clean).
+  // `drawSiteMap` is the pattern to copy.
+  const figureContent = doc.markStructureContent('Figure')
+  stats.tiles += drawMiniMap({
+    doc, frame, feature, style, site, grid, thumbnail
+  }).tileCount
+  doc.endMarkedContent()
+
+  const cells = [
+    doc.struct('TD', [
+      // The alt text repeats no data — the sibling cells carry it — so it
+      // describes only what the picture adds: shape and position.
+      doc.struct('Figure', {
+        alt: `Outline of parcel ${values.ref}, ${values.type}, ${values.area} hectares, ` +
+          'shown in place among the neighbouring parcels. ',
+        bbox: [frame.x, frame.y, frame.x + frame.width, frame.y + frame.height]
+      }, [figureContent])
+    ]),
+    ...['ref', 'type', 'condition', 'area'].map((key, index) =>
+      doc.struct('TD', () => {
+        doc.font(BODY).fontSize(8.5).fillColor(INK)
+        doc.text(`${values[key]} `, columnX(columns, index + 1), y + 6, {
+          width: columns[index + 1].width - 6
+        })
+      })
+    )
+  ]
+
+  labelAsArtifact(doc, () => {
+    doc.save().lineWidth(0.4).strokeColor(BORDER)
+    doc
+      .moveTo(MARGIN, y + HABITAT_ROW_HEIGHT - 4)
+      .lineTo(MARGIN + CONTENT_WIDTH, y + HABITAT_ROW_HEIGHT - 4)
+      .stroke()
+    doc.restore()
+  })
+
+  return doc.struct('TR', cells)
+}
+
+function columnX(columns, index) {
+  return MARGIN + columns.slice(0, index).reduce((sum, column) => sum + column.width, 0)
+}
