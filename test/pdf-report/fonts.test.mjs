@@ -10,6 +10,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
+import path from 'node:path'
 
 import {
   DEFAULT_FONT_CHOICE,
@@ -62,8 +63,13 @@ test('GDS Transport is found in the installed govuk-frontend', () => {
   assert.ok(fs.existsSync(gds.bold), gds.bold)
   // Content-hashed filenames change with every govuk-frontend release, so the
   // resolver matches by prefix. Assert that shape, never the exact name.
-  assert.match(gds.regular, /\/light-[0-9a-f]+-v\d+\.woff2?$/)
-  assert.match(gds.bold, /\/bold-[0-9a-f]+-v\d+\.woff2?$/)
+  //
+  // Against the basename, not the whole path: the claim is about the file the
+  // resolver picked, and the directory it sits in is separator-dependent. A
+  // pattern anchored on "/" fails on Windows for a font that was found
+  // perfectly well.
+  assert.match(path.basename(gds.regular), /^light-[0-9a-f]+-v\d+\.woff2?$/)
+  assert.match(path.basename(gds.bold), /^bold-[0-9a-f]+-v\d+\.woff2?$/)
 })
 
 test('the default is GDS Transport, and it is not falling back', () => {
