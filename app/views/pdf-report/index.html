@@ -1,0 +1,93 @@
+{% extends "layouts/main.html" %}
+
+{% set pageName="Generate PDF site report" %}
+
+{% block content %}
+
+{% if error %}
+  {{ govukErrorSummary({
+    titleText: "Could not generate the report",
+    errorList: [{ text: error, href: "#baseline" }]
+  }) }}
+{% endif %}
+
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+
+    <h1 class="govuk-heading-xl">Generate PDF site report</h1>
+
+    <p class="govuk-body">
+      Upload a baseline and a post-intervention GeoPackage to see what the site summary
+      looks like as a printable, downloadable PDF — site maps over an Ordnance Survey
+      basemap, then one card per habitat parcel showing every attribute the file records.
+    </p>
+
+    <p class="govuk-body">
+      Nothing is calculated. Every number on the report is read from the files you upload
+      or measured from their geometry, so there are no biodiversity unit figures on it.
+      This tool is about the design and the layout of the data.
+    </p>
+
+    <form action="/test-data/pdf-report" method="post" enctype="multipart/form-data" novalidate>
+      <input type="hidden" name="_csrf" value="{{ csrfToken }}">
+
+      <h2 class="govuk-heading-m">Files</h2>
+
+      <div class="govuk-form-group">
+        <label class="govuk-label govuk-label--s" for="baseline">Baseline GeoPackage</label>
+        <div class="govuk-hint" id="baseline-hint">
+          A BNG-template .gpkg in British National Grid (EPSG:27700). Required.
+          Maximum {{ maxUploadMb }} MB.
+        </div>
+        <input class="govuk-file-upload" id="baseline" name="baseline" type="file"
+               accept=".gpkg" aria-describedby="baseline-hint">
+      </div>
+
+      <div class="govuk-form-group">
+        <label class="govuk-label govuk-label--s" for="postIntervention">Post-intervention GeoPackage</label>
+        <div class="govuk-hint" id="postIntervention-hint">
+          Optional. Without it the report is baseline-only: one site map, and the parcel
+          cards describe the baseline habitats.
+        </div>
+        <input class="govuk-file-upload" id="postIntervention" name="postIntervention" type="file"
+               accept=".gpkg" aria-describedby="postIntervention-hint">
+      </div>
+
+      <h2 class="govuk-heading-m govuk-!-margin-top-8">Options</h2>
+
+      {{ govukRadios({
+        name: "font",
+        fieldset: { legend: { text: "Typeface", classes: "govuk-fieldset__legend--s" } },
+        hint: { text: "PDF/UA requires every font to be embedded in the file. The two built-in options are not embedded, so they produce a non-conformant PDF — they are here so you can see the difference." },
+        items: fontItems
+      }) }}
+
+      {{ govukRadios({
+        name: "basemap",
+        fieldset: { legend: { text: "Basemap", classes: "govuk-fieldset__legend--s" } },
+        items: basemapItems
+      }) }}
+
+      {{ govukRadios({
+        name: "layout",
+        fieldset: { legend: { text: "How to show each parcel", classes: "govuk-fieldset__legend--s" } },
+        items: layoutItems
+      }) }}
+
+      {{ govukButton({ text: "Generate report" }) }}
+    </form>
+
+    <h2 class="govuk-heading-m">Accessibility</h2>
+
+    <p class="govuk-body">
+      The report is a tagged PDF targeting PDF/UA-1: every map is a figure with alternative
+      text, decoration is marked so screen readers skip it, and every value shown on a map
+      is also given as text in the same card. Passing an automated checker is necessary but
+      not sufficient — whether the alternative text is <em>useful</em> is a human judgement,
+      so NVDA and PAC passes still apply.
+    </p>
+
+  </div>
+</div>
+
+{% endblock %}

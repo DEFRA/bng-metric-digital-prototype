@@ -22,7 +22,7 @@
     "setup:husky": "node -e \"try { (await import('husky')).default() } catch (e) { if (e.code !== 'ERR_MODULE_NOT_FOUND') throw e }\" --input-type module",
     "install:gitleaks": "node scripts/install-gitleaks.mjs",
     "test": "npm run test:unit && npm run test:features",
-    "test:unit": "node --test \"test/**/*.test.js\"",
+    "test:unit": "node --test \"test/**/*.test.{js,mjs}\"",
     "test:features": "cucumber-js features/"
   },
   "dependencies": {
@@ -32,7 +32,7 @@
     "@ministryofjustice/frontend": "9.0.0",
     "archiver": "^8.0.0",
     "better-sqlite3": "13.0.3",
-    "bng-library": "github:DEFRA/bng-library#af307d543e0dd0a1e6d1fe9a90496d63beedc2c3",
+    "bng-library": "github:DEFRA/bng-library#12ca53b1e30c4b0ced8f631155356e88305c111f",
     "dotenv": "^17.2.3",
     "govuk-frontend": "6.5.0",
     "govuk-prototype-kit": "13.20.4",
@@ -40,6 +40,7 @@
     "multer": "^2.3.0",
     "ol": "^10.10.0",
     "ol-mapbox-style": "^13.4.3",
+    "pdfkit": "0.20.1",
     "shpjs": "^6.1.0",
     "undici": "8.10.1",
     "xlsx": "^0.18.5"
