@@ -9,7 +9,7 @@
 
     {{ govukPanel({
       titleText: "Report generated",
-      html: siteName + "<br>" + stats.habitats + (" parcel" if stats.habitats == 1 else " parcels") + " · " + sizeKb + " kB · " + elapsedSeconds + "s"
+      html: (siteName | escape) + "<br>" + stats.habitats + (" parcel" if stats.habitats == 1 else " parcels") + " · " + sizeKb + " kB · " + elapsedSeconds + "s"
     }) }}
 
     <p class="govuk-body govuk-!-margin-top-6">
