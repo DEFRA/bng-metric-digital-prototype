@@ -39,10 +39,10 @@ function registerOsApiRoutes(router) {
     const requestOrigin =
       req.get('origin') ||
       (referer ? new URL(referer).origin : `${req.protocol}://${req.get('host')}`)
-    const apiKey = process.env.OS_API_KEY
+    const apiKey = process.env.OS_PROJECT_API_KEY
 
     if (!apiKey) {
-      console.error('OS_API_KEY not found in environment variables')
+      console.error('OS_PROJECT_API_KEY not found in environment variables')
       return res.status(500).json({ error: 'API key not configured' })
     }
 
@@ -139,10 +139,10 @@ function registerOsApiRoutes(router) {
   router.get(
     '/api/os/tiles/:collection/:crs/:z/:x/:y',
     async function (req, res) {
-      const apiKey = process.env.OS_API_KEY
+      const apiKey = process.env.OS_PROJECT_API_KEY
 
       if (!apiKey) {
-        console.error('OS_API_KEY not found in environment variables')
+        console.error('OS_PROJECT_API_KEY not found in environment variables')
         return res.status(500).json({ error: 'API key not configured' })
       }
 
@@ -185,10 +185,10 @@ function registerOsApiRoutes(router) {
 
   // Features Endpoint - proxies OS NGD Features API (OGC API Features)
   router.get('/api/os/features/:collection/items', async function (req, res) {
-    const apiKey = process.env.OS_API_KEY
+    const apiKey = process.env.OS_PROJECT_API_KEY
 
     if (!apiKey) {
-      console.error('OS_API_KEY not found in environment variables')
+      console.error('OS_PROJECT_API_KEY not found in environment variables')
       return res.status(500).json({ error: 'API key not configured' })
     }
 
@@ -236,10 +236,10 @@ function registerOsApiRoutes(router) {
   // Batch Features Endpoint - fetches multiple collections in parallel server-side
   // Reduces browser requests from N individual calls to 1 batch call per theme group
   router.post('/api/os/features/batch', async function (req, res) {
-    const apiKey = process.env.OS_API_KEY
+    const apiKey = process.env.OS_PROJECT_API_KEY
 
     if (!apiKey) {
-      console.error('OS_API_KEY not found in environment variables')
+      console.error('OS_PROJECT_API_KEY not found in environment variables')
       return res.status(500).json({ error: 'API key not configured' })
     }
 

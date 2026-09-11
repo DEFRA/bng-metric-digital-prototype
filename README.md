@@ -205,7 +205,7 @@ Two things about the output are easy to get wrong because they are invisible on 
   public repository and its licence does not permit republishing it) and the bundled Noto
   Sans both embed. The two PDF built-in options, Helvetica and Times, do not, so they
   produce a non-conformant file. The form and the result page both say so.
-- **The basemap.** It needs `OS_API_KEY` with the _OS NGD API – Tiles_ product —
+- **The basemap.** It needs `OS_PROJECT_API_KEY` with the _OS NGD API – Tiles_ product —
   the same key and product the interactive map pages already use, so no new secret is
   needed. Without it, or if OS cannot be reached, the report is drawn over a generated
   British National Grid instead and the result page says that it was.
