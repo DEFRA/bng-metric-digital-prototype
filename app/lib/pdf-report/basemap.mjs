@@ -4,7 +4,7 @@
  *
  * Two sources:
  *
- *   os         real OS NGD vector tiles. Needs OS_PROJECT_API_KEY and network.
+ *   os         real OS NGD vector tiles. Needs OS_API_KEY and network.
  *   synthetic  a generated grid that states its own ground coordinates. Needs
  *              neither, and is what makes the tool demonstrable — and its
  *              tests runnable — with no secret at all.
@@ -47,7 +47,7 @@ export const BASEMAP_CHOICES = Object.freeze([
   {
     value: 'os',
     label: 'Ordnance Survey',
-    hint: 'OS NGD vector tiles, drawn as PDF paths. Needs OS_PROJECT_API_KEY; falls back to the grid below if OS cannot be reached.',
+    hint: 'OS NGD vector tiles, drawn as PDF paths. Needs OS_API_KEY; falls back to the grid below if OS cannot be reached.',
     conformant: true
   },
   {
@@ -74,7 +74,7 @@ function synthetic(reason = null) {
 /**
  * @param {object} options
  * @param {string} options.source  'os' | 'synthetic'
- * @param {string} [options.apiKey]  OS_PROJECT_API_KEY
+ * @param {string} [options.apiKey]  OS_API_KEY
  * @param {Function} [options.log]
  * @param {Function} [options.fetchImpl]  test seam; defaults to proxyFetch
  * @returns {Promise<{ grid: object, tileSource: Function, kind: string,
@@ -92,8 +92,8 @@ export async function resolveBasemap({
 
   if (!apiKey) {
     // The absence, never the value.
-    log.warn?.('[pdf-report] OS_PROJECT_API_KEY is not set; using the generated basemap')
-    return synthetic('OS_PROJECT_API_KEY is not set on this environment.')
+    log.warn?.('[pdf-report] OS_API_KEY is not set; using the generated basemap')
+    return synthetic('OS_API_KEY is not set on this environment.')
   }
 
   try {

@@ -61,7 +61,7 @@ function describeFailure(response, what) {
   if (response.status === 401 || response.status === 403) {
     return (
       `${what}: ${response.status} from Ordnance Survey. The key in ` +
-      'OS_PROJECT_API_KEY needs the "OS NGD API – Tiles" product added to its project.'
+      'OS_API_KEY needs the "OS NGD API – Tiles" product added to its project.'
     )
   }
   return `${what}: ${response.status} ${response.statusText}`

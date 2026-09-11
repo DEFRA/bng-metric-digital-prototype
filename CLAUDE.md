@@ -71,6 +71,6 @@ Primary: **EPSG:27700 (British National Grid)** - chosen to reduce misalignment 
 
 ## Security
 
-- API keys handled server-side only (OS_PROJECT_API_KEY)
+- API keys handled server-side only (OS_API_KEY)
 - Never inspect `.env` directly - it contains secrets
 - Secrets managed via CDP Portal Frontend in deployment

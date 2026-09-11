@@ -191,7 +191,7 @@ async function buildReport(
   const fonts = engine.fonts.resolveFonts(font)
   const basemap = await engine.basemap.resolveBasemap({
     source: basemapSource,
-    apiKey: process.env.OS_PROJECT_API_KEY
+    apiKey: process.env.OS_API_KEY
   })
 
   const started = Date.now()

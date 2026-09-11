@@ -82,7 +82,7 @@ This is intended for **rapid iteration and user testing**, not production use.
 - **Prototype-only**: The README explicitly notes this is **not production-ready** and not intended to be resilient/secure/performant like a production service.
 - **Secrets and environment variables**:
   - Do not commit `.env`; secrets are provided via CDP Portal “Secrets” in deployed environments.
-  - Ordnance Survey API key is expected in environment as `OS_PROJECT_API_KEY` (server-side only).
+  - Ordnance Survey API key is expected in environment as `OS_API_KEY` (server-side only).
 - **No direct client exposure of API keys**: External map/API requests should go via server proxy routes.
 
 ## External Dependencies

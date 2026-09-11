@@ -133,7 +133,7 @@ test('resolveBasemap degrades when no key is configured, without calling out', a
   })
 
   assert.equal(basemap.degraded, true)
-  assert.match(basemap.reason, /OS_PROJECT_API_KEY is not set/)
+  assert.match(basemap.reason, /OS_API_KEY is not set/)
   assert.equal(called, false, 'no point calling OS without a key')
 })
 
