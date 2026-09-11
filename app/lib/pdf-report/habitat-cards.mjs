@@ -144,7 +144,7 @@ function addCards({ doc, section, features, thumbnails, site, style, grid, stats
   let y = doc.y + CARD_TOP_GAP
 
   for (const feature of features) {
-    const values = cardValues(feature)
+    const values = fitCardToPage(doc, cardValues(feature))
     const height = cardHeight(doc, values)
 
     if (y + height > A4_PORTRAIT_HEIGHT - MARGIN) {
@@ -177,6 +177,144 @@ function addCards({ doc, section, features, thumbnails, site, style, grid, stats
 export function cardHeight(doc, values) {
   const textHeight = CARD_HEADING_HEIGHT + fieldsHeight(doc, values) + CARD_PADDING * 2
   return Math.max(textHeight, CARD_MAP_SIZE + CARD_PADDING * 2)
+}
+
+/** The tallest a card can be and still be drawn inside one page. */
+export function maxCardHeight() {
+  return A4_PORTRAIT_HEIGHT - MARGIN * 2
+}
+
+/**
+ * Said on the card itself when a value has been cut, because a report that
+ * silently drops the end of a sentence is worse than one that admits to it.
+ */
+const SHORTENED_MARKER = '… [shortened to fit]'
+
+/**
+ * Trim free text until the card fits on a page.
+ *
+ * Moving an oversized card to a fresh page does not help: a card taller than
+ * the printable height overruns whatever page it starts on. pdfkit then
+ * paginates the overflowing text by itself, which leaves the card's frame — a
+ * single rect, already drawn — on the first page, the rest of the text on
+ * pages the layout does not know exist, and `y` advancing against a page that
+ * has been left behind.
+ *
+ * The three free-text fields come from the uploaded file, so nothing bounds
+ * them. Rather than cap them at a character count — which depends on the
+ * typeface, the label column and the map, none of them fixed — the value is
+ * measured and cut until the whole card fits. Longest first, so a card with
+ * one runaway field keeps the others whole.
+ */
+export function fitCardToPage(doc, values) {
+  const fitted = clampSingleLineFields(doc, { ...values })
+
+  const limit = maxCardHeight()
+  const exhausted = new Set()
+  while (cardHeight(doc, fitted) > limit) {
+    // Longest first, and recomputed each pass, so a card with two runaway
+    // fields loses a share of each rather than all of whichever came first.
+    const longest = longestWrappingField(fitted, exhausted)
+    if (!longest) {
+      // Nothing left that trimming can shrink. The fixed fields alone are far
+      // shorter than a page, so this is unreachable on real data — but a loop
+      // that can only be left by shrinking must not depend on that.
+      break
+    }
+
+    const shortened = shorten(fitted[longest])
+    if (shortened === null) {
+      fitted[longest] = SHORTENED_MARKER
+      exhausted.add(longest)
+    } else {
+      fitted[longest] = shortened
+    }
+  }
+
+  return fitted
+}
+
+/**
+ * A field declared non-wrapping is MEASURED as one line, but pdfkit still
+ * wraps what it draws to the value column. So an over-long value that is not
+ * free text — a location, a surveyor's name — draws through the lines beneath
+ * it and, if it is long enough, off the bottom of the page: the same overflow
+ * as a runaway comment, reached by a field nobody thinks of as free text.
+ *
+ * Cutting these to the single line they were measured as keeps drawn and
+ * measured height the same, which is the invariant the whole card rests on.
+ */
+function clampSingleLineFields(doc, values) {
+  doc.font(BOLD).fontSize(FONT_SIZE.bodySmall)
+  const width = valueWidth(doc)
+
+  for (const { key, wraps } of CARD_FIELDS) {
+    if (wraps || !values[key]) {
+      continue
+    }
+    const text = String(values[key])
+    // Width, not height: a single line of 9pt text is already taller than
+    // CARD_LINE_HEIGHT, so measuring height here condemns every field.
+    if (fitsOneLine(doc, text, width)) {
+      continue
+    }
+    values[key] = toSingleLine(doc, text, width)
+  }
+
+  return values
+}
+
+function fitsOneLine(doc, text, width) {
+  return doc.widthOfString(`${text} `) <= width
+}
+
+/** Drop characters until the value occupies one line, and say that it was cut. */
+function toSingleLine(doc, text, width) {
+  let kept = text.length
+  while (kept > 0) {
+    const candidate = `${text.slice(0, kept).trimEnd()}${SHORTENED_MARKER}`
+    if (fitsOneLine(doc, candidate, width)) {
+      return candidate
+    }
+    kept = Math.floor(kept * TRIM_RATIO)
+  }
+  return SHORTENED_MARKER
+}
+
+/** The wrapping field with the most text, ignoring any already trimmed away. */
+function longestWrappingField(values, exhausted) {
+  return CARD_FIELDS.filter(
+    ({ key, wraps }) => wraps && !exhausted.has(key) && values[key]
+  )
+    .map(({ key }) => key)
+    .reduce(
+      (longest, key) =>
+        longest === null || String(values[key]).length > String(values[longest]).length
+          ? key
+          : longest,
+      null
+    )
+}
+
+/**
+ * Drop a fixed share of what is left, so an absurd value converges in a few
+ * passes rather than one line at a time. Returns null once there is nothing
+ * worth keeping.
+ */
+const TRIM_RATIO = 0.8
+const MIN_KEPT_CHARS = 40
+
+function shorten(value) {
+  const text = String(value).replace(SHORTENED_MARKER, '').trimEnd()
+  const kept = Math.floor(text.length * TRIM_RATIO)
+  if (kept < MIN_KEPT_CHARS) {
+    return null
+  }
+  // Cut on a word boundary where there is one to cut on.
+  const cut = text.slice(0, kept)
+  const lastSpace = cut.lastIndexOf(' ')
+  const body = (lastSpace > MIN_KEPT_CHARS ? cut.slice(0, lastSpace) : cut).trimEnd()
+  return `${body}${SHORTENED_MARKER}`
 }
 
 /** The stacked height of every line this card will draw. */
