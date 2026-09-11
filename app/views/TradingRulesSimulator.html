@@ -308,10 +308,10 @@ const COND_SCORE = {"Good":3,"Fairly Good":2.5,"Moderate":2,"Fairly Poor":1.5,"P
 const DIFF_MULT = {"Low":1.0,"Medium":0.67,"High":0.33,"Very High":0.1,"N/A":1.0};
 const MVS = new Set(["Medium","Low","V.Low"]);
 
-// year -> time multiplier (Time to Target - Years)
-const YEAR_MULT = {0:1,1:0.965,2:0.931,3:0.899,4:0.867,5:0.837,6:0.808,7:0.779,8:0.752,9:0.726,
-10:0.7,11:0.676,12:0.652,13:0.629,14:0.607,15:0.586,16:0.566,17:0.546,18:0.527,19:0.508,20:0.49,
-21:0.473,22:0.457,23:0.441,24:0.425,25:0.41,26:0.396,27:0.382,28:0.369,29:0.356,30:0.343,"30+":0.32};
+// Time to Target multiplier: 3.5% of habitat value is lost per year until the
+// target condition is reached, so the multiplier is 0.965 ^ years. Kept in step
+// with getTimeMultiplier() in app/lib/metric-calcs.js.
+const ANNUAL_RETENTION = 0.965;
 
 const INTERTIDAL = new Set(["Intertidal hard structures","Intertidal sediment"]);
 const TRADING_RULES = {
@@ -388,9 +388,7 @@ function enhancementYears(t,h,cond){
 }
 function timeMultYears(years){
   if(years==null) return null;
-  if(years>30) return YEAR_MULT["30+"];
-  if(YEAR_MULT[years]!=null) return YEAR_MULT[years];
-  return YEAR_MULT[Math.min(30,Math.round(years))];
+  return Math.pow(ANNUAL_RETENTION, Math.max(0, Math.round(years)));
 }
 function diffMult(label){ return DIFF_MULT[label]!=null?DIFF_MULT[label]:1.0; }
 

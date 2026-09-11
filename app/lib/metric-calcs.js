@@ -3,7 +3,14 @@ const { distinctivenesScores, distinctivenessCategories } = require('./metric-va
 const { habitatDifficultyMultiplier, habitatDifficulty } = require('./metric-values-habitat-difficulty');
 const { creationTimeToTarget } = require('./metric-values-habitat-creation-time');
 const { enhancementTimeToTarget } = require('./metric-values-habitat-enhancement-time');
-const { timeToTarget } = require('./metric-values-habitat-time'); 
+
+/**
+ * The habitat value retained per year while a habitat is growing towards its target
+ * condition: 3.5% is lost each year, so the time multiplier is this raised to the
+ * number of years to target. Previously held as a table of values pre-rounded to
+ * three decimal places, which lost precision and could not express beyond 30 years.
+ */
+const ANNUAL_RETENTION = 0.965
 
 /**
  * Validate the size parameter
@@ -177,9 +184,6 @@ function getTimeToTargetValue(habitat, creationOrEnhancement, startCondition, en
   if (timeToTargetValue < 0) {
     timeToTargetValue = 0
   }
-  else if (timeToTargetValue > 30) {
-    timeToTargetValue = ">30"
-  }
 
   return timeToTargetValue
 }
@@ -210,16 +214,11 @@ function getTimeMultiplier(habitat, creationOrEnhancement, startCondition, endCo
 
   const timeToTargetValue = getTimeToTargetValue(habitat, creationOrEnhancement, startCondition, endCondition, delayYears, advanceYears)
 
-  const timeMultiplier =  timeToTarget[timeToTargetValue]
-  
-  if (timeMultiplier === undefined || timeMultiplier === null ) {
+  if (!Number.isFinite(timeToTargetValue)) {
     throw new Error(`Time multiplier not found for habitat: ${habitat}, creationOrEnhancement: ${creationOrEnhancement}, startCondition: ${startCondition}, endCondition: ${endCondition}`)
   }
-  else if (timeMultiplier === "Not Possible") {
-    throw new Error(`Time multiplier for habitat '${habitat}' is not possible`)
-  }
-  
-  return timeMultiplier
+
+  return Math.pow(ANNUAL_RETENTION, timeToTargetValue)
 }
 
 /**
@@ -406,6 +405,5 @@ module.exports = {
   habitatDifficultyMultiplier,
   habitatDifficulty,
   creationTimeToTarget,
-  enhancementTimeToTarget,
-  timeToTarget
+  enhancementTimeToTarget
 };
