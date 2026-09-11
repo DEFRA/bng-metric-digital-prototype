@@ -189,28 +189,55 @@ async function buildReport(
   { baseline, postIntervention, font, basemapSource, layout }
 ) {
   const fonts = engine.fonts.resolveFonts(font)
-  const basemap = await engine.basemap.resolveBasemap({
+  let basemap = await engine.basemap.resolveBasemap({
     source: basemapSource,
     apiKey: process.env.OS_PROJECT_API_KEY
   })
 
+  const draw = (using) =>
+    engine.document.buildSummaryPdf({
+      baseline,
+      postIntervention,
+      grid: using.grid,
+      tileSource: using.tileSource,
+      layout,
+      fonts
+    })
+
   const started = Date.now()
-  const { doc, stats } = await engine.document.buildSummaryPdf({
-    baseline,
-    postIntervention,
-    grid: basemap.grid,
-    tileSource: basemap.tileSource,
-    layout,
-    fonts
-  })
+  let built
+  try {
+    built = await draw(basemap)
+  } catch (error) {
+    // resolveBasemap only covers OS failing before any drawing starts. A tile
+    // that times out or answers 5xx part-way through gets here instead, and
+    // the page has already promised the generated grid when OS cannot be
+    // reached — so honour that rather than failing a report over a basemap.
+    //
+    // Only for tile failures, and only when OS tiles were actually in use:
+    // anything else is a fault in the drawing, which must not be hidden behind
+    // a substituted basemap. The document is rebuilt from scratch because a
+    // half-written PDF cannot have its basemap swapped.
+    if (!engine.basemap.isOsTileError(error) || !usingOsTiles(basemap)) {
+      throw error
+    }
+    console.warn(`[pdf-report] OS tiles failed mid-render: ${error.message}`)
+    basemap = engine.basemap.degradeToSynthetic(error.message)
+    built = await draw(basemap)
+  }
 
   return {
-    buffer: await toBuffer(doc),
-    stats,
+    buffer: await toBuffer(built.doc),
+    stats: built.stats,
     fonts,
     basemap,
     elapsedMs: Date.now() - started
   }
+}
+
+/** True only while the report is drawing against real OS tiles. */
+function usingOsTiles(basemap) {
+  return basemap.requested === 'os' && !basemap.degraded
 }
 
 /** `Test Area` → `test-area-summary.pdf`. */
@@ -373,4 +400,4 @@ function registerPdfReportRoutes(router) {
   })
 }
 
-module.exports = { registerPdfReportRoutes, LAYOUT_CHOICES }
+module.exports = { registerPdfReportRoutes, LAYOUT_CHOICES, buildReport }

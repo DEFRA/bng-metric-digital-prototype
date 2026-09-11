@@ -46,6 +46,25 @@ const REQUEST_TIMEOUT_MS = 15_000
 
 const tileCache = new LRUCache({ max: MAX_CACHED_TILES, ttl: TILE_TTL_MS })
 
+/**
+ * A tile could not be fetched or decoded.
+ *
+ * Distinct from a plain Error so the caller can tell "Ordnance Survey went
+ * away mid-render", which the report degrades around, from a fault in the
+ * drawing itself, which it must not hide behind a substituted basemap.
+ */
+export class OsTileError extends Error {
+  constructor(message, options) {
+    super(message, options)
+    this.name = 'OsTileError'
+  }
+}
+
+/** True for the failures a report may fall back to the generated grid on. */
+export function isOsTileError(error) {
+  return error instanceof OsTileError || error?.name === 'OsTileError'
+}
+
 /** The tile matrix set is static data; read it once per process. */
 let gridPromise = null
 
@@ -118,10 +137,16 @@ export function osVectorTileSource(apiKey, { fetchImpl = proxyFetch } = {}) {
       return cached
     }
 
-    const response = await fetchImpl(withKey(`${TILES_URL}/${z}/${row}/${col}`, apiKey), {
-      method: 'GET',
-      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS)
-    })
+    let response
+    try {
+      response = await fetchImpl(withKey(`${TILES_URL}/${z}/${row}/${col}`, apiKey), {
+        method: 'GET',
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS)
+      })
+    } catch (cause) {
+      // Transport failure or the 15s timeout above; both arrive here.
+      throw new OsTileError(`Tile ${key}: ${cause.message}`, { cause })
+    }
 
     // 204 is how OS signals "nothing here" for a tile outside the data extent
     // — the sea, mostly. That is an empty tile, not a failure.
@@ -132,10 +157,19 @@ export function osVectorTileSource(apiKey, { fetchImpl = proxyFetch } = {}) {
     }
 
     if (!response.ok) {
-      throw new Error(describeFailure(response, `Tile ${key}`))
+      throw new OsTileError(describeFailure(response, `Tile ${key}`))
     }
 
-    const tile = decodeVectorTile(Buffer.from(await response.arrayBuffer()))
+    let tile
+    try {
+      tile = decodeVectorTile(Buffer.from(await response.arrayBuffer()))
+    } catch (cause) {
+      // A tile body that will not decode is OS's problem, not the drawing's.
+      throw new OsTileError(`Tile ${key} could not be decoded: ${cause.message}`, {
+        cause
+      })
+    }
+
     tileCache.set(key, tile)
     return tile
   }

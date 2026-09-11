@@ -23,7 +23,7 @@
  */
 
 import { syntheticTileSource } from './tiles.mjs'
-import { fetchOsGrid, osVectorTileSource } from './os-tiles.mjs'
+import { fetchOsGrid, isOsTileError, osVectorTileSource } from './os-tiles.mjs'
 
 /**
  * A tile matrix set shaped like the one OS publishes for EPSG:27700: a shared
@@ -59,6 +59,21 @@ export const BASEMAP_CHOICES = Object.freeze([
 ])
 
 export const DEFAULT_BASEMAP_CHOICE = 'os'
+
+/**
+ * Fall back to the generated grid after OS has already been chosen — a tile
+ * failed part-way through drawing, rather than the grid failing up front.
+ *
+ * The caller rebuilds the document from scratch with this: a PDF cannot have
+ * half its basemap swapped once written, and a report drawn half on OS tiles
+ * and half on a generated grid would be worse than either.
+ */
+export function degradeToSynthetic(reason) {
+  return synthetic(reason)
+}
+
+/** Re-exported so callers need not reach past this module into os-tiles. */
+export { isOsTileError }
 
 function synthetic(reason = null) {
   return {
