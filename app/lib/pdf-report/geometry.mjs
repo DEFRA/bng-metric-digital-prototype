@@ -106,20 +106,43 @@ export function padEnvelope(envelope, fraction) {
 }
 
 /**
- * Planar area in square CRS units via the shoelace formula, exterior rings
- * only. Meaningful because the coordinates are metres on a projected grid.
+ * Planar area in square CRS units via the shoelace formula. Meaningful because
+ * the coordinates are metres on a projected grid.
+ *
+ * Holes are subtracted: a parcel drawn around a pond, or a red line drawn
+ * around a building it excludes, covers the ground inside its exterior ring
+ * less the ground inside each interior one.
  */
 export function polygonAreaSqm(geometry) {
   if (geometry?.type === 'Polygon') {
-    return Math.abs(ringArea(geometry.coordinates[0]))
+    return netPolygonArea(geometry.coordinates)
   }
   if (geometry?.type === 'MultiPolygon') {
     return geometry.coordinates.reduce(
-      (total, polygon) => total + Math.abs(ringArea(polygon[0])),
+      (total, polygon) => total + netPolygonArea(polygon),
       0
     )
   }
   return 0
+}
+
+/**
+ * One polygon's exterior ring less its holes. GeoJSON puts the exterior ring
+ * first and every interior ring after it. Winding order is not guaranteed in
+ * the wild, so each ring is taken as an absolute area rather than trusting the
+ * sign the shoelace gives it.
+ *
+ * Holes that overlap each other, or that escape the exterior ring, are invalid
+ * geometry and could otherwise drive the total below zero. A negative area is
+ * never the right thing to print in a key figure, so the total is floored.
+ */
+function netPolygonArea(rings = []) {
+  const [exterior, ...holes] = rings
+  const net = holes.reduce(
+    (total, hole) => total - Math.abs(ringArea(hole)),
+    Math.abs(ringArea(exterior))
+  )
+  return Math.max(0, net)
 }
 
 function ringArea(ring = []) {
