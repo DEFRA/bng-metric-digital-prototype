@@ -18,14 +18,18 @@
 
     <p class="govuk-body">
       Upload a baseline and a post-intervention GeoPackage to see what the site summary
-      looks like as a printable, downloadable PDF — site maps over an Ordnance Survey
-      basemap, then one card per habitat parcel showing every attribute the file records.
+      looks like as a printable, downloadable PDF — a summary page laid out like the
+      project summary screen, site maps over an Ordnance Survey basemap, then one card
+      per habitat parcel showing every attribute the file records.
     </p>
 
     <p class="govuk-body">
-      Nothing is calculated. Every number on the report is read from the files you upload
-      or measured from their geometry, so there are no biodiversity unit figures on it.
-      This tool is about the design and the layout of the data.
+      The unit figures on the summary page use the metric's static formula (size ×
+      distinctiveness × condition × strategic significance) from the files alone — the
+      time and difficulty multipliers for created or enhanced habitat are not applied,
+      so they are indicative, not the metric. Every other number is read from the files
+      or measured from their geometry. This tool is about the design and the layout of
+      the data.
     </p>
 
     <form action="/test-data/pdf-report" method="post" enctype="multipart/form-data" novalidate>

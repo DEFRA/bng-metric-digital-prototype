@@ -187,11 +187,19 @@ There are two ways to produce one, and they draw through the same code:
   uploaded, and falls back to committed demo data on a cold session, so it always
   produces something to look at. It reads no files.
 
-Either way the output is the same report: two site maps over an Ordnance Survey basemap,
-then one card per habitat parcel carrying every attribute the data records.
+Either way the output is the same report: a summary page laid out like the project
+summary screen — one tile section per unit type, with the total on-site net percentage
+change and its Met/Not met tag, the on-site baseline, post-intervention and net unit
+change — then two site maps over an Ordnance Survey basemap, then one card per habitat
+parcel carrying every attribute the data records.
 
-Nothing is calculated — every number on the report is read from the uploaded files or
-measured from their geometry, and there are no biodiversity unit figures on it. The tool
+The summary page's unit figures use the metric's static formula (size × distinctiveness
+× condition × strategic significance), computed from the data alone; the time and
+difficulty multipliers the full metric applies to created and enhanced habitat are
+deliberately not applied, so the figures are indicative — `app/lib/pdf-report/unit-summary.mjs`
+states the whole caveat. The Met/Not met tag is judged against the project's target
+percentage from the session, or the statutory 10% without one. Every other number on
+the report is read from the uploaded files or measured from their geometry. The tool
 exists to show what the data and the layout look like on a page.
 
 The engine in `app/lib/pdf-report/` is a port of the BMD-984 spike

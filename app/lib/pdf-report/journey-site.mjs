@@ -22,9 +22,10 @@
  * which is exactly what it reads. So this adapter is a re-keying, not a
  * transformation, and there is no reprojection anywhere in it.
  *
- * NOTHING here calculates. No metric engine, no biodiversity units — the
- * numbers on the report are the ones in the data plus areas and lengths
- * measured from geometry.
+ * NOTHING here calculates. No metric engine — the unit figures on the
+ * report's summary page are the engine's own file-derived ones (see
+ * `unit-summary.mjs` and its caveat); everything else is the data plus areas
+ * and lengths measured from geometry.
  */
 
 import fs from 'node:fs'

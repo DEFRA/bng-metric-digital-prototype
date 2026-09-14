@@ -2,9 +2,16 @@
  * The PDF itself: a tagged, PDF/UA-targeted site summary.
  *
  * Structure of the output:
- *   Page 1  site heading, key figures (pdfkit's built-in tagged table),
- *           baseline and post-intervention site maps side by side, legend
- *   Page 2+ the habitat parcels, in one of two layouts:
+ *   Page 1  the summary, laid out like the service's project summary page:
+ *           the project name as a caption over a "Summary" heading, then one
+ *           tile section per unit type (Area habitats, Hedgerows,
+ *           Watercourses) — percentage change with its Met/Not met tag,
+ *           trading rules, baseline, post-intervention and net unit change.
+ *           See `summary-tiles.mjs` and `unit-summary.mjs`.
+ *   Page 2  the site maps: baseline and post-intervention side by side,
+ *           legend, and the key figures table (pdfkit's built-in tagged
+ *           table) as the maps' textual counterpart
+ *   Page 3+ the habitat parcels, in one of two layouts:
  *             cards (default) — one card per parcel, every recorded attribute
  *                               on its own line, in `habitat-cards.mjs`
  *             table           — one row per parcel: mini-map, ref, type,
@@ -28,9 +35,12 @@ import { projectorFor } from './projector.mjs'
 import { addHabitatCards } from './habitat-cards.mjs'
 import { drawMiniMap, prepareThumbnails } from './thumbnail.mjs'
 import { BODY, BOLD, labelAsArtifact, plural, registerFonts } from './page-furniture.mjs'
+import { DEFAULT_TARGET_PERCENTAGE, summariseUnitTypes } from './unit-summary.mjs'
+import { buildUnitTypeSection, unitTypeSectionHeight } from './summary-tiles.mjs'
 import {
-  A4_PORTRAIT, BORDER, CONTENT_WIDTH, HABITAT_ROW_HEIGHT, INK, MAP_PAD, MARGIN,
-  MINI_MAP_SIZE, MUTED, SITE_MAP_HEIGHT
+  A4_PORTRAIT, A4_PORTRAIT_HEIGHT, BORDER, CONTENT_WIDTH, FONT_SIZE,
+  HABITAT_ROW_HEIGHT, INK, MAP_PAD, MARGIN, MINI_MAP_SIZE, MUTED, SECTION_GAP,
+  SITE_MAP_HEIGHT
 } from './layout.mjs'
 
 // Re-exported: the alt-text test imports it from here, and this is still the
@@ -49,6 +59,8 @@ export { plural }
  * @param {boolean} options.habitatBasemap  basemap behind each parcel thumbnail
  * @param {'cards'|'table'} options.layout  how the parcels are presented
  * @param {object} [options.fonts]  resolved body fonts; see fonts.mjs
+ * @param {number} options.targetPercentage  the net-gain target the summary
+ *   page's Met/Not met tags are judged against
  * @returns {Promise<{ doc: PDFDocument, stats: object }>}
  */
 export async function buildSummaryPdf({
@@ -59,7 +71,8 @@ export async function buildSummaryPdf({
   graticule = false,
   habitatBasemap = true,
   layout = 'cards',
-  fonts = undefined
+  fonts = undefined,
+  targetPercentage = DEFAULT_TARGET_PERCENTAGE
 }) {
   const siteName = baseline.siteName ?? 'BNG site'
   const title = `Biodiversity net gain summary — ${siteName}`
@@ -86,7 +99,8 @@ export async function buildSummaryPdf({
   const root = doc.struct('Document', { title })
   doc.addStructure(root)
 
-  await addSummaryPage({ doc, root, baseline, postIntervention, grid, tileSource, graticule, stats, siteName })
+  addUnitSummaryPage({ doc, root, baseline, postIntervention, targetPercentage, siteName })
+  await addSiteMapsPage({ doc, root, baseline, postIntervention, grid, tileSource, graticule, stats })
 
   // Same parcels, same mini-maps, same alt text; the layouts differ only in
   // how much of the file they have room to show. See habitat-cards.mjs.
@@ -102,38 +116,73 @@ export async function buildSummaryPdf({
 
 /* ------------------------------------------------------------------ page 1 */
 
-async function addSummaryPage({
-  doc, root, baseline, postIntervention, grid, tileSource, graticule, stats, siteName
+/**
+ * The summary page, shaped like the service's project summary screen: the
+ * project name as a caption over a "Summary" H1, then one tile section per
+ * unit type. Synchronous — the tiles draw no maps, so nothing here awaits.
+ */
+function addUnitSummaryPage({
+  doc, root, baseline, postIntervention, targetPercentage, siteName
 }) {
-  const section = doc.struct('Sect', { title: 'Site summary' })
+  const section = doc.struct('Sect', { title: 'Summary' })
   root.add(section)
 
+  // The caption sits over the heading, the way govuk-caption-l does on the
+  // page: the project identifies the summary, it is not the summary's name.
   section.add(
-    doc.struct('H1', () => {
-      doc.font(BOLD).fontSize(22).fillColor(INK)
+    doc.struct('P', () => {
+      doc.font(BODY).fontSize(FONT_SIZE.caption).fillColor(MUTED)
       doc.text(`${siteName} `, MARGIN, MARGIN, { width: CONTENT_WIDTH })
     })
   )
 
   section.add(
-    doc.struct('P', () => {
-      doc.font(BODY).fontSize(10).fillColor(MUTED)
-      doc.text(
-        'Baseline and post-intervention habitat summary. All areas are measured from the ' +
-          'supplied geometry on the British National Grid (EPSG:27700). ',
-        { width: CONTENT_WIDTH }
-      )
+    doc.struct('H1', () => {
+      doc.font(BOLD).fontSize(FONT_SIZE.title).fillColor(INK)
+      doc.text('Summary ', { width: CONTENT_WIDTH })
     })
   )
 
-  doc.moveDown(0.8)
-  addKeyFiguresTable(doc, section, baseline, postIntervention)
+  let top = doc.y + 14
+  const pageBottom = A4_PORTRAIT_HEIGHT - MARGIN
 
-  doc.moveDown(1)
+  for (const summary of summariseUnitTypes(baseline, postIntervention)) {
+    if (top + unitTypeSectionHeight() > pageBottom) {
+      doc.addPage()
+      top = MARGIN
+    }
+    section.add(buildUnitTypeSection({ doc, summary, targetPercentage, top }))
+    top += unitTypeSectionHeight() + SECTION_GAP
+  }
+
+  section.end()
+}
+
+/* ---------------------------------------------------------------- site maps */
+
+async function addSiteMapsPage({
+  doc, root, baseline, postIntervention, grid, tileSource, graticule, stats
+}) {
+  const section = doc.struct('Sect', { title: 'Site maps' })
+  root.add(section)
+
+  doc.addPage()
   section.add(
     doc.struct('H2', () => {
-      doc.font(BOLD).fontSize(14).fillColor(INK)
-      doc.text('Site maps ', { width: CONTENT_WIDTH })
+      doc.font(BOLD).fontSize(FONT_SIZE.sectionHeading).fillColor(INK)
+      doc.text('Site maps ', MARGIN, MARGIN, { width: CONTENT_WIDTH })
+    })
+  )
+
+  section.add(
+    doc.struct('P', () => {
+      doc.font(BODY).fontSize(FONT_SIZE.intro).fillColor(MUTED)
+      doc.text(
+        'Baseline and post-intervention habitats over the same extent, at the same scale. ' +
+          'All areas are measured from the supplied geometry on the British National Grid ' +
+          '(EPSG:27700). ',
+        { width: CONTENT_WIDTH }
+      )
     })
   )
 
@@ -197,6 +246,14 @@ async function addSummaryPage({
 
   doc.y = mapsTop + 14 + SITE_MAP_HEIGHT + 26
   section.add(buildLegend(doc, panels))
+
+  // The maps' textual counterpart: what each side contains, as a tagged
+  // table. It lives with the maps because it describes them, not the units.
+  // The legend leaves the cursor at its last column, so bring it home first.
+  doc.x = MARGIN
+  doc.moveDown(1)
+  addKeyFiguresTable(doc, section, baseline, postIntervention)
+
   section.end()
 }
 
