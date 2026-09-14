@@ -37,6 +37,7 @@ import { drawMiniMap, prepareThumbnails } from './thumbnail.mjs'
 import { BODY, BOLD, labelAsArtifact, plural, registerFonts } from './page-furniture.mjs'
 import { DEFAULT_TARGET_PERCENTAGE, summariseUnitTypes } from './unit-summary.mjs'
 import { buildUnitTypeSection, unitTypeSectionHeight } from './summary-tiles.mjs'
+import { addGovukHeader } from './govuk-header.mjs'
 import {
   A4_PORTRAIT, A4_PORTRAIT_HEIGHT, BORDER, CONTENT_WIDTH, FONT_SIZE,
   HABITAT_ROW_HEIGHT, INK, MAP_PAD, MARGIN, MINI_MAP_SIZE, MUTED, SECTION_GAP,
@@ -127,12 +128,15 @@ function addUnitSummaryPage({
   const section = doc.struct('Sect', { title: 'Summary' })
   root.add(section)
 
+  const headerBottom = addGovukHeader({ doc, section })
+  const captionTop = headerBottom + 12
+
   // The caption sits over the heading, the way govuk-caption-l does on the
   // page: the project identifies the summary, it is not the summary's name.
   section.add(
     doc.struct('P', () => {
       doc.font(BODY).fontSize(FONT_SIZE.caption).fillColor(MUTED)
-      doc.text(`${siteName} `, MARGIN, MARGIN, { width: CONTENT_WIDTH })
+      doc.text(`${siteName} `, MARGIN, captionTop, { width: CONTENT_WIDTH })
     })
   )
 
