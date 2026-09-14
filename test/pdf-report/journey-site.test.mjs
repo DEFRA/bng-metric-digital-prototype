@@ -1,5 +1,5 @@
 /**
- * The summary page's data path: session state, or the committed demo site.
+ * The journey download's data path: session state, or the committed demo site.
  *
  * The thing worth guarding is that this stays a re-keying rather than a
  * transformation. If the session's coordinates ever needed reprojecting, or

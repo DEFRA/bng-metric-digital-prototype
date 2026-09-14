@@ -182,10 +182,11 @@ There are two ways to produce one, and they draw through the same code:
 
 - **`/test-data/pdf-report`** (linked from `/dev`) — the developer tool. Upload a baseline
   and a post-intervention GeoPackage, choose a typeface, a basemap and a parcel layout.
-- **The "Download report" button on `/project-dashboard/summary`** — the journey's own
-  entry point. No form and no options; it reports on whatever the session has already
-  uploaded, and falls back to committed demo data on a cold session, so it always
-  produces something to look at. It reads no files.
+- **The downloads on `/project-dashboard/reports`** — the journey's own entry point:
+  the Reports screen's "Download final version" button and "Download draft" link.
+  No form and no options; it reports on whatever the session has already uploaded,
+  and falls back to committed demo data on a cold session, so it always produces
+  something to look at. It reads no files.
 
 Either way the output is the same report: a summary page laid out like the project
 summary screen — one tile section per unit type, with the total on-site net percentage

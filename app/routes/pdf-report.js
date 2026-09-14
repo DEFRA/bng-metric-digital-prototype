@@ -369,7 +369,8 @@ function registerPdfReportRoutes(router) {
   })
 
   /**
-   * The journey's own "Download report" button, on the project summary page.
+   * The journey's own download, reached from the Reports screen — its
+   * "Download final version" button and "Download draft" link both land here.
    *
    * No form and no options: one click, one file. It draws through exactly the
    * same `buildReport` as the developer tool, with the choices a real service
