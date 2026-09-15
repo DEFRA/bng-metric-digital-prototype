@@ -8,7 +8,18 @@
 
 export const GOVUK_LOGOTYPE = Object.freeze({
   viewBox: Object.freeze({ width: 324, height: 60 }),
-  // The crown's five dots each side of the band, plus the orb.
+  // Three dots each side of the crown, plus one on its centre line.
+  //
+  // That centre dot, {cx:31.7,cy:30.6}, is listed twice — and deliberately
+  // kept that way. It is duplicated in govuk-frontend's own macros/logo.njk,
+  // which this array is extracted from verbatim, so removing it here would
+  // silently fork the geometry from upstream and come back on the next
+  // extraction. Drawing it twice costs one redundant fill and changes nothing
+  // on the page: govuk-header.mjs fills each circle as its own path, so the
+  // second disc lands exactly on the first rather than punching a hole
+  // through it the way a shared even-odd path would.
+  // govuk-logo-upstream.test.mjs pins this array to the installed
+  // govuk-frontend, duplicate included.
   circles: Object.freeze([{cx:20,cy:17.6,r:3.7},{cx:10.2,cy:23.5,r:3.7},{cx:3.7,cy:33.2,r:3.7},{cx:31.7,cy:30.6,r:3.7},{cx:43.3,cy:17.6,r:3.7},{cx:53.2,cy:23.5,r:3.7},{cx:59.7,cy:33.2,r:3.7},{cx:31.7,cy:30.6,r:3.7}]),
   // The dot of ".UK", drawn as a circle so it stays perfectly round.
   dot: Object.freeze({cx:226,cy:36,r:7.3}),

@@ -22,7 +22,9 @@ import { registerFonts } from '../../app/lib/pdf-report/page-furniture.mjs'
 test('the logotype carries the crown, the letters and the dot of .UK', () => {
   assert.equal(GOVUK_LOGOTYPE.viewBox.width, 324)
   assert.equal(GOVUK_LOGOTYPE.viewBox.height, 60)
-  assert.equal(GOVUK_LOGOTYPE.circles.length, 8, 'the crown’s dots and orb')
+  // The exact circles are pinned against the installed govuk-frontend in
+  // govuk-logo-upstream.test.mjs; here it only matters that some survived.
+  assert.ok(GOVUK_LOGOTYPE.circles.length > 0, 'the crown kept its dots')
   assert.match(GOVUK_LOGOTYPE.crown, /^M/u)
   assert.match(GOVUK_LOGOTYPE.letters, /^M/u)
   assert.ok(GOVUK_LOGOTYPE.letters.length > 1000, 'the letterforms are the long path')
