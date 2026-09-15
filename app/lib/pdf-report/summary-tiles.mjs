@@ -15,7 +15,7 @@
  * Structure mirrors the visual: a Sect per unit type, its name as an H2,
  * each tile an H3 heading with its value as a paragraph. The "Met"/"Not met"
  * tag is real text on a coloured background, never colour alone — the same
- * rule the legend follows.
+ * rule the legend follows — and is absent where there is no change to judge.
  *
  * Every position here is computed, never read back off `doc.y`: a struct
  * closure does not run when it is created, it runs when the element is
@@ -73,14 +73,13 @@ export function buildUnitTypeSection({ doc, summary, targetPercentage, top }) {
 
 function primaryRow({ doc, summary, targetPercentage, top }) {
   const width = tileWidth(PRIMARY_TILE_COUNT)
-  const met = meetsTarget(summary.percentageChange, targetPercentage)
 
   const percentageTile = buildTile({
     doc,
     frame: tileFrame(0, top, width, PRIMARY_TILE_HEIGHT),
     heading: 'Total on-site net percentage change',
     value: formatPercentage(summary.percentageChange),
-    tag: { label: met ? 'Met' : 'Not met', colours: met ? TAG_COLOURS.met : TAG_COLOURS.notMet }
+    tag: targetTag(summary.percentageChange, targetPercentage)
   })
 
   // The web page's tile is a link to the trading rules screen. A PDF cannot
@@ -98,6 +97,31 @@ function primaryRow({ doc, summary, targetPercentage, top }) {
   })
 
   return [percentageTile, tradingRulesTile]
+}
+
+/**
+ * The Met/Not met tag — or no tag at all, where there is nothing to judge.
+ *
+ * A null percentage change means the question was never asked: no
+ * post-intervention file was supplied, or the baseline is zero. That is not
+ * the same as a project that was assessed and fell short, and a red "Not met"
+ * would say it was — next to a value that already reads as a dash.
+ *
+ * Omitting the tag is what the service itself does. Its summary page renders
+ * the tag conditionally (`{% if params.status %}` in app-unit-type-summary)
+ * and its helper returns `status: null` whenever the percentage is not a
+ * finite number, so an untagged tile is a shape the design already has.
+ */
+function targetTag(percentageChange, targetPercentage) {
+  if (percentageChange === null) {
+    return null
+  }
+
+  const met = meetsTarget(percentageChange, targetPercentage)
+  return {
+    label: met ? 'Met' : 'Not met',
+    colours: met ? TAG_COLOURS.met : TAG_COLOURS.notMet
+  }
 }
 
 function secondaryRow({ doc, summary, top }) {
