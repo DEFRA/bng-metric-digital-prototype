@@ -68,29 +68,6 @@ function buildProjectDashboardMapData(gpkgData) {
   };
 }
 
-function combineProjectDashboardMapData(baseline, postIntervention) {
-  const layerNames = [
-    'siteBoundary',
-    'parcels',
-    'hedgerows',
-    'watercourses',
-    'trees'
-  ];
-
-  return Object.fromEntries(
-    layerNames.map((layerName) => [
-      layerName,
-      {
-        type: 'FeatureCollection',
-        features: [
-          ...(baseline?.[layerName]?.features || []),
-          ...(postIntervention?.[layerName]?.features || [])
-        ]
-      }
-    ])
-  );
-}
-
 const TAG_NOT_MET = { text: 'Not met', classes: 'govuk-tag--red' }
 const TAG_MET = { text: 'Met', classes: 'govuk-tag--green' }
 
@@ -1086,27 +1063,16 @@ function registerProjectDashboardRoutes(router) {
 
     const availableViews = {
       baseline: hasBaseline,
-      postIntervention: hasPostIntervention,
-      both: hasBaseline && hasPostIntervention
+      postIntervention: hasPostIntervention
     };
     const requestedView = req.query.view;
     const mapView =
-      requestedView === 'both' && availableViews.both
-        ? 'both'
-        : requestedView === 'post-intervention' && hasPostIntervention
-          ? 'post-intervention'
-          : requestedView === 'baseline' && hasBaseline
-            ? 'baseline'
-            : hasBaseline
-              ? 'baseline'
-              : 'post-intervention';
-    const mapData =
-      mapView === 'both'
-        ? combineProjectDashboardMapData(
-            mapDataByKind.baseline,
-            mapDataByKind['post-intervention']
-          )
-        : mapDataByKind[mapView];
+      requestedView === 'post-intervention' && hasPostIntervention
+        ? 'post-intervention'
+        : hasBaseline
+          ? 'baseline'
+          : 'post-intervention';
+    const mapData = mapDataByKind[mapView];
 
     res.render('project-dashboard/map', {
       mapData: mapData,
@@ -1250,6 +1216,5 @@ function registerProjectDashboardRoutes(router) {
 
 module.exports = {
   buildProjectDashboardMapData,
-  combineProjectDashboardMapData,
   registerProjectDashboardRoutes
 };
