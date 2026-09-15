@@ -12,11 +12,14 @@
  * reached from here through a cached dynamic import, the same CJS→ESM bridge
  * `app/lib/geopackage-parser.js` and `app/routes/gen-gpkg.js` use.
  *
- * NO metric calculations happen here. `app/lib/metric-calcs.js` is not called
- * and the report carries no biodiversity-unit figures: every number on the
- * page is read from the uploaded files or measured from their geometry. The
- * point of the tool is to show what the data and the layout look like on a
- * page, not to reproduce the metric.
+ * `app/lib/metric-calcs.js` is not called. The summary page's unit figures
+ * are the engine's own file-derived ones — the metric's static formula (size
+ * × distinctiveness × condition × strategic significance), with the temporal
+ * and difficulty multipliers for created/enhanced parcels deliberately not
+ * applied; `app/lib/pdf-report/unit-summary.mjs` states the whole caveat.
+ * Every other number on the report is read from the uploaded files or
+ * measured from their geometry. The point of the tool is to show what the
+ * data and the layout look like on a page, not to reproduce the metric.
  */
 
 const os = require('node:os')
@@ -186,7 +189,7 @@ function toBuffer(doc) {
  */
 async function buildReport(
   engine,
-  { baseline, postIntervention, font, basemapSource, layout }
+  { baseline, postIntervention, font, basemapSource, layout, targetPercentage }
 ) {
   const fonts = engine.fonts.resolveFonts(font)
   let basemap = await engine.basemap.resolveBasemap({
@@ -201,7 +204,8 @@ async function buildReport(
       grid: using.grid,
       tileSource: using.tileSource,
       layout,
-      fonts
+      fonts,
+      targetPercentage
     })
 
   const started = Date.now()
@@ -238,6 +242,16 @@ async function buildReport(
 /** True only while the report is drawing against real OS tiles. */
 function usingOsTiles(basemap) {
   return basemap.requested === 'os' && !basemap.degraded
+}
+
+/**
+ * The project's own net-gain target, as entered on the project details
+ * screen, or undefined so the engine falls back to its statutory 10%.
+ * The session holds form strings, so blank and junk both mean "not set".
+ */
+function targetPercentageFrom(sessionData) {
+  const target = Number.parseFloat(sessionData?.targetPercentage)
+  return Number.isFinite(target) ? target : undefined
 }
 
 /** `Test Area` → `test-area-summary.pdf`. */
@@ -355,7 +369,8 @@ function registerPdfReportRoutes(router) {
   })
 
   /**
-   * The journey's own "Download report" button, on the project summary page.
+   * The journey's own download, reached from the Reports screen — its
+   * "Download final version" button and "Download draft" link both land here.
    *
    * No form and no options: one click, one file. It draws through exactly the
    * same `buildReport` as the developer tool, with the choices a real service
@@ -380,7 +395,8 @@ function registerPdfReportRoutes(router) {
           postIntervention,
           font: engine.fonts.DEFAULT_FONT_CHOICE,
           basemapSource: engine.basemap.DEFAULT_BASEMAP_CHOICE,
-          layout: 'cards'
+          layout: 'cards',
+          targetPercentage: targetPercentageFrom(req.session?.data)
         }
       )
 

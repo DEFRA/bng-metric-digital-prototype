@@ -203,7 +203,7 @@ test('an unrecognised option falls back rather than being trusted', async () => 
   assert.equal(res.model.fonts.name, 'GDS Transport', 'unknown font falls back to the default')
 })
 
-test('the summary page button streams a PDF straight back', async () => {
+test('the Reports screen download streams a PDF straight back', async () => {
   const res = fakeResponse()
 
   await handlers()('GET /project-dashboard/report.pdf')(
@@ -224,7 +224,7 @@ test('the button works on a cold session, from the demo data', async () => {
   const res = fakeResponse()
 
   // No session at all, not merely an empty one: a prototype user can land on
-  // the summary page without having uploaded anything.
+  // the Reports screen without having uploaded anything.
   await handlers()('GET /project-dashboard/report.pdf')({}, res, (error) => {
     throw error
   })

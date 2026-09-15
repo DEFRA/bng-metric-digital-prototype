@@ -507,7 +507,7 @@ export function cardValues(feature) {
     spatialRiskCategory: text(properties['Spatial risk category']),
     location: text(properties.Location),
     // Measured from the geometry, like every other area in this report, rather
-    // than read from the file's own `Area` column. Page 1 says so, and the two
+    // than read from the file's own `Area` column. The maps page says so, and the two
     // agree to under a square metre across the example files — which is what
     // independently validates the hand-rolled WKB decoder.
     area: `${(polygonAreaSqm(feature.geometry) / SQ_M_PER_HECTARE).toFixed(

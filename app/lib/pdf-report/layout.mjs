@@ -26,17 +26,38 @@ export const CONTEXT_STROKE = '#b1b4b6'
 
 export const FONT_SIZE = Object.freeze({
   title: 22,
+  caption: 12,
   sectionHeading: 15,
   subHeading: 14,
+  tileValue: 17,
   intro: 10,
   body: 9.5,
   bodySmall: 9,
   tableCell: 8.5,
+  tag: 8.5,
   legend: 7.5
 })
 
 export const SITE_MAP_HEIGHT = 210
 export const MAP_PAD = 0.08
+
+/* ------------------------------------------------------- summary tiles */
+
+// The project summary page's tile grid, translated to the page. Colours are
+// govuk-frontend's: light grey tile background, and the red/green tag pair
+// (govuk-tag--red / govuk-tag--green) behind "Not met" / "Met".
+export const TILE_BACKGROUND = '#f3f2f1'
+export const TAG_COLOURS = Object.freeze({
+  met: Object.freeze({ text: '#005a30', background: '#cce2d8' }),
+  notMet: Object.freeze({ text: '#942514', background: '#f6d7d2' })
+})
+
+export const TILE_GUTTER = 12
+export const TILE_PADDING = 10
+export const PRIMARY_TILE_HEIGHT = 96
+export const SECONDARY_TILE_HEIGHT = 82
+export const SECTION_HEADING_HEIGHT = 22
+export const SECTION_GAP = 12
 
 /* --------------------------------------------------------- table layout */
 

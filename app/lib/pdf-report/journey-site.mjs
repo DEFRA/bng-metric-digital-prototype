@@ -2,10 +2,10 @@
  * The site model, built from what the prototype journey already has in hand
  * rather than from an uploaded file.
  *
- * `gpkg.mjs` reads a GeoPackage. This is the other way in: the summary page's
- * "Download report" button has no file to read, so it assembles the same shape
+ * `gpkg.mjs` reads a GeoPackage. This is the other way in: the Reports
+ * screen's downloads have no file to read, so this assembles the same shape
  * out of session state — and falls back to committed demo data when there is
- * no session state either, so the button always produces something to look at.
+ * no session state either, so the download always produces something to look at.
  *
  * The two sources are deliberately the same shape as each other and as
  * `readSite`, because the whole point is that ONE engine draws all three. If
@@ -22,9 +22,10 @@
  * which is exactly what it reads. So this adapter is a re-keying, not a
  * transformation, and there is no reprojection anywhere in it.
  *
- * NOTHING here calculates. No metric engine, no biodiversity units — the
- * numbers on the report are the ones in the data plus areas and lengths
- * measured from geometry.
+ * NOTHING here calculates. No metric engine — the unit figures on the
+ * report's summary page are the engine's own file-derived ones (see
+ * `unit-summary.mjs` and its caveat); everything else is the data plus areas
+ * and lengths measured from geometry.
  */
 
 import fs from 'node:fs'
@@ -138,7 +139,7 @@ export function demoSite() {
 }
 
 /**
- * What the summary page should put in a report.
+ * What the journey's download should put in a report.
  *
  * Prefers whatever the user has actually uploaded in this session, so the PDF
  * shows their own site rather than a stranger's, and only falls back to the
