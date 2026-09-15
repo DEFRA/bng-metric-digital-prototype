@@ -40,9 +40,34 @@ const METRES_PER_KILOMETRE = 1_000
  */
 export const DEFAULT_TARGET_PERCENTAGE = 10
 
-/** Statutory metric distinctiveness bands, as the template spells them. */
-export const DISTINCTIVENESS_SCORES = Object.freeze({
+/**
+ * Statutory metric distinctiveness bands, as the template spells them.
+ *
+ * The metric publishes one band table per unit type and they are not
+ * interchangeable: V.Low scores 0 for area habitats but 1 for hedgerows, and
+ * watercourses have no V.Low band at all. The backend's engine keeps the same
+ * three-way split in its own reference tables, so scoring every unit type off
+ * one shared table would be wrong for two of the three.
+ */
+export const AREA_DISTINCTIVENESS_SCORES = Object.freeze({
+  'V.Low': 0,
+  Low: 2,
+  Medium: 4,
+  High: 6,
+  'V.High': 8
+})
+
+/** Hedgerows are the one type that scores V.Low above zero. */
+export const HEDGEROW_DISTINCTIVENESS_SCORES = Object.freeze({
   'V.Low': 1,
+  Low: 2,
+  Medium: 4,
+  High: 6,
+  'V.High': 8
+})
+
+/** Watercourses have no V.Low band, so a V.Low one falls through to zero. */
+export const WATERCOURSE_DISTINCTIVENESS_SCORES = Object.freeze({
   Low: 2,
   Medium: 4,
   High: 6,
@@ -84,9 +109,24 @@ const NEUTRAL_STRATEGIC_SIGNIFICANCE = 1
  * than approximate.
  */
 export const UNIT_TYPES = Object.freeze([
-  Object.freeze({ key: 'habitats', title: 'Area habitats', kind: 'area' }),
-  Object.freeze({ key: 'hedgerows', title: 'Hedgerows', kind: 'linear' }),
-  Object.freeze({ key: 'watercourses', title: 'Watercourses', kind: 'linear' })
+  Object.freeze({
+    key: 'habitats',
+    title: 'Area habitats',
+    kind: 'area',
+    scores: AREA_DISTINCTIVENESS_SCORES
+  }),
+  Object.freeze({
+    key: 'hedgerows',
+    title: 'Hedgerows',
+    kind: 'linear',
+    scores: HEDGEROW_DISTINCTIVENESS_SCORES
+  }),
+  Object.freeze({
+    key: 'watercourses',
+    title: 'Watercourses',
+    kind: 'linear',
+    scores: WATERCOURSE_DISTINCTIVENESS_SCORES
+  })
 ])
 
 /**
@@ -100,10 +140,11 @@ export const UNIT_TYPES = Object.freeze([
  * when the baseline is zero, where a percentage has no meaning.
  */
 export function summariseUnitTypes(baseline, postIntervention) {
-  return UNIT_TYPES.map(({ key, title, kind }) => {
-    const baselineUnits = layerUnits(baseline, key, kind, baselineValue)
+  return UNIT_TYPES.map((unitType) => {
+    const { key, title } = unitType
+    const baselineUnits = layerUnits(baseline, unitType, baselineValue)
     const postInterventionUnits = postIntervention
-      ? layerUnits(postIntervention, key, kind, activeValue)
+      ? layerUnits(postIntervention, unitType, activeValue)
       : null
 
     const netChange =
@@ -122,11 +163,16 @@ export function meetsTarget(percentageChange, targetPercentage) {
   return percentageChange !== null && percentageChange >= targetPercentage
 }
 
-function layerUnits(site, key, kind, valueOf) {
-  const features = site.layers[key]?.features ?? []
+/**
+ * The whole unit-type descriptor is threaded through rather than its `kind`,
+ * because `kind` is 'linear' for both hedgerows and watercourses and so cannot
+ * pick between their two different distinctiveness tables.
+ */
+function layerUnits(site, unitType, valueOf) {
+  const features = site.layers[unitType.key]?.features ?? []
   return features
     .filter(isOnSite)
-    .reduce((total, feature) => total + parcelUnits(feature, kind, valueOf), 0)
+    .reduce((total, feature) => total + parcelUnits(feature, unitType, valueOf), 0)
 }
 
 /**
@@ -138,10 +184,10 @@ function isOnSite(feature) {
   return (feature.properties?.Location ?? 'On-site') !== 'Off-site'
 }
 
-function parcelUnits(feature, kind, valueOf) {
+function parcelUnits(feature, unitType, valueOf) {
   const properties = feature.properties ?? {}
   const distinctiveness =
-    DISTINCTIVENESS_SCORES[dropdownValue(valueOf(properties, 'Distinctiveness'))] ?? 0
+    unitType.scores[dropdownValue(valueOf(properties, 'Distinctiveness'))] ?? 0
   const condition =
     CONDITION_SCORES[dropdownValue(valueOf(properties, 'Condition'))] ?? 0
   const significance =
@@ -152,7 +198,7 @@ function parcelUnits(feature, kind, valueOf) {
   // An unrecognised distinctiveness or condition zeroes the parcel rather
   // than guessing a score: a figure that quietly omits a parcel reads low,
   // which is the safer direction for a headline number to be wrong in.
-  return sizeOf(feature, kind) * distinctiveness * condition * significance
+  return sizeOf(feature, unitType.kind) * distinctiveness * condition * significance
 }
 
 function sizeOf(feature, kind) {

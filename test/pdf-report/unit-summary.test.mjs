@@ -126,6 +126,45 @@ test('sealed surface — "N/A - Other" — scores zero on purpose', () => {
   assert.equal(summaryFor(baseline).baselineUnits, 0)
 })
 
+test('V.Low area habitat scores zero, even in an assessed condition', () => {
+  const baseline = site({
+    habitats: [
+      areaParcel({
+        'Baseline Distinctiveness': 'V.Low',
+        'Baseline Condition': 'Good' // 3, so only a zero score can zero the parcel
+      })
+    ]
+  })
+
+  assert.equal(summaryFor(baseline).baselineUnits, 0)
+})
+
+test('V.Low hedgerow scores 1, not 0 — the one band that differs from area', () => {
+  const baseline = site({
+    hedgerows: [
+      linearParcel({
+        'Baseline Distinctiveness': 'V.Low', // 1 for hedgerows
+        'Baseline Condition': 'Good' // 3
+      })
+    ]
+  })
+
+  assert.equal(summaryFor(baseline, null, 'hedgerows').baselineUnits, 1 * 1 * 3)
+})
+
+test('V.Low watercourse scores zero — the band does not exist for watercourses', () => {
+  const baseline = site({
+    watercourses: [
+      linearParcel({
+        'Baseline Distinctiveness': 'V.Low',
+        'Baseline Condition': 'Good' // 3
+      })
+    ]
+  })
+
+  assert.equal(summaryFor(baseline, null, 'watercourses').baselineUnits, 0)
+})
+
 test('a literal "Null" proposed value falls back to the baseline, like a blank', () => {
   const postIntervention = site({
     habitats: [
