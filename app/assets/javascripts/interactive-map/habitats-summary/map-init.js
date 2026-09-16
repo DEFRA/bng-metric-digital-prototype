@@ -1212,9 +1212,7 @@
     var mapTitle =
       mapView === 'post-intervention'
         ? 'Post intervention'
-        : mapView === 'both'
-          ? 'Both'
-          : 'Baseline';
+        : 'Baseline';
     var layerDescription =
       'Red line boundary, Area habitats, Hedgerows, Watercourses, Trees';
     var interventionSection =

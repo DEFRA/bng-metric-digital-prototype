@@ -2,8 +2,13 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const {
   buildProjectDashboardMapData,
-  combineProjectDashboardMapData
+  resolveMapView
 } = require('../app/routes/project-dashboard');
+
+const BOTH_UPLOADED = {
+  hasBaseline: true,
+  hasPostIntervention: true
+};
 
 test('buildProjectDashboardMapData selects uploaded habitat map layers', () => {
   const featureCollection = {
@@ -43,42 +48,41 @@ test('buildProjectDashboardMapData requires boundary and parcel layers', () => {
   );
 });
 
-test('combineProjectDashboardMapData combines each baseline and post-intervention layer', () => {
-  const baselineFeature = { type: 'Feature', properties: { source: 'baseline' } };
-  const postFeature = {
-    type: 'Feature',
-    properties: { source: 'post-intervention' }
-  };
-  const layerNames = [
-    'siteBoundary',
-    'parcels',
-    'hedgerows',
-    'watercourses',
-    'trees'
-  ];
-  const baseline = {};
-  const postIntervention = {};
+test('resolveMapView defaults to baseline when no view is requested', () => {
+  assert.equal(resolveMapView(undefined, BOTH_UPLOADED), 'baseline');
+});
 
-  layerNames.forEach((layerName) => {
-    baseline[layerName] = {
-      type: 'FeatureCollection',
-      features: [baselineFeature]
-    };
-    postIntervention[layerName] = {
-      type: 'FeatureCollection',
-      features: [postFeature]
-    };
-  });
+test('resolveMapView selects an explicit baseline view', () => {
+  assert.equal(resolveMapView('baseline', BOTH_UPLOADED), 'baseline');
+});
 
-  const combined = combineProjectDashboardMapData(
-    baseline,
-    postIntervention
+test('resolveMapView selects an available post-intervention view', () => {
+  assert.equal(
+    resolveMapView('post-intervention', BOTH_UPLOADED),
+    'post-intervention'
   );
+});
 
-  layerNames.forEach((layerName) => {
-    assert.deepEqual(combined[layerName].features, [
-      baselineFeature,
-      postFeature
-    ]);
-  });
+test('resolveMapView falls back when post-intervention is unavailable', () => {
+  assert.equal(
+    resolveMapView('post-intervention', {
+      hasBaseline: true,
+      hasPostIntervention: false
+    }),
+    'baseline'
+  );
+});
+
+test('resolveMapView selects post-intervention when baseline is unavailable', () => {
+  assert.equal(
+    resolveMapView(undefined, {
+      hasBaseline: false,
+      hasPostIntervention: true
+    }),
+    'post-intervention'
+  );
+});
+
+test('resolveMapView falls back to baseline for the retired both view', () => {
+  assert.equal(resolveMapView('both', BOTH_UPLOADED), 'baseline');
 });
