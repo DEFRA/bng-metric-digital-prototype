@@ -258,6 +258,7 @@
       data-map-view="{{ mapView }}"
       data-has-baseline="{{ 'true' if availableViews.baseline else 'false' }}"
       data-has-post-intervention="{{ 'true' if availableViews.postIntervention else 'false' }}"
+      data-available-map-layers="{{ availableMapLayers | join(',') }}"
       role="img"
       aria-label="Map showing uploaded habitat parcels within the site boundary"
     ></div>

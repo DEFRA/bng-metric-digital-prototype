@@ -7,6 +7,8 @@
     hoverHandlersBound: false,
     interactPlugin: null,
     datasetsPlugin: null,
+    dashboardDatasetIds: [],
+    dashboardViewRequestId: 0,
     dashboardPanelConfigured: false,
     selectedLink: null,
     selectedFeatureKey: null,
@@ -26,6 +28,33 @@
   var HOVER_LINE_LAYER_ID = 'habitats-summary-hover-line';
   var HABITAT_DETAILS_PANEL_ID = 'habitatDetailsPanel';
   var HABITAT_HELP_PANEL_ID = 'habitatHelpBanner';
+  var dashboardHistoryBound = false;
+  var DASHBOARD_DATASET_CONFIG = [
+    {
+      mapDataKey: 'siteBoundary',
+      datasetId: 'site-boundary-im'
+    },
+    {
+      mapDataKey: 'parcels',
+      datasetId: 'habitat-parcels-im',
+      featureType: 'parcel'
+    },
+    {
+      mapDataKey: 'hedgerows',
+      datasetId: 'hedgerows-im',
+      featureType: 'hedgerow'
+    },
+    {
+      mapDataKey: 'watercourses',
+      datasetId: 'watercourses-im',
+      featureType: 'watercourse'
+    },
+    {
+      mapDataKey: 'trees',
+      datasetId: 'trees-im',
+      featureType: 'tree'
+    }
+  ];
   var AREA_HABITAT_STYLES = [
     { id: 'cropland', label: 'Cropland', color: '#e6c87a' },
     { id: 'grassland', label: 'Grassland', color: '#98f05d' },
@@ -95,6 +124,8 @@
     interactiveMapState.map = null;
     interactiveMapState.interactPlugin = null;
     interactiveMapState.datasetsPlugin = null;
+    interactiveMapState.dashboardDatasetIds = [];
+    interactiveMapState.dashboardViewRequestId = 0;
     interactiveMapState.dashboardPanelConfigured = false;
     interactiveMapState.selectedLink = null;
     interactiveMapState.selectedFeatureKey = null;
@@ -139,16 +170,22 @@
 
     var datasets = [];
     var areaHabitatDataset = null;
+    var availableDashboardLayers = getAvailableDashboardLayers(mapContainer);
     var boundaryGeoJson = mapData.siteBoundary || null;
     var parcelsGeoJson = mapData.parcels || null;
     var hedgerowsGeoJson = mapData.hedgerows || null;
     var watercoursesGeoJson = mapData.watercourses || null;
     var treesGeoJson = mapData.trees || null;
-    if (hasFeatures(boundaryGeoJson)) {
+    if (
+      hasFeatures(boundaryGeoJson) ||
+      (isDashboardMap && availableDashboardLayers.includes('siteBoundary'))
+    ) {
       datasets.push({
         id: 'site-boundary-im',
         label: isDashboardMap ? 'Red line boundary' : 'Site boundary',
-        geojson: normalizeToWgs84(boundaryGeoJson),
+        geojson: normalizeToWgs84(
+          boundaryGeoJson || emptyFeatureCollection()
+        ),
         style: {
           fill: 'transparent',
           stroke: '#d4351c',
@@ -160,9 +197,12 @@
       });
     }
 
-    if (hasFeatures(parcelsGeoJson)) {
+    if (
+      hasFeatures(parcelsGeoJson) ||
+      (isDashboardMap && availableDashboardLayers.includes('parcels'))
+    ) {
       var normalizedParcels = normalizeToWgs84(
-        parcelsGeoJson,
+        parcelsGeoJson || emptyFeatureCollection(),
         buildFeatureMetadataBuilder('parcel')
       );
 
@@ -186,9 +226,12 @@
       }
     }
 
-    if (hasFeatures(hedgerowsGeoJson)) {
+    if (
+      hasFeatures(hedgerowsGeoJson) ||
+      (isDashboardMap && availableDashboardLayers.includes('hedgerows'))
+    ) {
       var normalizedHedgerows = normalizeToWgs84(
-        hedgerowsGeoJson,
+        hedgerowsGeoJson || emptyFeatureCollection(),
         buildFeatureMetadataBuilder('hedgerow')
       );
 
@@ -210,9 +253,12 @@
       });
     }
 
-    if (hasFeatures(watercoursesGeoJson)) {
+    if (
+      hasFeatures(watercoursesGeoJson) ||
+      (isDashboardMap && availableDashboardLayers.includes('watercourses'))
+    ) {
       var normalizedWatercourses = normalizeToWgs84(
-        watercoursesGeoJson,
+        watercoursesGeoJson || emptyFeatureCollection(),
         buildFeatureMetadataBuilder('watercourse')
       );
 
@@ -234,9 +280,12 @@
       });
     }
 
-    if (hasFeatures(treesGeoJson)) {
+    if (
+      hasFeatures(treesGeoJson) ||
+      (isDashboardMap && availableDashboardLayers.includes('trees'))
+    ) {
       var normalizedTrees = normalizeToWgs84(
-        treesGeoJson,
+        treesGeoJson || emptyFeatureCollection(),
         buildFeatureMetadataBuilder('tree')
       );
 
@@ -264,6 +313,15 @@
         datasets.push(areaHabitatDataset);
       }
       datasets = datasets.concat(buildHabitatKeyDatasets());
+      interactiveMapState.dashboardDatasetIds = DASHBOARD_DATASET_CONFIG
+        .map(function (datasetConfig) {
+          return datasetConfig.datasetId;
+        })
+        .filter(function (datasetId) {
+          return datasets.some(function (dataset) {
+            return dataset.id === datasetId;
+          });
+        });
     }
 
     if (!datasets.length) {
@@ -1200,6 +1258,7 @@
     }
 
     window.setTimeout(bindDashboardLayersPanel, 0);
+    bindDashboardMapHistory();
   }
 
   function buildDashboardLayersPanelHtml(mapContainer, datasets) {
@@ -1215,8 +1274,9 @@
         : 'Baseline';
     var layerDescription =
       'Red line boundary, Area habitats, Hedgerows, Watercourses, Trees';
-    var interventionSection =
-      mapView === 'baseline' ? '' : buildDashboardInterventionSection();
+    var interventionSection = buildDashboardInterventionSection(
+      mapView === 'post-intervention'
+    );
     var layerControls = datasets
       .filter(function (dataset) {
         return dataset.showInMenu !== false;
@@ -1265,7 +1325,7 @@
       '</div>' +
       '<div class="dashboard-map-panel__section">' +
       '<p class="dashboard-map-panel__heading">Title</p>' +
-      '<div class="dashboard-map-panel__title-value">' +
+      '<div class="dashboard-map-panel__title-value" data-dashboard-map-title>' +
       escapeHtml(mapTitle) +
       '</div>' +
       '<button class="dashboard-map-panel__toggle" type="button" data-panel-toggle="dashboard-map-title-options" aria-expanded="true">' +
@@ -1284,6 +1344,8 @@
         !hasPostIntervention
       ) +
       '</div>' +
+      '<p class="govuk-error-message" data-dashboard-map-view-error role="alert" hidden></p>' +
+      '<p class="govuk-visually-hidden" data-dashboard-map-view-status aria-live="polite"></p>' +
       '</div></div>' +
       interventionSection +
       '<div class="dashboard-map-panel__section">' +
@@ -1301,7 +1363,7 @@
     );
   }
 
-  function buildDashboardInterventionSection() {
+  function buildDashboardInterventionSection(isVisible) {
     var interventionControls = ['Retained', 'Lost', 'Created']
       .map(function (label) {
         var id = 'dashboard-map-intervention-' + label.toLowerCase();
@@ -1324,7 +1386,9 @@
       .join('');
 
     return (
-      '<div class="dashboard-map-panel__section">' +
+      '<div class="dashboard-map-panel__section" data-dashboard-intervention-section' +
+      (isVisible ? '' : ' hidden') +
+      '>' +
       '<p class="dashboard-map-panel__heading">Intervention</p>' +
       '<div>Retained, Lost, Created</div>' +
       '<button class="dashboard-map-panel__toggle" type="button" data-panel-toggle="dashboard-map-intervention-options" aria-expanded="true">' +
@@ -1389,9 +1453,10 @@
     panel.addEventListener('change', function (event) {
       var viewInput = event.target.closest('input[name="dashboard-map-title"]');
       if (viewInput && viewInput.checked && !viewInput.disabled) {
-        var url = new URL(window.location.href);
-        url.searchParams.set('view', viewInput.value);
-        window.location.assign(url.toString());
+        var mapContainer = document.getElementById('map-preview-im');
+        switchDashboardMapView(mapContainer, viewInput.value, {
+          updateHistory: true
+        });
         return;
       }
 
@@ -1417,9 +1482,348 @@
     });
   }
 
+  function bindDashboardMapHistory() {
+    if (dashboardHistoryBound) {
+      return;
+    }
+
+    dashboardHistoryBound = true;
+    window.addEventListener('popstate', function () {
+      var mapContainer = document.getElementById('map-preview-im');
+      if (
+        !mapContainer ||
+        mapContainer.getAttribute('data-map-layout') !== 'dashboard'
+      ) {
+        return;
+      }
+
+      switchDashboardMapView(
+        mapContainer,
+        resolveDashboardMapViewFromLocation(mapContainer),
+        { updateHistory: false }
+      );
+    });
+  }
+
+  function resolveDashboardMapViewFromLocation(mapContainer) {
+    var requestedView = new URLSearchParams(window.location.search).get(
+      'view'
+    );
+    var hasBaseline = mapContainer.getAttribute('data-has-baseline') === 'true';
+    var hasPostIntervention =
+      mapContainer.getAttribute('data-has-post-intervention') === 'true';
+
+    if (requestedView === 'post-intervention' && hasPostIntervention) {
+      return 'post-intervention';
+    }
+
+    return hasBaseline ? 'baseline' : 'post-intervention';
+  }
+
+  function switchDashboardMapView(mapContainer, requestedView, options) {
+    if (
+      !mapContainer ||
+      !isDashboardMapViewAvailable(mapContainer, requestedView)
+    ) {
+      return Promise.resolve();
+    }
+
+    var currentView = mapContainer.getAttribute('data-map-view') || 'baseline';
+    var panel = document.querySelector('[id$="-panel-dashboard-layers"]');
+    if (requestedView === currentView) {
+      updateDashboardMapViewUi(mapContainer, panel, currentView);
+      return Promise.resolve();
+    }
+
+    var requestId = interactiveMapState.dashboardViewRequestId + 1;
+    interactiveMapState.dashboardViewRequestId = requestId;
+    setDashboardMapViewMessage(panel, '', false);
+    setDashboardMapViewLoading(mapContainer, panel, true);
+
+    return window
+      .fetch(
+        '/project-dashboard/map-data?view=' + encodeURIComponent(requestedView),
+        {
+          cache: 'no-store',
+          credentials: 'same-origin',
+          headers: { Accept: 'application/json' }
+        }
+      )
+      .then(function (response) {
+        if (!response.ok) {
+          throw new Error(
+            'Map view request failed with status ' + response.status
+          );
+        }
+        return response.json();
+      })
+      .then(function (responseData) {
+        if (requestId !== interactiveMapState.dashboardViewRequestId) {
+          return;
+        }
+        if (
+          !responseData ||
+          responseData.mapView !== requestedView ||
+          !responseData.mapData
+        ) {
+          throw new Error('Map view response was invalid');
+        }
+
+        replaceDashboardMapData(mapContainer, responseData.mapData);
+        updateDashboardMapViewUi(mapContainer, panel, responseData.mapView);
+
+        if (responseData.mapView === 'post-intervention') {
+          applyDashboardInterventionFilters(panel);
+        }
+
+        if (options && options.updateHistory) {
+          updateDashboardMapViewHistory(responseData.mapView, 'push');
+        }
+
+        setDashboardMapViewLoading(mapContainer, panel, false);
+        setDashboardMapViewMessage(
+          panel,
+          (responseData.mapView === 'post-intervention'
+            ? 'Post intervention'
+            : 'Baseline') + ' map loaded',
+          false
+        );
+      })
+      .catch(function (error) {
+        if (requestId !== interactiveMapState.dashboardViewRequestId) {
+          return;
+        }
+
+        console.error('Failed to switch dashboard map view:', error);
+        updateDashboardMapViewUi(mapContainer, panel, currentView);
+        setDashboardMapViewLoading(mapContainer, panel, false);
+        setDashboardMapViewMessage(
+          panel,
+          'The selected map view could not be loaded. Try again.',
+          true
+        );
+
+        if (!options || !options.updateHistory) {
+          updateDashboardMapViewHistory(currentView, 'replace');
+        }
+      });
+  }
+
+  function isDashboardMapViewAvailable(mapContainer, mapView) {
+    if (mapView === 'baseline') {
+      return mapContainer.getAttribute('data-has-baseline') === 'true';
+    }
+    if (mapView === 'post-intervention') {
+      return (
+        mapContainer.getAttribute('data-has-post-intervention') === 'true'
+      );
+    }
+    return false;
+  }
+
+  function normalizeDashboardMapData(mapData) {
+    var sourceData = mapData || {};
+
+    return {
+      siteBoundary: normalizeToWgs84(
+        sourceData.siteBoundary || emptyFeatureCollection()
+      ),
+      parcels: normalizeToWgs84(
+        sourceData.parcels || emptyFeatureCollection(),
+        buildFeatureMetadataBuilder('parcel')
+      ),
+      hedgerows: normalizeToWgs84(
+        sourceData.hedgerows || emptyFeatureCollection(),
+        buildFeatureMetadataBuilder('hedgerow')
+      ),
+      watercourses: normalizeToWgs84(
+        sourceData.watercourses || emptyFeatureCollection(),
+        buildFeatureMetadataBuilder('watercourse')
+      ),
+      trees: normalizeToWgs84(
+        sourceData.trees || emptyFeatureCollection(),
+        buildFeatureMetadataBuilder('tree')
+      )
+    };
+  }
+
+  function replaceDashboardMapData(mapContainer, mapData) {
+    var plugin = interactiveMapState.datasetsPlugin;
+    if (!plugin || typeof plugin.setData !== 'function') {
+      throw new Error('Interactive map datasets cannot be updated');
+    }
+
+    var normalizedMapData = normalizeDashboardMapData(mapData);
+    resetDashboardFeatureState(normalizedMapData);
+
+    DASHBOARD_DATASET_CONFIG.forEach(function (datasetConfig) {
+      if (
+        !interactiveMapState.dashboardDatasetIds.includes(
+          datasetConfig.datasetId
+        )
+      ) {
+        return;
+      }
+
+      plugin.setData(normalizedMapData[datasetConfig.mapDataKey], {
+        datasetId: datasetConfig.datasetId
+      });
+    });
+
+    interactiveMapState.datasetsByType = {
+      parcel: normalizedMapData.parcels.features,
+      hedgerow: normalizedMapData.hedgerows.features,
+      watercourse: normalizedMapData.watercourses.features,
+      tree: normalizedMapData.trees.features
+    };
+    interactiveMapState.fullBounds =
+      getCombinedBounds(
+        DASHBOARD_DATASET_CONFIG.map(function (datasetConfig) {
+          return { geojson: normalizedMapData[datasetConfig.mapDataKey] };
+        })
+      ) || [
+        [-7.57, 49.96],
+        [1.68, 58.64]
+      ];
+
+    zoomToFullExtent();
+  }
+
+  function resetDashboardFeatureState(normalizedMapData) {
+    var plugin = interactiveMapState.datasetsPlugin;
+
+    clearHoverFeature();
+    clearSelectedRow();
+    hideHabitatDetailsPanel();
+    interactiveMapState.preserveSelectionOnDetailsClose = false;
+    if (
+      interactiveMapState.interactPlugin &&
+      typeof interactiveMapState.interactPlugin.clear === 'function'
+    ) {
+      interactiveMapState.interactPlugin.clear();
+    }
+
+    DASHBOARD_DATASET_CONFIG.forEach(function (datasetConfig) {
+      if (
+        !datasetConfig.featureType ||
+        !interactiveMapState.dashboardDatasetIds.includes(
+          datasetConfig.datasetId
+        ) ||
+        !plugin ||
+        typeof plugin.setFeatureVisibility !== 'function'
+      ) {
+        return;
+      }
+
+      var currentFeatures =
+        interactiveMapState.datasetsByType[datasetConfig.featureType] || [];
+      var nextFeatures = normalizedMapData[datasetConfig.mapDataKey].features;
+      var featureIds = currentFeatures
+        .concat(nextFeatures)
+        .map(function (feature) {
+          return feature.properties && feature.properties.__imFeatureKey;
+        })
+        .filter(function (featureId, index, values) {
+          return featureId && values.indexOf(featureId) === index;
+        });
+
+      if (featureIds.length) {
+        plugin.setFeatureVisibility(true, featureIds, {
+          datasetId: datasetConfig.datasetId
+        });
+      }
+    });
+  }
+
+  function updateDashboardMapViewUi(mapContainer, panel, mapView) {
+    mapContainer.setAttribute('data-map-view', mapView);
+    if (!panel) {
+      return;
+    }
+
+    var title = panel.querySelector('[data-dashboard-map-title]');
+    if (title) {
+      title.textContent =
+        mapView === 'post-intervention' ? 'Post intervention' : 'Baseline';
+    }
+
+    panel
+      .querySelectorAll('input[name="dashboard-map-title"]')
+      .forEach(function (input) {
+        input.checked = input.value === mapView;
+      });
+
+    var interventionSection = panel.querySelector(
+      '[data-dashboard-intervention-section]'
+    );
+    if (interventionSection) {
+      interventionSection.hidden = mapView !== 'post-intervention';
+    }
+  }
+
+  function setDashboardMapViewLoading(mapContainer, panel, isLoading) {
+    mapContainer.setAttribute('aria-busy', isLoading ? 'true' : 'false');
+    if (!panel) {
+      return;
+    }
+
+    panel
+      .querySelectorAll('input[name="dashboard-map-title"]')
+      .forEach(function (input) {
+        input.disabled =
+          isLoading || !isDashboardMapViewAvailable(mapContainer, input.value);
+      });
+
+    var status = panel.querySelector('[data-dashboard-map-view-status]');
+    if (status && isLoading) {
+      status.textContent = 'Loading map view';
+    }
+  }
+
+  function setDashboardMapViewMessage(panel, message, isError) {
+    if (!panel) {
+      return;
+    }
+
+    var error = panel.querySelector('[data-dashboard-map-view-error]');
+    var status = panel.querySelector('[data-dashboard-map-view-status]');
+    if (error) {
+      error.textContent = isError ? message : '';
+      error.hidden = !isError;
+    }
+    if (status) {
+      status.textContent = isError ? '' : message;
+    }
+  }
+
+  function updateDashboardMapViewHistory(mapView, mode) {
+    if (!window.history || !window.history.pushState) {
+      return;
+    }
+
+    var url = new URL(window.location.href);
+    url.searchParams.set('view', mapView);
+    url.searchParams.delete('selected');
+    ['mv', 'map-preview-im:center', 'map-preview-im:zoom'].forEach(
+      function (key) {
+        url.searchParams.delete(key);
+      }
+    );
+    var nextUrl = url.pathname + '?' + url.searchParams.toString() + url.hash;
+    var state = Object.assign({}, window.history.state, {
+      dashboardMapView: mapView
+    });
+
+    if (mode === 'replace') {
+      window.history.replaceState(state, '', nextUrl);
+    } else {
+      window.history.pushState(state, '', nextUrl);
+    }
+  }
+
   function applyDashboardInterventionFilters(panel) {
     var plugin = interactiveMapState.datasetsPlugin;
-    if (!plugin) {
+    if (!plugin || !panel) {
       return;
     }
 
@@ -1510,6 +1914,18 @@
       Array.isArray(geoJson.features) &&
       geoJson.features.length > 0
     );
+  }
+
+  function getAvailableDashboardLayers(mapContainer) {
+    var availableLayers = mapContainer.getAttribute(
+      'data-available-map-layers'
+    );
+
+    return availableLayers
+      ? availableLayers.split(',').filter(function (layerName) {
+          return layerName;
+        })
+      : [];
   }
 
   function clearPersistedMapView(mapId) {
