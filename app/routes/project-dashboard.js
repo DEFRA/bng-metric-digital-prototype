@@ -68,6 +68,17 @@ function buildProjectDashboardMapData(gpkgData) {
   };
 }
 
+function resolveMapView(
+  requestedView,
+  { hasBaseline, hasPostIntervention }
+) {
+  if (requestedView === 'post-intervention' && hasPostIntervention) {
+    return 'post-intervention';
+  }
+
+  return hasBaseline ? 'baseline' : 'post-intervention';
+}
+
 const TAG_NOT_MET = { text: 'Not met', classes: 'govuk-tag--red' }
 const TAG_MET = { text: 'Met', classes: 'govuk-tag--green' }
 
@@ -1065,13 +1076,10 @@ function registerProjectDashboardRoutes(router) {
       baseline: hasBaseline,
       postIntervention: hasPostIntervention
     };
-    const requestedView = req.query.view;
-    const mapView =
-      requestedView === 'post-intervention' && hasPostIntervention
-        ? 'post-intervention'
-        : hasBaseline
-          ? 'baseline'
-          : 'post-intervention';
+    const mapView = resolveMapView(req.query.view, {
+      hasBaseline,
+      hasPostIntervention
+    });
     const mapData = mapDataByKind[mapView];
 
     res.render('project-dashboard/map', {
@@ -1216,5 +1224,6 @@ function registerProjectDashboardRoutes(router) {
 
 module.exports = {
   buildProjectDashboardMapData,
+  resolveMapView,
   registerProjectDashboardRoutes
 };
