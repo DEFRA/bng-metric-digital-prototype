@@ -1,0 +1,22 @@
+{% extends "layouts/main.html" %}
+
+{% set pageName="Report no longer available" %}
+
+{% block content %}
+
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+
+    <h1 class="govuk-heading-l">This report is no longer available</h1>
+
+    <p class="govuk-body">
+      Generated reports are held for 15 minutes and then discarded. Nothing is stored
+      permanently — upload the files again to produce a fresh one.
+    </p>
+
+    {{ govukButton({ text: "Generate a report", href: "/test-data/pdf-report" }) }}
+
+  </div>
+</div>
+
+{% endblock %}

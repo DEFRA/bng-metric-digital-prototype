@@ -42,6 +42,7 @@ const { registerProjectDashboardRoutes } = require('./routes/project-dashboard')
 const { registerTestRoutes } = require('./routes/test')
 const { registerGenGpkgRoutes } = require('./routes/gen-gpkg')
 const { registerUkhabStylesRoutes } = require('./routes/ukhab-styles')
+const { registerPdfReportRoutes } = require('./routes/pdf-report')
 
 // Register all route modules
 registerOsApiRoutes(router)
@@ -57,6 +58,7 @@ registerProjectDashboardRoutes(router)
 registerTestRoutes(router)
 registerGenGpkgRoutes(router)
 registerUkhabStylesRoutes(router)
+registerPdfReportRoutes(router)
 
 router.get('/dev', function (req, res) {
   res.render('dev');

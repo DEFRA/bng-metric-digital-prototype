@@ -176,6 +176,49 @@ To update dependencies use [npm-check-updates](https://github.com/raineorshine/n
 ncu --interactive --format group
 ```
 
+## PDF site report
+
+There are two ways to produce one, and they draw through the same code:
+
+- **`/test-data/pdf-report`** (linked from `/dev`) — the developer tool. Upload a baseline
+  and a post-intervention GeoPackage, choose a typeface, a basemap and a parcel layout.
+- **The downloads on `/project-dashboard/reports`** — the journey's own entry point:
+  the Reports screen's "Download final version" button and "Download draft" link.
+  No form and no options; it reports on whatever the session has already uploaded,
+  and falls back to committed demo data on a cold session, so it always produces
+  something to look at. It reads no files.
+
+Either way the output is the same report: a summary page laid out like the project
+summary screen — one tile section per unit type, with the total on-site net percentage
+change and its Met/Not met tag, the on-site baseline, post-intervention and net unit
+change — then two site maps over an Ordnance Survey basemap, then one card per habitat
+parcel carrying every attribute the data records.
+
+The summary page's unit figures use the metric's static formula (size × distinctiveness
+× condition × strategic significance), computed from the data alone; the time and
+difficulty multipliers the full metric applies to created and enhanced habitat are
+deliberately not applied, so the figures are indicative — `app/lib/pdf-report/unit-summary.mjs`
+states the whole caveat. The Met/Not met tag is judged against the project's target
+percentage from the session, or the statutory 10% without one. Every other number on
+the report is read from the uploaded files or measured from their geometry. The tool
+exists to show what the data and the layout look like on a page.
+
+The engine in `app/lib/pdf-report/` is a port of the BMD-984 spike
+(`bng-metric-harness`, `spikes/bmd-984-pdf-export/`), which is also what the report route
+in `bng-metric-backend` is built from.
+
+Two things about the output are easy to get wrong because they are invisible on the page:
+
+- **Typefaces.** PDF/UA-1 requires every font to be embedded in the file. GDS Transport
+  (read from the installed `govuk-frontend` package, never committed here — this is a
+  public repository and its licence does not permit republishing it) and the bundled Noto
+  Sans both embed. The two PDF built-in options, Helvetica and Times, do not, so they
+  produce a non-conformant file. The form and the result page both say so.
+- **The basemap.** It needs `OS_PROJECT_API_KEY` with the _OS NGD API – Tiles_ product —
+  the same key and product the interactive map pages already use, so no new secret is
+  needed. Without it, or if OS cannot be reached, the report is drawn over a generated
+  British National Grid instead and the result page says that it was.
+
 ## Environment Variables and Secrets
 
 Environment variables and Secrets are used to configure your prototype. Where you set them can be seen in the table
