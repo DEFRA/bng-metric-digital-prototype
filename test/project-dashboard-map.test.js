@@ -35,8 +35,13 @@ function makeMapData(source, overrides = {}) {
 
 function makeJsonResponse() {
   return {
+    headers: {},
     statusCode: 200,
     payload: null,
+    set(name, value) {
+      this.headers[name] = value;
+      return this;
+    },
     status(statusCode) {
       this.statusCode = statusCode;
       return this;
@@ -170,6 +175,7 @@ test('sendProjectDashboardMapData returns the requested available view', () => {
   );
 
   assert.equal(response.statusCode, 200);
+  assert.equal(response.headers['Cache-Control'], 'private, no-store');
   assert.deepEqual(response.payload, {
     mapView: 'post-intervention',
     mapData: postIntervention
@@ -194,6 +200,7 @@ test('sendProjectDashboardMapData rejects an unavailable view', () => {
   );
 
   assert.equal(response.statusCode, 404);
+  assert.equal(response.headers['Cache-Control'], 'private, no-store');
   assert.deepEqual(response.payload, { error: 'Map view is not available' });
 });
 
@@ -209,5 +216,6 @@ test('sendProjectDashboardMapData rejects an invalid view', () => {
   );
 
   assert.equal(response.statusCode, 400);
+  assert.equal(response.headers['Cache-Control'], 'private, no-store');
   assert.deepEqual(response.payload, { error: 'Select a valid map view' });
 });

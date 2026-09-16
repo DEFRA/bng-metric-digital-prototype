@@ -115,6 +115,8 @@ function getAvailableProjectDashboardMapLayers(mapDataByKind) {
 }
 
 function sendProjectDashboardMapData(req, res) {
+  res.set('Cache-Control', 'private, no-store');
+
   const requestedView = req.query.view;
   if (!['baseline', 'post-intervention'].includes(requestedView)) {
     return res.status(400).json({ error: 'Select a valid map view' });

@@ -9,6 +9,7 @@ The system SHALL allow a user to switch between uploaded baseline and post-inter
 - **WHEN** baseline and post-intervention data are available and the user selects Post intervention
 - **THEN** the map replaces the displayed datasets with post-intervention data without reloading the document
 - **AND** the map panel, controls, extent, and URL identify the post-intervention view
+- **AND** layer controls and key entries are shown only for layers present in the post-intervention data
 
 #### Scenario: Switch to baseline
 
@@ -27,6 +28,17 @@ The system SHALL allow a user to switch between uploaded baseline and post-inter
 - **WHEN** loading a selected view fails
 - **THEN** the current map data and active view remain unchanged
 - **AND** the user is informed that the selected view could not be loaded
+
+#### Scenario: Optional layer availability changes between views
+
+- **WHEN** a layer is present in one uploaded view but absent from the selected view
+- **THEN** the layer is hidden from the map, layer controls, and map key
+- **AND** the user's visibility preference is restored if the layer becomes available again
+
+#### Scenario: Map data is returned from the session
+
+- **WHEN** the client requests an available dashboard map view
+- **THEN** the response is marked private and must not be cached
 
 #### Scenario: Navigate through view history
 
