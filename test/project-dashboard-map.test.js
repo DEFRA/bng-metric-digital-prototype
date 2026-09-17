@@ -2,13 +2,56 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const {
   buildProjectDashboardMapData,
-  resolveMapView
+  getAvailableProjectDashboardMapLayers,
+  getProjectDashboardMapDataByKind,
+  resolveMapView,
+  sendProjectDashboardMapData
 } = require('../app/routes/project-dashboard');
 
 const BOTH_UPLOADED = {
   hasBaseline: true,
   hasPostIntervention: true
 };
+const EMPTY_FEATURE_COLLECTION = {
+  type: 'FeatureCollection',
+  features: []
+};
+
+function makeMapData(source, overrides = {}) {
+  const featureCollection = {
+    type: 'FeatureCollection',
+    features: [{ type: 'Feature', properties: { source }, geometry: null }]
+  };
+
+  return {
+    siteBoundary: featureCollection,
+    parcels: featureCollection,
+    hedgerows: EMPTY_FEATURE_COLLECTION,
+    watercourses: EMPTY_FEATURE_COLLECTION,
+    trees: EMPTY_FEATURE_COLLECTION,
+    ...overrides
+  };
+}
+
+function makeJsonResponse() {
+  return {
+    headers: {},
+    statusCode: 200,
+    payload: null,
+    set(name, value) {
+      this.headers[name] = value;
+      return this;
+    },
+    status(statusCode) {
+      this.statusCode = statusCode;
+      return this;
+    },
+    json(payload) {
+      this.payload = payload;
+      return this;
+    }
+  };
+}
 
 test('buildProjectDashboardMapData selects uploaded habitat map layers', () => {
   const featureCollection = {
@@ -85,4 +128,94 @@ test('resolveMapView selects post-intervention when baseline is unavailable', ()
 
 test('resolveMapView falls back to baseline for the retired both view', () => {
   assert.equal(resolveMapView('both', BOTH_UPLOADED), 'baseline');
+});
+
+test('getProjectDashboardMapDataByKind supports legacy session map data', () => {
+  const baseline = makeMapData('baseline');
+
+  assert.deepEqual(
+    getProjectDashboardMapDataByKind({
+      projectDashboardMapData: baseline,
+      projectDashboardUploadedFile: { kind: 'baseline' }
+    }),
+    { baseline }
+  );
+});
+
+test('getAvailableProjectDashboardMapLayers returns layers used by either view', () => {
+  const hedgerows = makeMapData('hedgerow').parcels;
+  const trees = makeMapData('tree').parcels;
+
+  assert.deepEqual(
+    getAvailableProjectDashboardMapLayers({
+      baseline: makeMapData('baseline', { hedgerows }),
+      'post-intervention': makeMapData('post-intervention', { trees })
+    }),
+    ['siteBoundary', 'parcels', 'hedgerows', 'trees']
+  );
+});
+
+test('sendProjectDashboardMapData returns the requested available view', () => {
+  const postIntervention = makeMapData('post-intervention');
+  const response = makeJsonResponse();
+
+  sendProjectDashboardMapData(
+    {
+      query: { view: 'post-intervention' },
+      session: {
+        data: {
+          projectDashboardMapDataByKind: {
+            baseline: makeMapData('baseline'),
+            'post-intervention': postIntervention
+          }
+        }
+      }
+    },
+    response
+  );
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.headers['Cache-Control'], 'private, no-store');
+  assert.deepEqual(response.payload, {
+    mapView: 'post-intervention',
+    mapData: postIntervention
+  });
+});
+
+test('sendProjectDashboardMapData rejects an unavailable view', () => {
+  const response = makeJsonResponse();
+
+  sendProjectDashboardMapData(
+    {
+      query: { view: 'post-intervention' },
+      session: {
+        data: {
+          projectDashboardMapDataByKind: {
+            baseline: makeMapData('baseline')
+          }
+        }
+      }
+    },
+    response
+  );
+
+  assert.equal(response.statusCode, 404);
+  assert.equal(response.headers['Cache-Control'], 'private, no-store');
+  assert.deepEqual(response.payload, { error: 'Map view is not available' });
+});
+
+test('sendProjectDashboardMapData rejects an invalid view', () => {
+  const response = makeJsonResponse();
+
+  sendProjectDashboardMapData(
+    {
+      query: { view: 'both' },
+      session: { data: {} }
+    },
+    response
+  );
+
+  assert.equal(response.statusCode, 400);
+  assert.equal(response.headers['Cache-Control'], 'private, no-store');
+  assert.deepEqual(response.payload, { error: 'Select a valid map view' });
 });

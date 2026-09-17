@@ -26,6 +26,13 @@ const { parseGeoPackage } = require('../lib/geopackage-parser');
 
 const upload = multer({ storage: multer.memoryStorage() });
 const maxFileSizeMB = 100;
+const projectDashboardMapLayerNames = [
+  'siteBoundary',
+  'parcels',
+  'hedgerows',
+  'watercourses',
+  'trees'
+];
 
 function findLayer(layers, names) {
   return layers.find((layer) => {
@@ -77,6 +84,60 @@ function resolveMapView(
   }
 
   return hasBaseline ? 'baseline' : 'post-intervention';
+}
+
+function getProjectDashboardMapDataByKind(sessionData) {
+  const mapDataByKind = {
+    ...(sessionData.projectDashboardMapDataByKind || {})
+  };
+  const latestFile = sessionData.projectDashboardUploadedFile;
+
+  if (
+    Object.keys(mapDataByKind).length === 0 &&
+    sessionData.projectDashboardMapData
+  ) {
+    mapDataByKind[latestFile?.kind || 'baseline'] =
+      sessionData.projectDashboardMapData;
+  }
+
+  return mapDataByKind;
+}
+
+function getAvailableProjectDashboardMapLayers(mapDataByKind) {
+  const mapViews = Object.values(mapDataByKind);
+
+  return projectDashboardMapLayerNames.filter((layerName) =>
+    mapViews.some((mapData) => {
+      const features = mapData?.[layerName]?.features;
+      return Array.isArray(features) && features.length > 0;
+    })
+  );
+}
+
+function sendProjectDashboardMapData(req, res) {
+  res.set('Cache-Control', 'private, no-store');
+
+  const requestedView = req.query.view;
+  if (!['baseline', 'post-intervention'].includes(requestedView)) {
+    return res.status(400).json({ error: 'Select a valid map view' });
+  }
+
+  const mapDataByKind = getProjectDashboardMapDataByKind(req.session.data);
+  const hasBaseline = Boolean(mapDataByKind.baseline);
+  const hasPostIntervention = Boolean(mapDataByKind['post-intervention']);
+  const mapView = resolveMapView(requestedView, {
+    hasBaseline,
+    hasPostIntervention
+  });
+
+  if (mapView !== requestedView || !mapDataByKind[mapView]) {
+    return res.status(404).json({ error: 'Map view is not available' });
+  }
+
+  return res.json({
+    mapView,
+    mapData: mapDataByKind[mapView]
+  });
 }
 
 const TAG_NOT_MET = { text: 'Not met', classes: 'govuk-tag--red' }
@@ -1068,6 +1129,8 @@ function registerProjectDashboardRoutes(router) {
     })
   })
 
+  router.get('/project-dashboard/map-data', sendProjectDashboardMapData);
+
   router.get('/project-dashboard/reports', function (req, res) {
     const filled = Boolean(req.session.data.postInterventionUploaded)
     res.render('project-dashboard/reports', {
@@ -1077,18 +1140,7 @@ function registerProjectDashboardRoutes(router) {
   })
 
   router.get('/project-dashboard/map', function (req, res) {
-    const mapDataByKind = {
-      ...(req.session.data.projectDashboardMapDataByKind || {})
-    };
-    const latestFile = req.session.data.projectDashboardUploadedFile;
-
-    if (
-      Object.keys(mapDataByKind).length === 0 &&
-      req.session.data.projectDashboardMapData
-    ) {
-      mapDataByKind[latestFile?.kind || 'baseline'] =
-        req.session.data.projectDashboardMapData;
-    }
+    const mapDataByKind = getProjectDashboardMapDataByKind(req.session.data);
 
     const hasBaseline = Boolean(mapDataByKind.baseline);
     const hasPostIntervention = Boolean(mapDataByKind['post-intervention']);
@@ -1113,6 +1165,8 @@ function registerProjectDashboardRoutes(router) {
       mapData: mapData,
       mapView: mapView,
       availableViews: availableViews,
+      availableMapLayers:
+        getAvailableProjectDashboardMapLayers(mapDataByKind),
       projectName: req.session.data.projectName || 'Project name'
     });
   });
@@ -1251,6 +1305,9 @@ function registerProjectDashboardRoutes(router) {
 
 module.exports = {
   buildProjectDashboardMapData,
+  getAvailableProjectDashboardMapLayers,
+  getProjectDashboardMapDataByKind,
   resolveMapView,
+  sendProjectDashboardMapData,
   registerProjectDashboardRoutes
 };
