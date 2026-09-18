@@ -29,7 +29,7 @@
     "@cucumber/cucumber": "13.2.1",
     "@defra/interactive-map": "0.0.41-alpha",
     "@govuk-prototype-kit/common-templates": "3.0.1",
-    "@ministryofjustice/frontend": "9.0.0",
+    "@ministryofjustice/frontend": "11.0.1",
     "archiver": "^8.0.0",
     "better-sqlite3": "13.0.3",
     "bng-library": "github:DEFRA/bng-library#5e5d4dc49f6d04222b142709289202a762388380",
