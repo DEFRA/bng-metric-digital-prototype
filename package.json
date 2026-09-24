@@ -39,7 +39,7 @@
     "lru-cache": "11.5.2",
     "multer": "^2.4.0",
     "ol": "^10.10.0",
-    "ol-mapbox-style": "^13.5.0",
+    "ol-mapbox-style": "^13.5.1",
     "pdfkit": "0.20.2",
     "shpjs": "^6.1.0",
     "undici": "8.10.2",
