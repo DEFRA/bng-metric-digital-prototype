@@ -47,7 +47,7 @@
   },
   "devDependencies": {
     "husky": "9.1.7",
-    "prettier": "3.9.7"
+    "prettier": "3.9.8"
   },
   "overrides": {
     "better-sqlite3": "$better-sqlite3"
