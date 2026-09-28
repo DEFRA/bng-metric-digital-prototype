@@ -36,7 +36,7 @@
     "dotenv": "^17.2.3",
     "govuk-frontend": "6.5.1",
     "govuk-prototype-kit": "13.20.5",
-    "lru-cache": "11.5.2",
+    "lru-cache": "11.5.3",
     "multer": "^2.4.0",
     "ol": "^10.10.0",
     "ol-mapbox-style": "^13.5.1",
