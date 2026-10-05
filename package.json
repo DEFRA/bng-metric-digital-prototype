@@ -33,7 +33,7 @@
     "archiver": "^8.0.0",
     "better-sqlite3": "13.0.3",
     "bng-library": "github:DEFRA/bng-library#5e5d4dc49f6d04222b142709289202a762388380",
-    "dotenv": "^17.2.3",
+    "dotenv": "^18.0.0",
     "govuk-frontend": "6.5.1",
     "govuk-prototype-kit": "13.20.5",
     "lru-cache": "11.5.3",
