@@ -610,10 +610,12 @@ function postInterventionTable(section, intervention) {
           h.habitatType
             ? { text: h.habitatType, classes: WRAP_HABITAT_TYPE }
             : NO_DATA,
-          {
-            text: distinctiveness(h.distinctiveness, h.distinctivenessScore),
-            attributes: sortValue(h.distinctivenessScore)
-          },
+          h.distinctiveness
+            ? {
+                text: distinctiveness(h.distinctiveness, h.distinctivenessScore),
+                attributes: sortValue(h.distinctivenessScore)
+              }
+            : NO_DATA,
           conditionCell(h),
           h.strategicSignificance
             ? {
@@ -640,10 +642,12 @@ function postInterventionTable(section, intervention) {
                 yearsCell(h.standardTime),
                 yearsCell(h.advanceYears),
                 yearsCell(h.delayYears),
-                {
-                  text: `${years(h.finalTime)} (${h.finalTimeMultiplier.toFixed(3)})`,
-                  attributes: sortValue(h.finalTime)
-                },
+                h.finalTime == null || h.finalTimeMultiplier == null
+                  ? NO_DATA
+                  : {
+                      text: `${years(h.finalTime)} (${h.finalTimeMultiplier.toFixed(3)})`,
+                      attributes: sortValue(h.finalTime)
+                    },
                 {
                   text: `${h.standardDifficulty} (${DIFFICULTY_MULTIPLIERS[h.standardDifficulty]})`,
                   attributes: sortValue(
@@ -1323,17 +1327,21 @@ function registerProjectDashboardV2Routes(router) {
         listHref: postList,
         intervention: intervention,
         measureValue: section.measure.format(habitat[section.measure.key], 4),
-        units: fixed(habitat.units),
-        distinctiveness: distinctiveness(
-          habitat.distinctiveness,
-          habitat.distinctivenessScore
-        ),
+        units: habitat.units == null ? NO_DATA_TEXT : fixed(habitat.units),
+        distinctiveness: habitat.distinctiveness
+          ? distinctiveness(
+              habitat.distinctiveness,
+              habitat.distinctivenessScore
+            )
+          : NO_DATA_TEXT,
         standardTime:
-          habitat.standardTime === undefined ? '' : years(habitat.standardTime),
+          habitat.standardTime == null ? '' : years(habitat.standardTime),
         finalTime:
-          habitat.finalTime === undefined
+          habitat.finalTime == null
             ? ''
-            : `${years(habitat.finalTime)} (${habitat.finalTimeMultiplier.toFixed(3)})`,
+            : habitat.finalTimeMultiplier == null
+              ? years(habitat.finalTime)
+              : `${years(habitat.finalTime)} (${habitat.finalTimeMultiplier.toFixed(3)})`,
         appliedDifficulty: habitat.appliedDifficulty
           ? `${habitat.appliedDifficulty} (${habitat.appliedDifficultyMultiplier})`
           : '',
