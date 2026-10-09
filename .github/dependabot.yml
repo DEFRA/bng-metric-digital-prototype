@@ -22,15 +22,15 @@ updates:
           - minor
           - patch
 
-    # Schedule run every Monday, local time
+    # Schedule run every day, local time
     schedule:
-      interval: weekly
+      interval: daily
       time: '10:30'
       timezone: 'Europe/London'
 
     versioning-strategy: increase
 
-    # Hold new PRs for a few days after a release so auto-merge does not pull in
+    # Hold new PRs for a few days after a release so auto-approval does not pull in
     # a version that gets yanked shortly after publishing. Longer hold for the
     # riskier bumps.
     cooldown:
@@ -47,9 +47,9 @@ updates:
   - package-ecosystem: github-actions
     directory: /
 
-    # Schedule run every Monday, local time
+    # Schedule run every day, local time
     schedule:
-      interval: weekly
+      interval: daily
       time: '10:30'
       timezone: 'Europe/London'
 
@@ -62,9 +62,9 @@ updates:
   - package-ecosystem: docker
     directory: /
 
-    # Schedule run every Monday, local time
+    # Schedule run every day, local time
     schedule:
-      interval: weekly
+      interval: daily
       time: '10:30'
       timezone: 'Europe/London'
 

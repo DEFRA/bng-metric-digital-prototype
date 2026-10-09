@@ -30,13 +30,8 @@ function getStylesData() {
   return cachedData
 }
 
-function isEnabled() {
-  return process.env.SHOW_TOOLS === 'true'
-}
-
 function registerUkhabStylesRoutes(router) {
   router.get('/tools/ukhab-styles', function (req, res) {
-    if (!isEnabled()) return res.status(404).send('Not found')
     res.render('ukhab-styles/index', { ukhabData: getStylesData() })
   })
 }

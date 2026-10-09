@@ -7,8 +7,8 @@
  *   -> area habitats -> flags / trading rules / baseline / post-intervention
  *   -> habitat detail
  *
- * This is a User Research prototype: there is no real GeoPackage parsing or
- * live metric calculation. All dashboards, tables and form values are
+ * This is a User Research prototype: uploaded GeoPackages are parsed for the
+ * map, but there is no live metric calculation. Dashboards and tables are
  * populated from the static config objects below, passed straight into the
  * reusable appDashboard / appSideNav Nunjucks macros
  * (app/views/dashboard/macro.njk) and stock govuk-frontend components.
@@ -20,6 +20,125 @@
  * req.session.data.postInterventionUploaded and flips when the upload
  * wizard's post-intervention branch completes.
  */
+
+const multer = require('multer');
+const { parseGeoPackage } = require('../lib/geopackage-parser');
+
+const upload = multer({ storage: multer.memoryStorage() });
+const maxFileSizeMB = 100;
+const projectDashboardMapLayerNames = [
+  'siteBoundary',
+  'parcels',
+  'hedgerows',
+  'watercourses',
+  'trees'
+];
+
+function findLayer(layers, names) {
+  return layers.find((layer) => {
+    const layerName = layer.name.toLowerCase();
+    return names.some((name) => layerName.includes(name));
+  });
+}
+
+function buildProjectDashboardMapData(gpkgData) {
+  const layers = gpkgData.layers || [];
+  const geometries = gpkgData.geometries || {};
+  const boundaryLayer = findLayer(layers, ['boundary', 'site']);
+  const parcelsLayer = findLayer(layers, ['parcel', 'habitat']);
+  const hedgerowsLayer = findLayer(layers, ['hedgerow', 'hedge']);
+  const watercoursesLayer = findLayer(layers, [
+    'watercourse',
+    'river',
+    'stream'
+  ]);
+  const treesLayer = findLayer(layers, ['tree']);
+
+  if (!boundaryLayer || !parcelsLayer) {
+    throw new Error(
+      'GeoPackage must contain boundary and habitat parcel layers.'
+    );
+  }
+
+  return {
+    siteBoundary: geometries[boundaryLayer.name],
+    parcels: geometries[parcelsLayer.name],
+    hedgerows: hedgerowsLayer
+      ? geometries[hedgerowsLayer.name]
+      : { type: 'FeatureCollection', features: [] },
+    watercourses: watercoursesLayer
+      ? geometries[watercoursesLayer.name]
+      : { type: 'FeatureCollection', features: [] },
+    trees: treesLayer
+      ? geometries[treesLayer.name]
+      : { type: 'FeatureCollection', features: [] }
+  };
+}
+
+function resolveMapView(
+  requestedView,
+  { hasBaseline, hasPostIntervention }
+) {
+  if (requestedView === 'post-intervention' && hasPostIntervention) {
+    return 'post-intervention';
+  }
+
+  return hasBaseline ? 'baseline' : 'post-intervention';
+}
+
+function getProjectDashboardMapDataByKind(sessionData) {
+  const mapDataByKind = {
+    ...(sessionData.projectDashboardMapDataByKind || {})
+  };
+  const latestFile = sessionData.projectDashboardUploadedFile;
+
+  if (
+    Object.keys(mapDataByKind).length === 0 &&
+    sessionData.projectDashboardMapData
+  ) {
+    mapDataByKind[latestFile?.kind || 'baseline'] =
+      sessionData.projectDashboardMapData;
+  }
+
+  return mapDataByKind;
+}
+
+function getAvailableProjectDashboardMapLayers(mapDataByKind) {
+  const mapViews = Object.values(mapDataByKind);
+
+  return projectDashboardMapLayerNames.filter((layerName) =>
+    mapViews.some((mapData) => {
+      const features = mapData?.[layerName]?.features;
+      return Array.isArray(features) && features.length > 0;
+    })
+  );
+}
+
+function sendProjectDashboardMapData(req, res) {
+  res.set('Cache-Control', 'private, no-store');
+
+  const requestedView = req.query.view;
+  if (!['baseline', 'post-intervention'].includes(requestedView)) {
+    return res.status(400).json({ error: 'Select a valid map view' });
+  }
+
+  const mapDataByKind = getProjectDashboardMapDataByKind(req.session.data);
+  const hasBaseline = Boolean(mapDataByKind.baseline);
+  const hasPostIntervention = Boolean(mapDataByKind['post-intervention']);
+  const mapView = resolveMapView(requestedView, {
+    hasBaseline,
+    hasPostIntervention
+  });
+
+  if (mapView !== requestedView || !mapDataByKind[mapView]) {
+    return res.status(404).json({ error: 'Map view is not available' });
+  }
+
+  return res.json({
+    mapView,
+    mapData: mapDataByKind[mapView]
+  });
+}
 
 const TAG_NOT_MET = { text: 'Not met', classes: 'govuk-tag--red' }
 const TAG_MET = { text: 'Met', classes: 'govuk-tag--green' }
@@ -807,13 +926,27 @@ const postInterventionHabitats = {
   }
 }
 
+// "Reports" — the outstanding tasks that stand between the user and a final
+// report. Static placeholder rows for User Research: the journey has no task
+// engine, so nothing here is derived from the uploaded file.
+const reportsTasksTable = {
+  head: [{ text: 'Task' }, { text: 'Action' }],
+  rows: [
+    ['Task 1', 'Add project details', '/project-dashboard/project-details'],
+    ['Task 2', 'Example action', '#']
+  ].map(([task, action, href]) => [
+    { text: task },
+    { html: `<a class="govuk-link" href="${href}">${action}</a>` }
+  ])
+}
+
 /**
  * Build the side navigation, marking the current top-level section and,
  * when inside Area habitats, the current sub-section. "Flags" and
  * "Post-intervention" only appear once a post-intervention file has been
  * uploaded — matching the Figma design, where those sub-items and their
  * screens don't exist until then.
- * @param {string} section - "summary" or "area-habitats"
+ * @param {string} section - "summary", "area-habitats" or "reports"
  * @param {string} [sub] - "flags", "trading-rules", "baseline" or "post-intervention"
  * @param {boolean} filled - whether a post-intervention file has been uploaded
  */
@@ -856,6 +989,11 @@ function sideNav(section, sub, filled) {
         href: '/project-dashboard/area-habitats',
         current: section === 'area-habitats' && !sub,
         items: section === 'area-habitats' ? areaHabitatsItems : undefined
+      },
+      {
+        text: 'Reports',
+        href: '/project-dashboard/reports',
+        current: section === 'reports'
       }
     ]
   }
@@ -883,6 +1021,7 @@ function registerProjectDashboardRoutes(router) {
   })
 
   router.post('/project-dashboard/project-details', function (req, res) {
+    req.session.data.projectName = req.body.projectName || 'Project name';
     res.redirect('/project-dashboard/upload/choose')
   })
 
@@ -903,16 +1042,70 @@ function registerProjectDashboardRoutes(router) {
   })
 
   router.get('/project-dashboard/upload/:kind', function (req, res) {
-    res.render('project-dashboard/upload', { kind: req.params.kind })
+    res.render('project-dashboard/upload', {
+      kind: req.params.kind,
+      error: req.query.error || null
+    })
   })
 
-  router.post('/project-dashboard/upload/:kind', function (req, res) {
-    res.redirect(`/project-dashboard/upload/${req.params.kind}/processing`)
-  })
+  router.post(
+    '/project-dashboard/upload/:kind',
+    upload.single('fileUpload'),
+    async function (req, res) {
+      const uploadUrl = `/project-dashboard/upload/${req.params.kind}`;
+
+      if (!req.file) {
+        return res.redirect(`${uploadUrl}?error=Select a file to upload`);
+      }
+
+      if (!req.file.originalname.toLowerCase().endsWith('.gpkg')) {
+        return res.redirect(
+          `${uploadUrl}?error=Upload a GeoPackage (.gpkg) file`
+        );
+      }
+
+      if (req.file.size > maxFileSizeMB * 1024 * 1024) {
+        return res.redirect(
+          `${uploadUrl}?error=File is too large. Please upload a file smaller than ${maxFileSizeMB}MB`
+        );
+      }
+
+      try {
+        const gpkgData = await parseGeoPackage(req.file.buffer);
+        const mapData = buildProjectDashboardMapData(gpkgData);
+        const mapDataByKind =
+          req.session.data.projectDashboardMapDataByKind || {};
+        const uploadedFilesByKind =
+          req.session.data.projectDashboardUploadedFilesByKind || {};
+
+        req.session.data.projectDashboardMapData = mapData;
+        mapDataByKind[req.params.kind] = mapData;
+        uploadedFilesByKind[req.params.kind] = {
+          kind: req.params.kind,
+          originalName: req.file.originalname,
+          size: req.file.size
+        };
+        req.session.data.projectDashboardMapDataByKind = mapDataByKind;
+        req.session.data.projectDashboardUploadedFilesByKind =
+          uploadedFilesByKind;
+        req.session.data.projectDashboardUploadedFile =
+          uploadedFilesByKind[req.params.kind];
+
+        return res.redirect(
+          `/project-dashboard/upload/${req.params.kind}/processing`
+        );
+      } catch (error) {
+        console.error('Project dashboard GeoPackage parsing error:', error);
+        return res.redirect(
+          `${uploadUrl}?error=Could not read the GeoPackage file. Please check the file is valid.`
+        );
+      }
+    }
+  );
 
   router.get('/project-dashboard/upload/:kind/processing', function (req, res) {
-    // UR mock: no real parsing — record that a file was "uploaded" and, for
-    // the post-intervention branch, flip the dashboard into its filled state.
+    // The POST route parsed the file. For the post-intervention branch, flip
+    // the dashboard into its filled state.
     if (req.params.kind === 'post-intervention') {
       req.session.data.postInterventionUploaded = true
     }
@@ -935,6 +1128,48 @@ function registerProjectDashboardRoutes(router) {
       }
     })
   })
+
+  router.get('/project-dashboard/map-data', sendProjectDashboardMapData);
+
+  router.get('/project-dashboard/reports', function (req, res) {
+    const filled = Boolean(req.session.data.postInterventionUploaded)
+    res.render('project-dashboard/reports', {
+      sideNav: sideNav('reports', null, filled),
+      tasksTable: reportsTasksTable
+    })
+  })
+
+  router.get('/project-dashboard/map', function (req, res) {
+    const mapDataByKind = getProjectDashboardMapDataByKind(req.session.data);
+
+    const hasBaseline = Boolean(mapDataByKind.baseline);
+    const hasPostIntervention = Boolean(mapDataByKind['post-intervention']);
+
+    if (!hasBaseline && !hasPostIntervention) {
+      return res.redirect(
+        '/project-dashboard/upload/choose?error=Upload a GeoPackage file to view the map'
+      );
+    }
+
+    const availableViews = {
+      baseline: hasBaseline,
+      postIntervention: hasPostIntervention
+    };
+    const mapView = resolveMapView(req.query.view, {
+      hasBaseline,
+      hasPostIntervention
+    });
+    const mapData = mapDataByKind[mapView];
+
+    res.render('project-dashboard/map', {
+      mapData: mapData,
+      mapView: mapView,
+      availableViews: availableViews,
+      availableMapLayers:
+        getAvailableProjectDashboardMapLayers(mapDataByKind),
+      projectName: req.session.data.projectName || 'Project name'
+    });
+  });
 
   router.get('/project-dashboard/area-habitats', function (req, res) {
     const filled = Boolean(req.session.data.postInterventionUploaded)
@@ -1075,4 +1310,11 @@ function registerProjectDashboardRoutes(router) {
   )
 }
 
-module.exports = { registerProjectDashboardRoutes }
+module.exports = {
+  buildProjectDashboardMapData,
+  getAvailableProjectDashboardMapLayers,
+  getProjectDashboardMapDataByKind,
+  resolveMapView,
+  sendProjectDashboardMapData,
+  registerProjectDashboardRoutes
+};

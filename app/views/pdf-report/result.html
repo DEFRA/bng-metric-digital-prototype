@@ -1,0 +1,75 @@
+{% extends "layouts/main.html" %}
+
+{% set pageName="PDF site report ready" %}
+
+{% block content %}
+
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+
+    {{ govukPanel({
+      titleText: "Report generated",
+      html: (siteName | escape) + "<br>" + stats.habitats + (" parcel" if stats.habitats == 1 else " parcels") + " · " + sizeKb + " kB · " + elapsedSeconds + "s"
+    }) }}
+
+    <p class="govuk-body govuk-!-margin-top-6">
+      {{ govukButton({
+        text: "Download the PDF",
+        href: "/test-data/pdf-report/download/" + id
+      }) }}
+    </p>
+
+    <p class="govuk-hint">
+      The file is held for 15 minutes. After that, generate it again.
+    </p>
+
+    <h2 class="govuk-heading-m">What is in it</h2>
+
+    {{ govukSummaryList({
+      rows: [
+        { key: { text: "Site" }, value: { text: siteName } },
+        { key: { text: "Maps" }, value: { text: ("Baseline and post-intervention, side by side" if hasPostIntervention else "Baseline only") } },
+        { key: { text: "Parcels" }, value: { text: stats.habitats + (" cards, one per parcel" if layout == "cards" else " rows") } },
+        { key: { text: "Basemap tiles drawn" }, value: { text: stats.tiles } },
+        { key: { text: "File size" }, value: { text: sizeKb + " kB" } }
+      ]
+    }) }}
+
+    <h2 class="govuk-heading-m">Typeface</h2>
+
+    {% if fonts.embedded %}
+      <p class="govuk-body">
+        Drawn in <strong>{{ fonts.name }}</strong>, embedded in the file.
+        {% if fonts.fellBack %}
+          GDS Transport was requested but could not be found in the installed
+          <code>govuk-frontend</code> package, so the report fell back to {{ fonts.name }}.
+          Nothing in the document says so — this line is the only signal.
+        {% endif %}
+      </p>
+      <p class="govuk-body">This report meets the font requirement of PDF/UA-1.</p>
+    {% else %}
+      {{ govukWarningText({
+        text: "Drawn in " + fonts.name + ", which is a PDF built-in font. Built-in fonts are named rather than embedded, so this file cannot meet PDF/UA-1 however well it is tagged. Nothing on the page looks different — that is exactly why it is worth knowing.",
+        iconFallbackText: "Warning"
+      }) }}
+    {% endif %}
+
+    <h2 class="govuk-heading-m">Basemap</h2>
+
+    {% if basemap.degraded %}
+      {{ govukWarningText({
+        text: "Ordnance Survey mapping was requested but is not available, so the maps are drawn over a generated grid instead. " + basemap.reason,
+        iconFallbackText: "Warning"
+      }) }}
+    {% else %}
+      <p class="govuk-body">{{ basemap.kind }}.</p>
+    {% endif %}
+
+    <p class="govuk-body">
+      <a class="govuk-link" href="/test-data/pdf-report">Generate another report</a>
+    </p>
+
+  </div>
+</div>
+
+{% endblock %}

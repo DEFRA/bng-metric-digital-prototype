@@ -78,6 +78,29 @@
       }) }}
     {% endset %}
 
+    {% set permutationsBlock %}
+      <p class="govuk-body">
+        Generates the full scenario catalogue as paired baseline / post-intervention GeoPackages, covering every testing theme. Downloads as one .zip with a folder per purpose.
+      </p>
+
+      <div class="govuk-form-group">
+        <label class="govuk-label" for="purpose">Purpose</label>
+        <div class="govuk-hint">Restrict to one testing theme, or generate the whole catalogue.</div>
+        <select class="govuk-select" id="purpose" name="purpose">
+          <option value="all">All purposes</option>
+          {% for p in purposes %}
+            <option value="{{ p }}">{{ p }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="govuk-form-group">
+        <label class="govuk-label" for="seed">Seed (optional)</label>
+        <div class="govuk-hint">An integer makes the output reproducible — the same seed always produces byte-identical files. Leave blank for fresh random geometry each time.</div>
+        <input class="govuk-input govuk-input--width-10" id="seed" name="seed" type="number" step="1">
+      </div>
+    {% endset %}
+
     {% set workbookBlock %}
       <div class="govuk-form-group">
         <label class="govuk-label" for="workbook">Workbook file</label>
@@ -113,9 +136,14 @@
         fieldset: { legend: { text: "What kind of GeoPackage?", classes: "govuk-fieldset__legend--m" } },
         items: [
           {
+            value: "permutations",
+            text: "Permutations — the full scenario catalogue as a .zip",
+            checked: true,
+            conditional: { html: permutationsBlock }
+          },
+          {
             value: "synthetic",
             text: "Synthetic — random geometry and attributes",
-            checked: true,
             conditional: { html: syntheticBlock }
           },
           {

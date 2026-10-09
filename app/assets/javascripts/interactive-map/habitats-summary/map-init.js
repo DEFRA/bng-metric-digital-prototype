@@ -6,6 +6,11 @@
     map: null,
     hoverHandlersBound: false,
     interactPlugin: null,
+    datasetsPlugin: null,
+    dashboardDatasetIds: [],
+    dashboardLayerVisibility: {},
+    dashboardViewRequestId: 0,
+    dashboardPanelConfigured: false,
     selectedLink: null,
     selectedFeatureKey: null,
     preserveSelectionOnDetailsClose: false,
@@ -14,7 +19,8 @@
     datasetsByType: {
       parcel: [],
       hedgerow: [],
-      watercourse: []
+      watercourse: [],
+      tree: []
     }
   };
 
@@ -23,30 +29,95 @@
   var HOVER_LINE_LAYER_ID = 'habitats-summary-hover-line';
   var HABITAT_DETAILS_PANEL_ID = 'habitatDetailsPanel';
   var HABITAT_HELP_PANEL_ID = 'habitatHelpBanner';
-  var HOVERABLE_LAYER_IDS = [
-    'habitat-parcels-im',
-    'habitat-parcels-im-stroke',
-    'hedgerows-im',
-    'watercourses-im'
-  ];
-
-  document.addEventListener('DOMContentLoaded', function () {
-    initInteractiveMapPreview();
-  });
-
-  window.addEventListener('pageshow', function (event) {
-    if (event.persisted) {
-      if (
-        window.habitatsSummaryInteractiveMap &&
-        typeof window.habitatsSummaryInteractiveMap.unmount === 'function'
-      ) {
-        window.habitatsSummaryInteractiveMap.unmount();
-      }
-
-      window.habitatsSummaryInteractiveMap = null;
-      initInteractiveMapPreview();
+  var dashboardHistoryBound = false;
+  var DASHBOARD_DATASET_CONFIG = [
+    {
+      mapDataKey: 'siteBoundary',
+      datasetId: 'site-boundary-im',
+      label: 'Red line boundary'
+    },
+    {
+      mapDataKey: 'parcels',
+      datasetId: 'habitat-parcels-im',
+      label: 'Area habitats',
+      featureType: 'parcel'
+    },
+    {
+      mapDataKey: 'hedgerows',
+      datasetId: 'hedgerows-im',
+      label: 'Hedgerows',
+      featureType: 'hedgerow'
+    },
+    {
+      mapDataKey: 'watercourses',
+      datasetId: 'watercourses-im',
+      label: 'Watercourses',
+      featureType: 'watercourse'
+    },
+    {
+      mapDataKey: 'trees',
+      datasetId: 'trees-im',
+      label: 'Trees',
+      featureType: 'tree'
     }
+  ];
+  var AREA_HABITAT_STYLES = [
+    { id: 'cropland', label: 'Cropland', color: '#e6c87a' },
+    { id: 'grassland', label: 'Grassland', color: '#98f05d' },
+    { id: 'heathland-and-shrub', label: 'Heathland and shrub', color: '#8268d6' },
+    { id: 'lakes', label: 'Lakes', color: '#27edf5' },
+    { id: 'sparsely-vegetated-land', label: 'Sparsely vegetated land', color: '#a8a8a4' },
+    { id: 'urban', label: 'Urban', color: '#ec2244' },
+    { id: 'wetland', label: 'Wetland', color: '#fd7bee' },
+    { id: 'woodland-and-forest', label: 'Woodland and forest', color: '#33a02c' }
+  ];
+  var HABITAT_FILL_PATTERNS = [
+    'diagonal-cross-hatch',
+    'dot',
+    'horizontal-hatch',
+    'vertical-hatch',
+    'forward-diagonal-hatch',
+    'backward-diagonal-hatch',
+    'cross-hatch',
+    'diamond'
+  ];
+  var AREA_HABITAT_FILL_LAYER_IDS = AREA_HABITAT_STYLES.flatMap(function (habitat) {
+    return [habitat.id].concat(HABITAT_FILL_PATTERNS.map(function (pattern, index) {
+      return habitat.id + '-pattern-' + index;
+    }));
+  }).map(function (id) {
+    return 'habitat-parcels-im-' + id;
+  }).concat([
+    'habitat-parcels-im-unclassified'
+  ]);
+  var AREA_HABITAT_LAYER_IDS = AREA_HABITAT_FILL_LAYER_IDS.flatMap(function (id) {
+    return [id, id + '-stroke'];
   });
+  var HOVERABLE_LAYER_IDS = [
+    'hedgerows-im',
+    'watercourses-im',
+    'trees-im'
+  ].concat(AREA_HABITAT_LAYER_IDS);
+
+  if (typeof document !== 'undefined' && typeof window !== 'undefined') {
+    document.addEventListener('DOMContentLoaded', function () {
+      initInteractiveMapPreview();
+    });
+
+    window.addEventListener('pageshow', function (event) {
+      if (event.persisted) {
+        if (
+          window.habitatsSummaryInteractiveMap &&
+          typeof window.habitatsSummaryInteractiveMap.unmount === 'function'
+        ) {
+          window.habitatsSummaryInteractiveMap.unmount();
+        }
+
+        window.habitatsSummaryInteractiveMap = null;
+        initInteractiveMapPreview();
+      }
+    });
+  }
 
   function initInteractiveMapPreview() {
     var mapContainer = document.getElementById('map-preview-im');
@@ -54,16 +125,25 @@
       return;
     }
 
+    var isDashboardMap =
+      mapContainer.getAttribute('data-map-layout') === 'dashboard';
+
     interactiveMapState.fullBounds = null;
     interactiveMapState.map = null;
     interactiveMapState.interactPlugin = null;
+    interactiveMapState.datasetsPlugin = null;
+    interactiveMapState.dashboardDatasetIds = [];
+    interactiveMapState.dashboardLayerVisibility = {};
+    interactiveMapState.dashboardViewRequestId = 0;
+    interactiveMapState.dashboardPanelConfigured = false;
     interactiveMapState.selectedLink = null;
     interactiveMapState.selectedFeatureKey = null;
     interactiveMapState.lastInteractionSource = null;
     interactiveMapState.datasetsByType = {
       parcel: [],
       hedgerow: [],
-      watercourse: []
+      watercourse: [],
+      tree: []
     };
 
     clearPersistedMapView(mapContainer.id);
@@ -73,7 +153,8 @@
       !window.defra.InteractiveMap ||
       !window.defra.maplibreProvider ||
       !window.defra.datasetsPlugin ||
-      !window.defra.interactPlugin
+      !window.defra.interactPlugin ||
+      !window.defra.mapKeyPlugin
     ) {
       showMapPlaceholder(mapContainer, 'Interactive map library not available');
       return;
@@ -97,83 +178,166 @@
     }
 
     var datasets = [];
+    var areaHabitatDataset = null;
+    var availableDashboardLayers = getAvailableDashboardLayers(mapContainer);
     var boundaryGeoJson = mapData.siteBoundary || null;
     var parcelsGeoJson = mapData.parcels || null;
     var hedgerowsGeoJson = mapData.hedgerows || null;
     var watercoursesGeoJson = mapData.watercourses || null;
-
-    if (hasFeatures(boundaryGeoJson)) {
+    var treesGeoJson = mapData.trees || null;
+    if (
+      hasFeatures(boundaryGeoJson) ||
+      (isDashboardMap && availableDashboardLayers.includes('siteBoundary'))
+    ) {
       datasets.push({
         id: 'site-boundary-im',
-        label: 'Site boundary',
-        data: normalizeToWgs84(boundaryGeoJson),
-        fill: 'transparent',
-        stroke: '#d4351c',
-        strokeWidth: 3,
-        strokeDashArray: [3, 2],
-        showInLayers: true,
+        label: isDashboardMap ? 'Red line boundary' : 'Site boundary',
+        geojson: normalizeToWgs84(
+          boundaryGeoJson || emptyFeatureCollection()
+        ),
+        style: {
+          fill: 'transparent',
+          stroke: '#d4351c',
+          strokeWidth: 3,
+          strokeDashArray: [3, 2]
+        },
+        visible: !isDashboardMap || hasFeatures(boundaryGeoJson),
+        showInMenu: true,
         showInKey: true
       });
     }
 
-    if (hasFeatures(parcelsGeoJson)) {
+    if (
+      hasFeatures(parcelsGeoJson) ||
+      (isDashboardMap && availableDashboardLayers.includes('parcels'))
+    ) {
       var normalizedParcels = normalizeToWgs84(
-        parcelsGeoJson,
+        parcelsGeoJson || emptyFeatureCollection(),
         buildFeatureMetadataBuilder('parcel')
       );
 
       interactiveMapState.datasetsByType.parcel = normalizedParcels.features;
 
-      datasets.push({
+      areaHabitatDataset = {
         id: 'habitat-parcels-im',
-        label: 'Habitat parcels',
-        data: normalizedParcels,
-        fill: '#1d70b8',
-        stroke: '#1d70b8',
-        strokeWidth: 2,
-        opacity: 0.3,
-        showInLayers: true,
+        label: isDashboardMap ? 'Area habitats' : 'Habitat parcels',
+        geojson: normalizedParcels,
+        idProperty: '__imFeatureKey',
+        style: {
+          opacity: 0.55
+        },
+        sublayers: buildAreaHabitatSublayers(),
+        visible: !isDashboardMap || hasFeatures(parcelsGeoJson),
+        showInMenu: true,
         showInKey: true
-      });
+      };
+
+      if (!isDashboardMap) {
+        datasets.push(areaHabitatDataset);
+      }
     }
 
-    if (hasFeatures(hedgerowsGeoJson)) {
+    if (
+      hasFeatures(hedgerowsGeoJson) ||
+      (isDashboardMap && availableDashboardLayers.includes('hedgerows'))
+    ) {
       var normalizedHedgerows = normalizeToWgs84(
-        hedgerowsGeoJson,
+        hedgerowsGeoJson || emptyFeatureCollection(),
         buildFeatureMetadataBuilder('hedgerow')
       );
 
-      interactiveMapState.datasetsByType.hedgerow = normalizedHedgerows.features;
+      interactiveMapState.datasetsByType.hedgerow =
+        normalizedHedgerows.features;
 
       datasets.push({
         id: 'hedgerows-im',
         label: 'Hedgerows',
-        data: normalizedHedgerows,
-        stroke: '#00703c',
-        strokeWidth: 3,
-        keySymbolShape: 'line',
-        showInLayers: true,
+        geojson: normalizedHedgerows,
+        idProperty: '__imFeatureKey',
+        style: {
+          stroke: '#00703c',
+          strokeWidth: 3,
+          keySymbolShape: 'line'
+        },
+        visible: !isDashboardMap || hasFeatures(hedgerowsGeoJson),
+        showInMenu: true,
         showInKey: true
       });
     }
 
-    if (hasFeatures(watercoursesGeoJson)) {
+    if (
+      hasFeatures(watercoursesGeoJson) ||
+      (isDashboardMap && availableDashboardLayers.includes('watercourses'))
+    ) {
       var normalizedWatercourses = normalizeToWgs84(
-        watercoursesGeoJson,
+        watercoursesGeoJson || emptyFeatureCollection(),
         buildFeatureMetadataBuilder('watercourse')
       );
 
-      interactiveMapState.datasetsByType.watercourse = normalizedWatercourses.features;
+      interactiveMapState.datasetsByType.watercourse =
+        normalizedWatercourses.features;
 
       datasets.push({
         id: 'watercourses-im',
         label: 'Watercourses',
-        data: normalizedWatercourses,
-        stroke: '#1d70b8',
-        strokeWidth: 3,
-        keySymbolShape: 'line',
-        showInLayers: true,
+        geojson: normalizedWatercourses,
+        idProperty: '__imFeatureKey',
+        style: {
+          stroke: '#1d70b8',
+          strokeWidth: 3,
+          keySymbolShape: 'line'
+        },
+        visible: !isDashboardMap || hasFeatures(watercoursesGeoJson),
+        showInMenu: true,
         showInKey: true
+      });
+    }
+
+    if (
+      hasFeatures(treesGeoJson) ||
+      (isDashboardMap && availableDashboardLayers.includes('trees'))
+    ) {
+      var normalizedTrees = normalizeToWgs84(
+        treesGeoJson || emptyFeatureCollection(),
+        buildFeatureMetadataBuilder('tree')
+      );
+
+      interactiveMapState.datasetsByType.tree = normalizedTrees.features;
+
+      datasets.push({
+        id: 'trees-im',
+        label: 'Trees',
+        geojson: normalizedTrees,
+        idProperty: '__imFeatureKey',
+        style: {
+          symbol: 'circle',
+          symbolBackgroundColor: '#00703c',
+          symbolForegroundColor: '#004b29'
+        },
+        visible: !isDashboardMap || hasFeatures(treesGeoJson),
+        showInMenu: true,
+        showInKey: true
+      });
+    }
+
+    if (isDashboardMap) {
+      // Put flat key entries before the grouped habitat entries while retaining
+      // the real area habitat dataset in both the map and the key.
+      if (areaHabitatDataset) {
+        datasets.push(areaHabitatDataset);
+      }
+      datasets = datasets.concat(buildHabitatKeyDatasets());
+      interactiveMapState.dashboardDatasetIds = DASHBOARD_DATASET_CONFIG
+        .map(function (datasetConfig) {
+          return datasetConfig.datasetId;
+        })
+        .filter(function (datasetId) {
+          return datasets.some(function (dataset) {
+            return dataset.id === datasetId;
+          });
+        });
+      interactiveMapState.dashboardDatasetIds.forEach(function (datasetId) {
+        interactiveMapState.dashboardLayerVisibility[datasetId] = true;
       });
     }
 
@@ -183,39 +347,49 @@
     }
 
     var mapBounds = getCombinedBounds(datasets);
-    interactiveMapState.fullBounds = mapBounds || [[-7.57, 49.96], [1.68, 58.64]];
+    interactiveMapState.fullBounds = mapBounds || [
+      [-7.57, 49.96],
+      [1.68, 58.64]
+    ];
 
     var interactPlugin = window.defra.interactPlugin({
-      interactionMode: 'select',
-      closeOnDone: false,
-      closeOnCancel: false,
-      dataLayers: [
-        {
-          layerId: 'habitat-parcels-im',
-          idProperty: '__imFeatureKey',
-          selectedFeatureStyle: {
-            stroke: '#ffdd00',
-            fill: 'rgba(255, 221, 0, 0.35)',
-            strokeWidth: 4
-          }
-        },
+      interactionModes: ['selectFeature'],
+      closeOnAction: false,
+      layers: AREA_HABITAT_FILL_LAYER_IDS
+        .map(function (layerId) {
+          return {
+            layerId: layerId,
+            idProperty: '__imFeatureKey',
+            labelProperty: '__imFeatureKey',
+            selectedStroke: '#ffdd00',
+            selectedFill: 'rgba(255, 221, 0, 0.35)',
+            selectedStrokeWidth: 4
+          };
+        })
+        .concat([
         {
           layerId: 'hedgerows-im',
           idProperty: '__imFeatureKey',
-          selectedFeatureStyle: {
-            stroke: '#ffdd00',
-            strokeWidth: 6
-          }
+          labelProperty: '__imFeatureKey',
+          selectedStroke: '#ffdd00',
+          selectedStrokeWidth: 6
         },
         {
           layerId: 'watercourses-im',
           idProperty: '__imFeatureKey',
-          selectedFeatureStyle: {
-            stroke: '#ffdd00',
-            strokeWidth: 6
-          }
+          labelProperty: '__imFeatureKey',
+          selectedStroke: '#ffdd00',
+          selectedStrokeWidth: 6
+        },
+        {
+          layerId: 'trees-im',
+          idProperty: '__imFeatureKey',
+          labelProperty: '__imFeatureKey',
+          selectedStroke: '#ffdd00',
+          selectedFill: '#ffdd00',
+          selectedStrokeWidth: 4
         }
-      ]
+      ])
     });
 
     interactiveMapState.interactPlugin = interactPlugin;
@@ -227,7 +401,7 @@
           mapProvider: window.defra.maplibreProvider(),
           behaviour: 'inline',
           mapLabel: 'Interactive map preview',
-          containerHeight: '540px',
+          containerHeight: isDashboardMap ? '100%' : '540px',
           bounds: interactiveMapState.fullBounds,
           minZoom: 5,
           maxZoom: 20,
@@ -235,25 +409,25 @@
           mapStyle: {
             url: '/api/os/tiles/style/3857'
           },
-          plugins: [
-            window.defra.datasetsPlugin({
-              datasets: datasets
-            }),
-            interactPlugin
-          ]
+          plugins: buildMapPlugins(datasets, mapContainer, interactPlugin)
         }
       );
 
       configureHabitatHelpBanner(window.habitatsSummaryInteractiveMap);
-
       if (typeof window.habitatsSummaryInteractiveMap.on === 'function') {
         window.habitatsSummaryInteractiveMap.on('map:ready', function (event) {
           configureHabitatHelpBanner(window.habitatsSummaryInteractiveMap);
+          configureDashboardLayersPanel(
+            window.habitatsSummaryInteractiveMap,
+            mapContainer,
+            datasets
+          );
 
           window.habitatsSummaryInteractiveMap.addButton('fitToExtent', {
             group: 'zoom',
             label: 'Fit to full extent',
-            iconSvgContent: '<path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/>',
+            iconSvgContent:
+              '<path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/>',
             onClick: function () {
               zoomToFullExtent();
             },
@@ -262,8 +436,10 @@
             desktop: { slot: 'right-top', showLabel: false }
           });
 
-          interactiveMapState.map = event && event.map ? event.map : getMapInstance();
+          interactiveMapState.map =
+            event && event.map ? event.map : getMapInstance();
 
+          scheduleReadableHabitatPatterns(interactiveMapState.map);
           setupHoverInteractions(interactiveMapState.map);
 
           if (!interactiveMapState.map) {
@@ -288,17 +464,34 @@
         });
 
         var markDetailsAsTemporarilyHidden = function (event) {
-          if (event && event.panelId && event.panelId !== HABITAT_DETAILS_PANEL_ID) {
+          if (event && event.panelId === HABITAT_DETAILS_PANEL_ID) {
+            window.habitatsSummaryInteractiveMap.hidePanel('mapKey');
+            return;
+          }
+
+          if (event && event.panelId === 'mapKey') {
             interactiveMapState.preserveSelectionOnDetailsClose = true;
             if (interactiveMapState.pendingSelectionClearTimer) {
-              window.clearTimeout(interactiveMapState.pendingSelectionClearTimer);
+              window.clearTimeout(
+                interactiveMapState.pendingSelectionClearTimer
+              );
               interactiveMapState.pendingSelectionClearTimer = null;
             }
+
+            window.habitatsSummaryInteractiveMap.hidePanel(
+              HABITAT_DETAILS_PANEL_ID
+            );
           }
         };
 
-        window.habitatsSummaryInteractiveMap.on('app:panelopened', markDetailsAsTemporarilyHidden);
-        window.habitatsSummaryInteractiveMap.on('app:panelopen', markDetailsAsTemporarilyHidden);
+        window.habitatsSummaryInteractiveMap.on(
+          'app:panelopened',
+          markDetailsAsTemporarilyHidden
+        );
+        window.habitatsSummaryInteractiveMap.on(
+          'app:panelopen',
+          markDetailsAsTemporarilyHidden
+        );
 
         window.habitatsSummaryInteractiveMap.on(
           'interact:selectionchange',
@@ -313,51 +506,1502 @@
           zoomToFullExtent();
         });
 
-        window.habitatsSummaryInteractiveMap.on('app:panelclosed', function (event) {
-          if (event && event.panelId === HABITAT_DETAILS_PANEL_ID) {
-            var featureKey = interactiveMapState.selectedFeatureKey;
-            var parsed = featureKey ? parseFeatureKey(featureKey, null) : null;
+        window.habitatsSummaryInteractiveMap.on(
+          'app:panelclosed',
+          function (event) {
+            if (event && event.panelId === HABITAT_DETAILS_PANEL_ID) {
+              var featureKey = interactiveMapState.selectedFeatureKey;
+              var parsed = featureKey
+                ? parseFeatureKey(featureKey, null)
+                : null;
 
-            if (interactiveMapState.pendingSelectionClearTimer) {
-              window.clearTimeout(interactiveMapState.pendingSelectionClearTimer);
-              interactiveMapState.pendingSelectionClearTimer = null;
+              if (interactiveMapState.pendingSelectionClearTimer) {
+                window.clearTimeout(
+                  interactiveMapState.pendingSelectionClearTimer
+                );
+                interactiveMapState.pendingSelectionClearTimer = null;
+              }
+
+              interactiveMapState.pendingSelectionClearTimer =
+                window.setTimeout(function () {
+                  interactiveMapState.pendingSelectionClearTimer = null;
+
+                  if (interactiveMapState.preserveSelectionOnDetailsClose) {
+                    return;
+                  }
+
+                  clearSelectedRow();
+                  if (parsed && interactiveMapState.interactPlugin) {
+                    interactiveMapState.interactPlugin.unselectFeature({
+                      featureId: featureKey,
+                      layerId: getLayerIdForFeatureType(
+                        parsed.featureType,
+                        parsed.featureIndex
+                      ),
+                      idProperty: '__imFeatureKey'
+                    });
+                  }
+                }, 0);
+
+              return;
             }
 
-            interactiveMapState.pendingSelectionClearTimer = window.setTimeout(function () {
-              interactiveMapState.pendingSelectionClearTimer = null;
-
-              if (interactiveMapState.preserveSelectionOnDetailsClose) {
-                return;
-              }
-
-              clearSelectedRow();
-              if (parsed && interactiveMapState.interactPlugin) {
-                interactiveMapState.interactPlugin.unselectFeature({
-                  featureId: featureKey,
-                  layerId: getLayerIdForFeatureType(parsed.featureType),
-                  idProperty: '__imFeatureKey'
-                });
-              }
-            }, 0);
-
-            return;
+            if (
+              event &&
+              event.panelId &&
+              event.panelId !== HABITAT_DETAILS_PANEL_ID &&
+              interactiveMapState.preserveSelectionOnDetailsClose
+            ) {
+              interactiveMapState.preserveSelectionOnDetailsClose = false;
+              restoreSelectedDetailsPanel();
+            }
           }
-
-          if (
-            event &&
-            event.panelId &&
-            event.panelId !== HABITAT_DETAILS_PANEL_ID &&
-            interactiveMapState.preserveSelectionOnDetailsClose
-          ) {
-            interactiveMapState.preserveSelectionOnDetailsClose = false;
-            restoreSelectedDetailsPanel();
-          }
-        });
+        );
       }
     } catch (error) {
       console.error('Failed to initialize interactive map:', error);
       showMapPlaceholder(mapContainer, 'Could not load interactive map');
     }
+  }
+
+  function buildMapPlugins(datasets, mapContainer, interactPlugin) {
+    var plugins = [
+      createDatasetsPlugin(datasets, mapContainer),
+      interactPlugin
+    ];
+
+    plugins.push(createMapKeyPlugin());
+
+    return plugins;
+  }
+
+  function buildAreaHabitatSublayers() {
+    var classifiedLabels = AREA_HABITAT_STYLES.map(function (habitat) {
+      return habitat.label;
+    });
+    var sublayers = AREA_HABITAT_STYLES.flatMap(function (habitat) {
+      var foreground = darkenHexColor(habitat.color, 0.35);
+      var layers = [{
+        id: habitat.id,
+        label: habitat.label,
+        filter: ['all',
+          ['==', ['get', '__imBroadHabitat'], habitat.label],
+          ['==', ['get', '__imHabitatPatternIndex'], -1]
+        ],
+        showInKey: false,
+        showInMenu: false,
+        style: {
+          fill: habitat.color,
+          stroke: foreground,
+          strokeWidth: 2
+        }
+      }];
+
+      HABITAT_FILL_PATTERNS.forEach(function (pattern, index) {
+        layers.push({
+          id: habitat.id + '-pattern-' + index,
+          label: habitat.label,
+          filter: ['all',
+            ['==', ['get', '__imBroadHabitat'], habitat.label],
+            ['==', ['get', '__imHabitatPatternIndex'], index]
+          ],
+          showInKey: false,
+          showInMenu: false,
+          style: {
+            fillPattern: pattern,
+            fillPatternForegroundColor: foreground,
+            fillPatternBackgroundColor: habitat.color,
+            stroke: foreground,
+            strokeWidth: 2
+          }
+        });
+      });
+
+      return layers;
+    });
+
+    sublayers.push({
+      id: 'unclassified',
+      label: 'Unclassified area habitat',
+      filter: ['!', ['in', ['get', '__imBroadHabitat'], ['literal', classifiedLabels]]],
+      showInKey: false,
+      showInMenu: false,
+      style: {
+        fill: '#b1b4b6',
+        stroke: '#505a5f',
+        strokeWidth: 2
+      }
+    });
+
+    return sublayers;
+  }
+
+  function scheduleReadableHabitatPatterns(map) {
+    [0, 250, 750, 1500, 3000].forEach(function (delay) {
+      window.setTimeout(function () {
+        applyReadableHabitatPatterns(map);
+      }, delay);
+    });
+
+    if (map && typeof map.once === 'function') {
+      map.once('idle', function () {
+        applyReadableHabitatPatterns(map);
+      });
+    }
+  }
+
+  function applyReadableHabitatPatterns(map) {
+    if (!map || typeof map.addImage !== 'function') {
+      return;
+    }
+
+    var logicalSize = 32;
+    var pixelRatio = Math.max(1, Math.ceil(window.devicePixelRatio || 1));
+
+    AREA_HABITAT_STYLES.forEach(function (habitat) {
+      var foreground = darkenHexColor(habitat.color, 0.45);
+
+      HABITAT_FILL_PATTERNS.forEach(function (pattern, patternIndex) {
+        var layerId =
+          'habitat-parcels-im-' + habitat.id + '-pattern-' + patternIndex;
+        if (!map.getLayer(layerId)) {
+          return;
+        }
+
+        var imageId = 'bng-readable-' + habitat.id + '-' + patternIndex;
+        if (!map.hasImage(imageId)) {
+          map.addImage(
+            imageId,
+            drawHabitatPattern(
+              logicalSize,
+              pixelRatio,
+              pattern,
+              foreground,
+              habitat.color
+            ),
+            { pixelRatio: pixelRatio }
+          );
+        }
+
+        map.setPaintProperty(layerId, 'fill-pattern', imageId);
+      });
+    });
+  }
+
+  function drawHabitatPattern(size, pixelRatio, pattern, foreground, background) {
+    var patternSize = 20;
+    var canvas = document.createElement('canvas');
+    canvas.width = size * pixelRatio;
+    canvas.height = size * pixelRatio;
+    var context = canvas.getContext('2d');
+    var unit = pixelRatio;
+
+    context.scale(unit, unit);
+    context.fillStyle = background;
+    context.fillRect(0, 0, size, size);
+    context.scale(size / patternSize, size / patternSize);
+    context.strokeStyle = foreground;
+    context.fillStyle = foreground;
+    context.lineWidth = 1.6;
+    var midpoint = patternSize / 2;
+
+    if (pattern === 'dot') {
+      [[5, 5], [15, 15]].forEach(function (point) {
+        context.beginPath();
+        context.arc(point[0], point[1], 2.4, 0, Math.PI * 2);
+        context.fill();
+      });
+    } else if (pattern === 'horizontal-hatch') {
+      [5, 15].forEach(function (position) {
+        drawPatternLine(context, 0, position, patternSize, position);
+      });
+    } else if (pattern === 'vertical-hatch') {
+      [5, 15].forEach(function (position) {
+        drawPatternLine(context, position, 0, position, patternSize);
+      });
+    } else if (pattern === 'forward-diagonal-hatch') {
+      drawPatternLine(context, -midpoint, patternSize, midpoint, 0);
+      drawPatternLine(context, midpoint, patternSize, patternSize + midpoint, 0);
+    } else if (pattern === 'backward-diagonal-hatch') {
+      drawPatternLine(context, -midpoint, 0, midpoint, patternSize);
+      drawPatternLine(context, midpoint, 0, patternSize + midpoint, patternSize);
+    } else if (pattern === 'cross-hatch') {
+      drawPatternLine(context, midpoint, 0, midpoint, patternSize);
+      drawPatternLine(context, 0, midpoint, patternSize, midpoint);
+    } else if (pattern === 'diamond') {
+      [[5, 5], [15, 5], [5, 15], [15, 15]].forEach(function (point) {
+        drawFilledPatternDiamond(context, point[0], point[1], 4.4);
+      });
+    } else {
+      drawPatternLine(context, -midpoint, 0, midpoint, patternSize);
+      drawPatternLine(context, midpoint, 0, patternSize + midpoint, patternSize);
+      drawPatternLine(context, -midpoint, patternSize, midpoint, 0);
+      drawPatternLine(context, midpoint, patternSize, patternSize + midpoint, 0);
+    }
+
+    return context.getImageData(0, 0, canvas.width, canvas.height);
+  }
+
+  function drawPatternLine(context, x1, y1, x2, y2) {
+    context.beginPath();
+    context.moveTo(x1, y1);
+    context.lineTo(x2, y2);
+    context.stroke();
+  }
+
+  function drawFilledPatternDiamond(context, centerX, centerY, radius) {
+    context.beginPath();
+    context.moveTo(centerX, centerY - radius);
+    context.lineTo(centerX + radius, centerY);
+    context.lineTo(centerX, centerY + radius);
+    context.lineTo(centerX - radius, centerY);
+    context.closePath();
+    context.fill();
+  }
+
+  function getAreaBroadHabitat(properties) {
+    var value = firstDefinedValue([
+      properties['Proposed Broad Habitat Type'],
+      properties['Baseline Broad Habitat Type'],
+      properties['Broad Habitat Type'],
+      properties.broadHabitat,
+      properties.broad_habitat
+    ]);
+
+    if (!value) {
+      var detailedHabitat = firstDefinedValue([
+        properties['Proposed Habitat Type'],
+        properties['Baseline Habitat Type'],
+        properties.habitatType,
+        properties.habitat_type
+      ]);
+      if (detailedHabitat && detailedHabitat.indexOf(' - ') !== -1) {
+        value = detailedHabitat.split(' - ')[0];
+      }
+    }
+
+    var normalized = String(value || '').trim().toLowerCase();
+    var match = AREA_HABITAT_STYLES.find(function (habitat) {
+      return habitat.label.toLowerCase() === normalized;
+    });
+
+    return match ? match.label : '';
+  }
+
+  function getDetailedHabitat(properties) {
+    var value = firstDefinedValue([
+      properties['Proposed Habitat Type'],
+      properties['Baseline Habitat Type'],
+      properties.habitatType,
+      properties.habitat_type
+    ]);
+    var habitat = String(value || '').trim();
+
+    if (habitat.indexOf(' - ') !== -1) {
+      habitat = habitat.split(' - ').slice(1).join(' - ').trim();
+    }
+
+    return habitat;
+  }
+
+  function getHabitatPatternIndex(habitat) {
+    if (!habitat) {
+      return -1;
+    }
+
+    var hash = 0;
+    String(habitat).toLowerCase().split('').forEach(function (character) {
+      hash = ((hash << 5) - hash + character.charCodeAt(0)) | 0;
+    });
+
+    return Math.abs(hash) % HABITAT_FILL_PATTERNS.length;
+  }
+
+  function buildHabitatKeyDatasets() {
+    var emptyGeoJson = { type: 'FeatureCollection', features: [] };
+    var groups = [
+      {
+        label: 'Coastal lagoons',
+        color: '#27edf5',
+        habitats: ['Coastal lagoons']
+      },
+      {
+        label: 'Coastal saltmarsh',
+        color: '#1b53d6',
+        habitats: [
+          'Saltmarshes and saline reedbeds',
+          'Artificial saltmarshes and saline reedbeds'
+        ]
+      },
+      {
+        label: 'Cropland',
+        color: '#e6c87a',
+        habitats: [
+          'Arable field margins cultivated annually',
+          'Arable field margins game bird mix',
+          'Arable field margins pollen and nectar',
+          'Arable field margins tussocky',
+          'Cereal crops',
+          'Winter stubble',
+          'Horticulture',
+          'Intensive orchards',
+          'Non-cereal crops',
+          'Temporary grass and clover leys'
+        ]
+      },
+      {
+        label: 'Grassland',
+        color: '#98f05d',
+        habitats: [
+          'Traditional orchards',
+          'Bracken',
+          'Floodplain wetland mosaic and CFGM',
+          'Lowland calcareous grassland',
+          'Lowland dry acid grassland',
+          'Lowland meadows',
+          'Modified grassland',
+          'Other lowland acid grassland',
+          'Other neutral grassland',
+          'Tall herb communities (H6430)',
+          'Upland acid grassland',
+          'Upland calcareous grassland',
+          'Upland hay meadows'
+        ]
+      },
+      {
+        label: 'Heathland and shrub',
+        color: '#8268d6',
+        habitats: [
+          'Blackthorn scrub',
+          'Bramble scrub',
+          'Gorse scrub',
+          'Hawthorn scrub',
+          'Hazel scrub',
+          'Willow scrub',
+          'Lowland heathland',
+          'Mixed scrub',
+          'Mountain heaths and willow scrub',
+          'Rhododendron scrub',
+          'Dunes with sea buckthorn (H2160)',
+          'Other sea buckthorn scrub',
+          'Upland heathland'
+        ]
+      },
+      {
+        label: 'Intertidal sediment',
+        color: '#fbfd81',
+        habitats: [
+          'Artificial littoral biogenic reefs',
+          'Artificial littoral coarse sediment',
+          'Artificial littoral mixed sediments',
+          'Artificial littoral muddy sand',
+          'Artificial littoral seagrass',
+          'Features of littoral sediment',
+          'Littoral biogenic reefs - Sabellaria',
+          'Littoral coarse sediment',
+          'Littoral mixed sediments',
+          'Littoral mud',
+          'Littoral seagrass',
+          'Littoral seagrass on peat, clay or chalk',
+          'Littoral sand',
+          'Littoral muddy sand',
+          'Littoral biogenic reefs - Mussels',
+          'Artificial littoral mud',
+          'Artificial littoral sand'
+        ]
+      },
+      {
+        label: 'Lakes',
+        color: '#27edf5',
+        habitats: [
+          'Aquifer fed naturally fluctuating water bodies',
+          'Ornamental lake or pond',
+          'High alkalinity lakes',
+          'Low alkalinity lakes',
+          'Marl lakes',
+          'Moderate alkalinity lakes',
+          'Peat lakes',
+          'Ponds (non-priority habitat)',
+          'Ponds (priority habitat)',
+          'Reservoirs',
+          'Temporary lakes ponds and pools (H3170)'
+        ]
+      },
+      {
+        label: 'Rocky shore',
+        color: '#a8a8a4',
+        habitats: [
+          'Features of littoral rock',
+          'Features of littoral rock - on peat, clay or chalk',
+          'High energy littoral rock',
+          'High energy littoral rock - on peat, clay or chalk',
+          'Low energy littoral rock',
+          'Low energy littoral rock - on peat, clay or chalk',
+          'Moderate energy littoral rock',
+          'Moderate energy littoral rock - on peat, clay or chalk'
+        ]
+      },
+      {
+        label: 'Sparsely vegetated land',
+        color: '#a8a8a4',
+        habitats: [
+          'Calaminarian grasslands',
+          'Coastal sand dunes',
+          'Coastal vegetated shingle',
+          'Inland rock outcrop and scree habitats',
+          'Limestone pavement',
+          'Maritime cliff and slopes',
+          'Other inland rock and scree',
+          'Ruderal/Ephemeral',
+          'Tall forbs'
+        ]
+      },
+      {
+        label: 'Urban',
+        color: '#ec2244',
+        habitats: [
+          'Vacant or derelict land',
+          'Bare ground',
+          'Allotments',
+          'Artificial unvegetated, unsealed surface',
+          'Bioswale',
+          'Intensive green roof',
+          'Built linear features',
+          'Cemeteries and churchyards',
+          'Developed land; sealed surface',
+          'Other green roof',
+          'Facade-bound green wall',
+          'Ground based green wall',
+          'Ground level planters',
+          'Biodiverse green roof',
+          'Introduced shrub',
+          'Open mosaic habitats on previously developed land',
+          'Rain garden',
+          'Actively worked sand pit quarry or open cast mine',
+          'Sustainable drainage system',
+          'Unvegetated garden',
+          'Vegetated garden'
+        ]
+      },
+      {
+        label: 'Wetland',
+        color: '#fd7bee',
+        habitats: [
+          'Blanket bog',
+          'Depressions on peat substrates (H7150)',
+          'Fens (upland and lowland)',
+          'Lowland raised bog',
+          'Oceanic valley mire[1] (D2.1)',
+          'Purple moor grass and rush pastures',
+          'Reedbeds',
+          'Transition mires and quaking bogs (H7140)'
+        ]
+      },
+      {
+        label: 'Woodland and forest',
+        color: '#33a02c',
+        habitats: [
+          'Felled',
+          'Lowland beech and yew woodland',
+          'Lowland mixed deciduous woodland',
+          'Native pine woodlands',
+          'Other coniferous woodland',
+          "Other Scot's pine woodland",
+          'Other woodland; broadleaved',
+          'Other woodland; mixed',
+          'Upland birchwoods',
+          'Upland mixed ashwoods',
+          'Upland oakwood',
+          'Wet woodland',
+          'Wood-pasture and parkland'
+        ]
+      },
+      {
+        label: 'Intertidal hard structures',
+        color: '#8c9692',
+        habitats: [
+          'Artificial hard structures',
+          'Artificial features of hard structures',
+          'Artificial hard structures with integrated greening of grey infrastructure (IGGI)'
+        ]
+      }
+    ];
+    var areaHabitatLabels = [
+      'Cropland',
+      'Grassland',
+      'Heathland and shrub',
+      'Lakes',
+      'Sparsely vegetated land',
+      'Urban',
+      'Wetland',
+      'Woodland and forest'
+    ];
+
+    groups = groups.filter(function (group) {
+      return areaHabitatLabels.indexOf(group.label) !== -1;
+    });
+
+    var areaHabitats = groups.map(function (group) {
+      return {
+        id: slugifyKeyLabel(group.label),
+        label: group.label,
+        filter: ['==', ['get', '__habitatKey'], group.label],
+        showInKey: true,
+        showInMenu: false,
+        style: {
+          fill: group.color,
+          stroke: darkenHexColor(group.color, 0.35),
+          strokeWidth: 1
+        }
+      };
+    });
+    var detailedHabitats = groups.flatMap(function (group) {
+      var foreground = darkenHexColor(group.color, 0.35);
+
+      return group.habitats.map(function (habitat) {
+        return {
+          id: slugifyKeyLabel(group.label + '-' + habitat),
+          label: habitat,
+          filter: ['==', ['get', '__habitatKey'], habitat],
+          showInKey: true,
+          showInMenu: false,
+          style: {
+            fillPattern:
+              HABITAT_FILL_PATTERNS[getHabitatPatternIndex(habitat)],
+            fillPatternForegroundColor: foreground,
+            fillPatternBackgroundColor: group.color,
+            stroke: foreground,
+            strokeWidth: 1
+          }
+        };
+      });
+    });
+
+    return [
+      {
+        id: 'habitat-key-area-habitats',
+        label: 'Area habitats',
+        geojson: emptyGeoJson,
+        showInKey: true,
+        showInMenu: false,
+        style: { fill: 'transparent' },
+        sublayers: areaHabitats
+      },
+      {
+        id: 'habitat-key-detailed-habitats',
+        label: 'Detailed habitats',
+        geojson: emptyGeoJson,
+        showInKey: true,
+        showInMenu: false,
+        style: { fill: 'transparent' },
+        sublayers: detailedHabitats
+      }
+    ];
+  }
+
+  function slugifyKeyLabel(value) {
+    return String(value || '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '');
+  }
+
+  function darkenHexColor(hex, amount) {
+    var value = String(hex || '').replace('#', '');
+    var factor = 1 - amount;
+
+    if (!/^[0-9a-f]{6}$/i.test(value)) {
+      return '#0b0c0c';
+    }
+
+    return (
+      '#' +
+      [0, 2, 4]
+        .map(function (offset) {
+          var channel = Math.round(
+            parseInt(value.slice(offset, offset + 2), 16) * factor
+          );
+          return channel.toString(16).padStart(2, '0');
+        })
+        .join('')
+    );
+  }
+
+  function createMapKeyPlugin() {
+    var plugin = window.defra.mapKeyPlugin();
+    var loadPlugin = plugin.load;
+
+    plugin.load = async function () {
+      var manifest = await loadPlugin();
+      var panels = (manifest.panels || []).map(function (panel) {
+        if (panel.id !== 'mapKey') {
+          return panel;
+        }
+
+        return Object.assign({}, panel, {
+          mobile: Object.assign({}, panel.mobile, {
+            exclusive: false,
+            modal: false,
+            width: '340px'
+          }),
+          tablet: Object.assign({}, panel.tablet, {
+            exclusive: false,
+            modal: false,
+            width: '380px'
+          }),
+          desktop: Object.assign({}, panel.desktop, {
+            exclusive: false,
+            modal: false,
+            width: '420px'
+          })
+        });
+      });
+      var buttons = (manifest.buttons || []).map(function (button) {
+        if (button.id !== 'mapKey') {
+          return button;
+        }
+
+        return Object.assign({}, button, {
+          mobile: Object.assign({}, button.mobile, {
+            showLabel: true
+          })
+        });
+      });
+
+      return Object.assign({}, manifest, {
+        panels: panels,
+        buttons: buttons
+      });
+    };
+
+    return plugin;
+  }
+
+  function createDatasetsPlugin(datasets, mapContainer) {
+    var plugin = window.defra.datasetsPlugin({
+      datasets: datasets
+    });
+
+    interactiveMapState.datasetsPlugin = plugin;
+
+    if (
+      !mapContainer ||
+      mapContainer.getAttribute('data-map-layout') !== 'dashboard' ||
+      typeof plugin.load !== 'function'
+    ) {
+      return plugin;
+    }
+
+    var loadPlugin = plugin.load;
+    plugin.load = async function () {
+      var manifest = await loadPlugin();
+      var panels = (manifest.panels || []).filter(function (panel) {
+        return panel.id !== 'datasetsLayers';
+      });
+      var buttons = (manifest.buttons || []).filter(function (button) {
+        return button.id !== 'datasetsLayers';
+      });
+
+      return Object.assign({}, manifest, {
+        panels: panels,
+        buttons: buttons
+      });
+    };
+
+    return plugin;
+  }
+
+  function configureDashboardLayersPanel(mapApp, mapContainer, datasets) {
+    if (
+      interactiveMapState.dashboardPanelConfigured ||
+      !mapApp ||
+      !mapContainer ||
+      mapContainer.getAttribute('data-map-layout') !== 'dashboard' ||
+      typeof mapApp.addPanel !== 'function'
+    ) {
+      return;
+    }
+
+    interactiveMapState.dashboardPanelConfigured = true;
+
+    mapApp.addPanel('dashboardLayers', {
+      label: 'Map information and layers',
+      mobile: {
+        slot: 'drawer',
+        open: false,
+        dismissible: true,
+        showLabel: false,
+        modal: false
+      },
+      tablet: {
+        slot: 'side',
+        open: true,
+        dismissible: false,
+        showLabel: false,
+        modal: false
+      },
+      desktop: {
+        slot: 'side',
+        open: true,
+        dismissible: false,
+        showLabel: false,
+        modal: false
+      },
+      html: buildDashboardLayersPanelHtml(mapContainer, datasets)
+    });
+
+    if (typeof mapApp.addButton === 'function') {
+      mapApp.addButton('dashboardLayers', {
+        label: 'Layers',
+        panelId: 'dashboardLayers',
+        iconId: 'layers',
+        mobile: { slot: 'top-left', showLabel: true }
+      });
+    }
+
+    if (typeof mapApp.on === 'function') {
+      mapApp.on('app:panelopened', function (event) {
+        if (event && event.panelId === 'dashboardLayers') {
+          window.setTimeout(bindDashboardLayersPanel, 0);
+        }
+      });
+    }
+
+    if (
+      typeof mapApp.showPanel === 'function' &&
+      mapContainer.clientWidth > 640
+    ) {
+      mapApp.showPanel('dashboardLayers');
+    }
+
+    window.setTimeout(bindDashboardLayersPanel, 0);
+    bindDashboardMapHistory();
+  }
+
+  function buildDashboardLayersPanelHtml(mapContainer, datasets) {
+    var projectName =
+      mapContainer.getAttribute('data-project-name') || 'Project name';
+    var mapView = mapContainer.getAttribute('data-map-view') || 'baseline';
+    var hasBaseline = mapContainer.getAttribute('data-has-baseline') === 'true';
+    var hasPostIntervention =
+      mapContainer.getAttribute('data-has-post-intervention') === 'true';
+    var mapTitle =
+      mapView === 'post-intervention'
+        ? 'Post intervention'
+        : 'Baseline';
+    var layerDatasets = datasets.filter(function (dataset) {
+      return dataset.showInMenu !== false;
+    });
+    var layerDescription = buildDashboardLayerDescription(
+      layerDatasets.filter(function (dataset) {
+        return dataset.visible !== false;
+      })
+    );
+    var interventionSection = buildDashboardInterventionSection(
+      mapView === 'post-intervention'
+    );
+    var layerControls = layerDatasets
+      .map(function (dataset) {
+        var inputId = 'dashboard-map-layer-' + dataset.id;
+        var style = dataset.style || {};
+        var swatchStyle =
+          style.keySymbolShape === 'line'
+            ? 'background:linear-gradient(transparent 45%,' +
+              style.stroke +
+              ' 45%,' +
+              style.stroke +
+              ' 55%,transparent 55%)'
+            : 'background:' +
+              (style.fill || style.symbolBackgroundColor || 'transparent') +
+              ';border-color:' +
+              (style.stroke || style.symbolForegroundColor || 'transparent');
+
+        return (
+          '<div class="dashboard-map-panel__layer" data-dashboard-map-layer="' +
+          escapeAttribute(dataset.id) +
+          '"' +
+          (dataset.visible === false ? ' hidden' : '') +
+          '>' +
+          '<div class="govuk-checkboxes govuk-checkboxes--small"><div class="govuk-checkboxes__item">' +
+          '<input class="govuk-checkboxes__input dashboard-map-panel__layer-input" id="' +
+          escapeAttribute(inputId) +
+          '" type="checkbox" checked value="' +
+          escapeAttribute(dataset.id) +
+          '">' +
+          '<label class="govuk-label govuk-checkboxes__label" for="' +
+          escapeAttribute(inputId) +
+          '">' +
+          escapeHtml(dataset.label) +
+          '</label>' +
+          '</div></div>' +
+          '<span class="dashboard-map-panel__swatch" style="' +
+          escapeAttribute(swatchStyle) +
+          '" aria-hidden="true"></span>' +
+          '</div>'
+        );
+      })
+      .join('');
+
+    return (
+      '<div class="dashboard-map-panel">' +
+      '<div class="dashboard-map-panel__project">' +
+      escapeHtml(projectName) +
+      '</div>' +
+      '<div class="dashboard-map-panel__section">' +
+      '<p class="dashboard-map-panel__heading">Title</p>' +
+      '<div class="dashboard-map-panel__title-value" data-dashboard-map-title>' +
+      escapeHtml(mapTitle) +
+      '</div>' +
+      '<button class="dashboard-map-panel__toggle" type="button" data-panel-toggle="dashboard-map-title-options" aria-expanded="true">' +
+      '<span class="dashboard-map-panel__toggle-icon" aria-hidden="true"></span><span data-panel-toggle-label>Hide</span></button>' +
+      '<div id="dashboard-map-title-options"><div class="govuk-radios govuk-radios--small" data-module="govuk-radios">' +
+      buildDashboardMapRadio(
+        'baseline',
+        'Baseline',
+        mapView === 'baseline',
+        !hasBaseline
+      ) +
+      buildDashboardMapRadio(
+        'post-intervention',
+        'Post intervention',
+        mapView === 'post-intervention',
+        !hasPostIntervention
+      ) +
+      '</div>' +
+      '<p class="govuk-error-message" data-dashboard-map-view-error role="alert" hidden></p>' +
+      '<p class="govuk-visually-hidden" data-dashboard-map-view-status aria-live="polite"></p>' +
+      '</div></div>' +
+      interventionSection +
+      '<div class="dashboard-map-panel__section">' +
+      '<p class="dashboard-map-panel__heading">Layers</p>' +
+      '<div data-dashboard-map-layer-description>' +
+      escapeHtml(layerDescription) +
+      '</div>' +
+      '<button class="dashboard-map-panel__toggle" type="button" data-panel-toggle="dashboard-map-layer-options" aria-expanded="true">' +
+      '<span class="dashboard-map-panel__toggle-icon" aria-hidden="true"></span><span data-panel-toggle-label>Hide</span></button>' +
+      '<div id="dashboard-map-layer-options">' +
+      layerControls +
+      '</div>' +
+      '</div>' +
+      '</div>'
+    );
+  }
+
+  function buildDashboardInterventionSection(isVisible) {
+    var interventionControls = ['Retained', 'Lost', 'Created']
+      .map(function (label) {
+        var id = 'dashboard-map-intervention-' + label.toLowerCase();
+
+        return (
+          '<div class="govuk-checkboxes govuk-checkboxes--small"><div class="govuk-checkboxes__item">' +
+          '<input class="govuk-checkboxes__input dashboard-map-panel__intervention-input" id="' +
+          escapeAttribute(id) +
+          '" type="checkbox" checked value="' +
+          escapeAttribute(label.toLowerCase()) +
+          '">' +
+          '<label class="govuk-label govuk-checkboxes__label" for="' +
+          escapeAttribute(id) +
+          '">' +
+          escapeHtml(label) +
+          '</label>' +
+          '</div></div>'
+        );
+      })
+      .join('');
+
+    return (
+      '<div class="dashboard-map-panel__section" data-dashboard-intervention-section' +
+      (isVisible ? '' : ' hidden') +
+      '>' +
+      '<p class="dashboard-map-panel__heading">Intervention</p>' +
+      '<div>Retained, Lost, Created</div>' +
+      '<button class="dashboard-map-panel__toggle" type="button" data-panel-toggle="dashboard-map-intervention-options" aria-expanded="true">' +
+      '<span class="dashboard-map-panel__toggle-icon" aria-hidden="true"></span><span data-panel-toggle-label>Hide</span></button>' +
+      '<div id="dashboard-map-intervention-options" class="dashboard-map-panel__interventions">' +
+      interventionControls +
+      '</div>' +
+      '</div>'
+    );
+  }
+
+  function buildDashboardLayerDescription(layers) {
+    return layers
+      .map(function (layer) {
+        return layer.label;
+      })
+      .join(', ');
+  }
+
+  function buildDashboardMapRadio(value, label, checked, disabled) {
+    var id = 'dashboard-map-title-' + value;
+    return (
+      '<div class="govuk-radios__item">' +
+      '<input class="govuk-radios__input" id="' +
+      escapeAttribute(id) +
+      '" type="radio" name="dashboard-map-title" value="' +
+      escapeAttribute(value) +
+      '"' +
+      (checked ? ' checked' : '') +
+      (disabled ? ' disabled' : '') +
+      '>' +
+      '<label class="govuk-label govuk-radios__label" for="' +
+      escapeAttribute(id) +
+      '">' +
+      escapeHtml(label) +
+      '</label>' +
+      '</div>'
+    );
+  }
+
+  function bindDashboardLayersPanel() {
+    var panel = document.querySelector('[id$="-panel-dashboard-layers"]');
+
+    if (!panel || panel.getAttribute('data-dashboard-panel-bound') === 'true') {
+      return;
+    }
+
+    panel.setAttribute('data-dashboard-panel-bound', 'true');
+
+    panel.addEventListener('click', function (event) {
+      var toggle = event.target.closest('[data-panel-toggle]');
+      if (!toggle) {
+        return;
+      }
+
+      var content = panel.querySelector(
+        '#' + toggle.getAttribute('data-panel-toggle')
+      );
+      var isExpanded = toggle.getAttribute('aria-expanded') === 'true';
+      var label = toggle.querySelector('[data-panel-toggle-label]');
+      toggle.setAttribute('aria-expanded', isExpanded ? 'false' : 'true');
+      if (content) {
+        content.hidden = isExpanded;
+      }
+      if (label) {
+        label.textContent = isExpanded ? 'Show' : 'Hide';
+      }
+    });
+
+    panel.addEventListener('change', function (event) {
+      var viewInput = event.target.closest('input[name="dashboard-map-title"]');
+      if (viewInput && viewInput.checked && !viewInput.disabled) {
+        var mapContainer = document.getElementById('map-preview-im');
+        switchDashboardMapView(mapContainer, viewInput.value, {
+          updateHistory: true
+        });
+        return;
+      }
+
+      var interventionInput = event.target.closest(
+        '.dashboard-map-panel__intervention-input'
+      );
+      if (interventionInput) {
+        applyDashboardInterventionFilters(panel);
+        return;
+      }
+
+      var input = event.target.closest('.dashboard-map-panel__layer-input');
+      var plugin = interactiveMapState.datasetsPlugin;
+      if (!input || !plugin) {
+        return;
+      }
+
+      interactiveMapState.dashboardLayerVisibility[input.value] = input.checked;
+      if (typeof plugin.setDatasetVisibility === 'function') {
+        plugin.setDatasetVisibility(input.checked, {
+          datasetId: input.value
+        });
+      }
+    });
+  }
+
+  function bindDashboardMapHistory() {
+    if (dashboardHistoryBound) {
+      return;
+    }
+
+    dashboardHistoryBound = true;
+    window.addEventListener('popstate', function () {
+      var mapContainer = document.getElementById('map-preview-im');
+      if (
+        !mapContainer ||
+        mapContainer.getAttribute('data-map-layout') !== 'dashboard'
+      ) {
+        return;
+      }
+
+      switchDashboardMapView(
+        mapContainer,
+        resolveDashboardMapViewFromLocation(mapContainer),
+        { updateHistory: false }
+      );
+    });
+  }
+
+  function resolveDashboardMapViewFromLocation(mapContainer) {
+    var requestedView = new URLSearchParams(window.location.search).get(
+      'view'
+    );
+    var hasBaseline = mapContainer.getAttribute('data-has-baseline') === 'true';
+    var hasPostIntervention =
+      mapContainer.getAttribute('data-has-post-intervention') === 'true';
+
+    if (requestedView === 'post-intervention' && hasPostIntervention) {
+      return 'post-intervention';
+    }
+
+    return hasBaseline ? 'baseline' : 'post-intervention';
+  }
+
+  function switchDashboardMapView(mapContainer, requestedView, options) {
+    if (
+      !mapContainer ||
+      !isDashboardMapViewAvailable(mapContainer, requestedView)
+    ) {
+      return Promise.resolve();
+    }
+
+    var currentView = mapContainer.getAttribute('data-map-view') || 'baseline';
+    var panel = document.querySelector('[id$="-panel-dashboard-layers"]');
+    if (requestedView === currentView) {
+      updateDashboardMapViewUi(mapContainer, panel, currentView);
+      return Promise.resolve();
+    }
+
+    var requestId = interactiveMapState.dashboardViewRequestId + 1;
+    interactiveMapState.dashboardViewRequestId = requestId;
+    setDashboardMapViewMessage(panel, '', false);
+    setDashboardMapViewLoading(mapContainer, panel, true);
+
+    return window
+      .fetch(
+        '/project-dashboard/map-data?view=' + encodeURIComponent(requestedView),
+        {
+          cache: 'no-store',
+          credentials: 'same-origin',
+          headers: { Accept: 'application/json' }
+        }
+      )
+      .then(function (response) {
+        if (!response.ok) {
+          throw new Error(
+            'Map view request failed with status ' + response.status
+          );
+        }
+        return response.json();
+      })
+      .then(function (responseData) {
+        if (requestId !== interactiveMapState.dashboardViewRequestId) {
+          return;
+        }
+        if (
+          !responseData ||
+          responseData.mapView !== requestedView ||
+          !responseData.mapData
+        ) {
+          throw new Error('Map view response was invalid');
+        }
+
+        var normalizedMapData = replaceDashboardMapData(
+          mapContainer,
+          responseData.mapData
+        );
+        updateDashboardLayerAvailability(panel, normalizedMapData);
+        updateDashboardMapViewUi(mapContainer, panel, responseData.mapView);
+
+        if (responseData.mapView === 'post-intervention') {
+          applyDashboardInterventionFilters(panel);
+        }
+
+        if (options && options.updateHistory) {
+          updateDashboardMapViewHistory(responseData.mapView, 'push');
+        }
+
+        setDashboardMapViewLoading(mapContainer, panel, false);
+        setDashboardMapViewMessage(
+          panel,
+          (responseData.mapView === 'post-intervention'
+            ? 'Post intervention'
+            : 'Baseline') + ' map loaded',
+          false
+        );
+      })
+      .catch(function (error) {
+        if (requestId !== interactiveMapState.dashboardViewRequestId) {
+          return;
+        }
+
+        console.error('Failed to switch dashboard map view:', error);
+        updateDashboardMapViewUi(mapContainer, panel, currentView);
+        setDashboardMapViewLoading(mapContainer, panel, false);
+        setDashboardMapViewMessage(
+          panel,
+          'The selected map view could not be loaded. Try again.',
+          true
+        );
+
+        if (!options || !options.updateHistory) {
+          updateDashboardMapViewHistory(currentView, 'replace');
+        }
+      });
+  }
+
+  function isDashboardMapViewAvailable(mapContainer, mapView) {
+    if (mapView === 'baseline') {
+      return mapContainer.getAttribute('data-has-baseline') === 'true';
+    }
+    if (mapView === 'post-intervention') {
+      return (
+        mapContainer.getAttribute('data-has-post-intervention') === 'true'
+      );
+    }
+    return false;
+  }
+
+  function normalizeDashboardMapData(mapData) {
+    var sourceData = mapData || {};
+
+    return {
+      siteBoundary: normalizeToWgs84(
+        sourceData.siteBoundary || emptyFeatureCollection()
+      ),
+      parcels: normalizeToWgs84(
+        sourceData.parcels || emptyFeatureCollection(),
+        buildFeatureMetadataBuilder('parcel')
+      ),
+      hedgerows: normalizeToWgs84(
+        sourceData.hedgerows || emptyFeatureCollection(),
+        buildFeatureMetadataBuilder('hedgerow')
+      ),
+      watercourses: normalizeToWgs84(
+        sourceData.watercourses || emptyFeatureCollection(),
+        buildFeatureMetadataBuilder('watercourse')
+      ),
+      trees: normalizeToWgs84(
+        sourceData.trees || emptyFeatureCollection(),
+        buildFeatureMetadataBuilder('tree')
+      )
+    };
+  }
+
+  function replaceDashboardMapData(mapContainer, mapData) {
+    var plugin = interactiveMapState.datasetsPlugin;
+    if (!plugin || typeof plugin.setData !== 'function') {
+      throw new Error('Interactive map datasets cannot be updated');
+    }
+
+    var normalizedMapData = normalizeDashboardMapData(mapData);
+    resetDashboardFeatureState(normalizedMapData);
+
+    DASHBOARD_DATASET_CONFIG.forEach(function (datasetConfig) {
+      if (
+        !interactiveMapState.dashboardDatasetIds.includes(
+          datasetConfig.datasetId
+        )
+      ) {
+        return;
+      }
+
+      plugin.setData(normalizedMapData[datasetConfig.mapDataKey], {
+        datasetId: datasetConfig.datasetId
+      });
+    });
+
+    interactiveMapState.datasetsByType = {
+      parcel: normalizedMapData.parcels.features,
+      hedgerow: normalizedMapData.hedgerows.features,
+      watercourse: normalizedMapData.watercourses.features,
+      tree: normalizedMapData.trees.features
+    };
+    interactiveMapState.fullBounds =
+      getCombinedBounds(
+        DASHBOARD_DATASET_CONFIG.map(function (datasetConfig) {
+          return { geojson: normalizedMapData[datasetConfig.mapDataKey] };
+        })
+      ) || [
+        [-7.57, 49.96],
+        [1.68, 58.64]
+      ];
+
+    zoomToFullExtent();
+    return normalizedMapData;
+  }
+
+  function updateDashboardLayerAvailability(panel, normalizedMapData) {
+    var plugin = interactiveMapState.datasetsPlugin;
+    var availableLayers = [];
+
+    DASHBOARD_DATASET_CONFIG.forEach(function (datasetConfig) {
+      if (
+        !interactiveMapState.dashboardDatasetIds.includes(
+          datasetConfig.datasetId
+        )
+      ) {
+        return;
+      }
+
+      var isAvailable = hasFeatures(
+        normalizedMapData[datasetConfig.mapDataKey]
+      );
+      var isPreferred =
+        interactiveMapState.dashboardLayerVisibility[
+          datasetConfig.datasetId
+        ] !== false;
+
+      if (isAvailable) {
+        availableLayers.push(datasetConfig);
+      }
+      if (plugin && typeof plugin.setDatasetVisibility === 'function') {
+        plugin.setDatasetVisibility(isAvailable && isPreferred, {
+          datasetId: datasetConfig.datasetId
+        });
+      }
+      if (!panel) {
+        return;
+      }
+
+      var layerControl = panel.querySelector(
+        '[data-dashboard-map-layer="' + datasetConfig.datasetId + '"]'
+      );
+      if (layerControl) {
+        layerControl.hidden = !isAvailable;
+        var input = layerControl.querySelector(
+          '.dashboard-map-panel__layer-input'
+        );
+        if (input) {
+          input.checked = isPreferred;
+        }
+      }
+    });
+
+    if (panel) {
+      var description = panel.querySelector(
+        '[data-dashboard-map-layer-description]'
+      );
+      if (description) {
+        description.textContent = buildDashboardLayerDescription(
+          availableLayers
+        );
+      }
+    }
+  }
+
+  function resetDashboardFeatureState(normalizedMapData) {
+    var plugin = interactiveMapState.datasetsPlugin;
+
+    clearHoverFeature();
+    clearSelectedRow();
+    hideHabitatDetailsPanel();
+    interactiveMapState.preserveSelectionOnDetailsClose = false;
+    if (
+      interactiveMapState.interactPlugin &&
+      typeof interactiveMapState.interactPlugin.clear === 'function'
+    ) {
+      interactiveMapState.interactPlugin.clear();
+    }
+
+    DASHBOARD_DATASET_CONFIG.forEach(function (datasetConfig) {
+      if (
+        !datasetConfig.featureType ||
+        !interactiveMapState.dashboardDatasetIds.includes(
+          datasetConfig.datasetId
+        ) ||
+        !plugin ||
+        typeof plugin.setFeatureVisibility !== 'function'
+      ) {
+        return;
+      }
+
+      var currentFeatures =
+        interactiveMapState.datasetsByType[datasetConfig.featureType] || [];
+      var nextFeatures = normalizedMapData[datasetConfig.mapDataKey].features;
+      var featureIds = currentFeatures
+        .concat(nextFeatures)
+        .map(function (feature) {
+          return feature.properties && feature.properties.__imFeatureKey;
+        })
+        .filter(function (featureId, index, values) {
+          return featureId && values.indexOf(featureId) === index;
+        });
+
+      if (featureIds.length) {
+        plugin.setFeatureVisibility(true, featureIds, {
+          datasetId: datasetConfig.datasetId
+        });
+      }
+    });
+  }
+
+  function updateDashboardMapViewUi(mapContainer, panel, mapView) {
+    mapContainer.setAttribute('data-map-view', mapView);
+    if (!panel) {
+      return;
+    }
+
+    var title = panel.querySelector('[data-dashboard-map-title]');
+    if (title) {
+      title.textContent =
+        mapView === 'post-intervention' ? 'Post intervention' : 'Baseline';
+    }
+
+    panel
+      .querySelectorAll('input[name="dashboard-map-title"]')
+      .forEach(function (input) {
+        input.checked = input.value === mapView;
+      });
+
+    var interventionSection = panel.querySelector(
+      '[data-dashboard-intervention-section]'
+    );
+    if (interventionSection) {
+      interventionSection.hidden = mapView !== 'post-intervention';
+    }
+  }
+
+  function setDashboardMapViewLoading(mapContainer, panel, isLoading) {
+    mapContainer.setAttribute('aria-busy', isLoading ? 'true' : 'false');
+    if (!panel) {
+      return;
+    }
+
+    panel
+      .querySelectorAll('input[name="dashboard-map-title"]')
+      .forEach(function (input) {
+        input.disabled =
+          isLoading || !isDashboardMapViewAvailable(mapContainer, input.value);
+      });
+
+    var status = panel.querySelector('[data-dashboard-map-view-status]');
+    if (status && isLoading) {
+      status.textContent = 'Loading map view';
+    }
+  }
+
+  function setDashboardMapViewMessage(panel, message, isError) {
+    if (!panel) {
+      return;
+    }
+
+    var error = panel.querySelector('[data-dashboard-map-view-error]');
+    var status = panel.querySelector('[data-dashboard-map-view-status]');
+    if (error) {
+      error.textContent = isError ? message : '';
+      error.hidden = !isError;
+    }
+    if (status) {
+      status.textContent = isError ? '' : message;
+    }
+  }
+
+  function updateDashboardMapViewHistory(mapView, mode) {
+    if (!window.history || !window.history.pushState) {
+      return;
+    }
+
+    var url = new URL(window.location.href);
+    url.searchParams.set('view', mapView);
+    url.searchParams.delete('selected');
+    ['mv', 'map-preview-im:center', 'map-preview-im:zoom'].forEach(
+      function (key) {
+        url.searchParams.delete(key);
+      }
+    );
+    var nextUrl = url.pathname + '?' + url.searchParams.toString() + url.hash;
+    var state = Object.assign({}, window.history.state, {
+      dashboardMapView: mapView
+    });
+
+    if (mode === 'replace') {
+      window.history.replaceState(state, '', nextUrl);
+    } else {
+      window.history.pushState(state, '', nextUrl);
+    }
+  }
+
+  function applyDashboardInterventionFilters(panel) {
+    var plugin = interactiveMapState.datasetsPlugin;
+    if (!plugin || !panel) {
+      return;
+    }
+
+    var selectedCategories = Array.prototype.slice
+      .call(
+        panel.querySelectorAll(
+          '.dashboard-map-panel__intervention-input:checked'
+        )
+      )
+      .map(function (input) {
+        return input.value;
+      });
+    var datasets = {
+      parcel: 'habitat-parcels-im',
+      hedgerow: 'hedgerows-im',
+      watercourse: 'watercourses-im',
+      tree: 'trees-im'
+    };
+
+    Object.keys(datasets).forEach(function (featureType) {
+      var featureIdsToShow = [];
+      var featureIdsToHide = [];
+
+      (interactiveMapState.datasetsByType[featureType] || []).forEach(
+        function (feature) {
+          var properties = feature.properties || {};
+          var category = normalizeInterventionCategory(
+            properties['Retention Category'] ||
+              properties.retention_category ||
+              properties.Intervention ||
+              properties.intervention
+          );
+          var featureId = properties.__imFeatureKey;
+
+          if (!category || !featureId) {
+            return;
+          }
+
+          if (selectedCategories.includes(category)) {
+            featureIdsToShow.push(featureId);
+          } else {
+            featureIdsToHide.push(featureId);
+          }
+        }
+      );
+
+      if (
+        featureIdsToShow.length &&
+        typeof plugin.setFeatureVisibility === 'function'
+      ) {
+        plugin.setFeatureVisibility(true, featureIdsToShow, {
+          datasetId: datasets[featureType]
+        });
+      }
+      if (
+        featureIdsToHide.length &&
+        typeof plugin.setFeatureVisibility === 'function'
+      ) {
+        plugin.setFeatureVisibility(false, featureIdsToHide, {
+          datasetId: datasets[featureType]
+        });
+      }
+    });
+  }
+
+  function normalizeInterventionCategory(value) {
+    var category = String(value || '')
+      .trim()
+      .toLowerCase();
+
+    if (category === 'enhanced' || category === 'enhancement') {
+      return 'retained';
+    }
+    if (category === 'retain') {
+      return 'retained';
+    }
+    if (category === 'create') {
+      return 'created';
+    }
+
+    return ['retained', 'lost', 'created'].includes(category) ? category : null;
   }
 
   function hasFeatures(geoJson) {
@@ -369,8 +2013,25 @@
     );
   }
 
+  function getAvailableDashboardLayers(mapContainer) {
+    var availableLayers = mapContainer.getAttribute(
+      'data-available-map-layers'
+    );
+
+    return availableLayers
+      ? availableLayers.split(',').filter(function (layerName) {
+          return layerName;
+        })
+      : [];
+  }
+
   function clearPersistedMapView(mapId) {
-    if (!mapId || !window.history || !window.history.replaceState || !window.location) {
+    if (
+      !mapId ||
+      !window.history ||
+      !window.history.replaceState ||
+      !window.location
+    ) {
       return;
     }
 
@@ -390,7 +2051,8 @@
     }
 
     var nextSearch = searchParams.toString();
-    var nextUrl = url.pathname + (nextSearch ? '?' + nextSearch : '') + url.hash;
+    var nextUrl =
+      url.pathname + (nextSearch ? '?' + nextSearch : '') + url.hash;
 
     window.history.replaceState(window.history.state, '', nextUrl);
   }
@@ -404,13 +2066,61 @@
   }
 
   function buildFeatureMetadataBuilder(featureType) {
-    return function (properties, index) {
-      return {
+    return function (properties, index, feature) {
+      var metadata = {
         __imFeatureType: featureType,
         __imFeatureIndex: index,
         __imFeatureKey: featureType + ':' + index
       };
+
+      if (featureType === 'parcel') {
+        metadata.__imBroadHabitat = getAreaBroadHabitat(properties);
+        metadata.__imHabitatPatternIndex = getHabitatPatternIndex(
+          getDetailedHabitat(properties)
+        );
+        metadata.__imAreaHa = calculateGeometryAreaHectares(
+          feature && feature.geometry
+        );
+      }
+
+      return metadata;
     };
+  }
+
+  function calculateGeometryAreaHectares(geometry) {
+    if (!geometry || !Array.isArray(geometry.coordinates)) {
+      return null;
+    }
+
+    var polygons =
+      geometry.type === 'Polygon'
+        ? [geometry.coordinates]
+        : geometry.type === 'MultiPolygon'
+          ? geometry.coordinates
+          : [];
+    var areaSquareMetres = polygons.reduce(function (total, polygon) {
+      return total + polygon.reduce(function (polygonArea, ring, ringIndex) {
+        var ringArea = Math.abs(calculateRingArea(ring));
+        return polygonArea + (ringIndex === 0 ? ringArea : -ringArea);
+      }, 0);
+    }, 0);
+
+    return areaSquareMetres > 0 ? areaSquareMetres / 10000 : null;
+  }
+
+  function calculateRingArea(ring) {
+    if (!Array.isArray(ring) || ring.length < 3) {
+      return 0;
+    }
+
+    var area = 0;
+    for (var index = 0; index < ring.length; index += 1) {
+      var current = ring[index];
+      var next = ring[(index + 1) % ring.length];
+      area += current[0] * next[1] - next[0] * current[1];
+    }
+
+    return area / 2;
   }
 
   function normalizeToWgs84(geoJson, metadataBuilder) {
@@ -452,9 +2162,14 @@
 
     window.setTimeout(function () {
       var link = getTableLink(parsed.featureType, parsed.featureIndex);
-      handleTableSelection(parsed.featureType, parsed.featureIndex, link || null, {
-        skipScroll: true
-      });
+      handleTableSelection(
+        parsed.featureType,
+        parsed.featureIndex,
+        link || null,
+        {
+          skipScroll: true
+        }
+      );
     }, 100);
   }
 
@@ -479,7 +2194,10 @@
       try {
         ensureHoverLayers(map);
       } catch (error) {
-        console.warn('Failed to setup hover layers, will retry on next style event:', error);
+        console.warn(
+          'Failed to setup hover layers, will retry on next style event:',
+          error
+        );
         return;
       }
 
@@ -607,9 +2325,13 @@
       };
     }
 
-    var featureType = inferFeatureTypeFromLayer(feature.layer && feature.layer.id);
+    var featureType = inferFeatureTypeFromLayer(
+      feature.layer && feature.layer.id
+    );
     var featureIndex = parseInt(
-      properties.__imFeatureIndex != null ? properties.__imFeatureIndex : feature.id,
+      properties.__imFeatureIndex != null
+        ? properties.__imFeatureIndex
+        : feature.id,
       10
     );
 
@@ -627,7 +2349,7 @@
   }
 
   function inferFeatureTypeFromLayer(layerId) {
-    if (layerId === 'habitat-parcels-im' || layerId === 'habitat-parcels-im-stroke') {
+    if (String(layerId || '').indexOf('habitat-parcels-im-') === 0) {
       return 'parcel';
     }
     if (layerId === 'hedgerows-im') {
@@ -636,13 +2358,33 @@
     if (layerId === 'watercourses-im') {
       return 'watercourse';
     }
+    if (layerId === 'trees-im') {
+      return 'tree';
+    }
 
     return null;
   }
 
-  function getLayerIdForFeatureType(featureType) {
+  function getLayerIdForFeatureType(featureType, featureIndex) {
     if (featureType === 'parcel') {
-      return 'habitat-parcels-im';
+      var feature = getFeatureByTypeAndIndex(featureType, featureIndex);
+      var broadHabitat =
+        feature && feature.properties
+          ? feature.properties.__imBroadHabitat
+          : '';
+      var habitat = AREA_HABITAT_STYLES.find(function (item) {
+        return item.label === broadHabitat;
+      });
+      if (!habitat) {
+        return 'habitat-parcels-im-unclassified';
+      }
+
+      var patternIndex = feature.properties.__imHabitatPatternIndex;
+      return (
+        'habitat-parcels-im-' +
+        habitat.id +
+        (patternIndex >= 0 ? '-pattern-' + patternIndex : '')
+      );
     }
 
     if (featureType === 'hedgerow') {
@@ -651,6 +2393,9 @@
 
     if (featureType === 'watercourse') {
       return 'watercourses-im';
+    }
+    if (featureType === 'tree') {
+      return 'trees-im';
     }
 
     return null;
@@ -700,7 +2445,9 @@
 
   function handleSelectionChange(event) {
     var selectedFeatures =
-      event && Array.isArray(event.selectedFeatures) ? event.selectedFeatures : [];
+      event && Array.isArray(event.selectedFeatures)
+        ? event.selectedFeatures
+        : [];
 
     if (!selectedFeatures.length) {
       clearSelectedRow();
@@ -734,7 +2481,12 @@
     interactiveMapState.lastInteractionSource = null;
   }
 
-  function handleTableSelection(featureType, featureIndex, linkElement, options) {
+  function handleTableSelection(
+    featureType,
+    featureIndex,
+    linkElement,
+    options
+  ) {
     if (!featureType || !isFinite(featureIndex)) {
       return;
     }
@@ -752,7 +2504,7 @@
     interactiveMapState.lastInteractionSource = 'table';
     interactiveMapState.interactPlugin.selectFeature({
       featureId: featureKey,
-      layerId: getLayerIdForFeatureType(featureType),
+      layerId: getLayerIdForFeatureType(featureType, featureIndex),
       idProperty: '__imFeatureKey'
     });
 
@@ -780,24 +2532,28 @@
 
     mapApp.addPanel(HABITAT_HELP_PANEL_ID, {
       label: 'Map help',
-      showLabel: false,
       mobile: {
         slot: 'banner',
-        dismissable: true,
+        dismissible: true,
         exclusive: false,
-        initiallyOpen: true
+        open: true,
+        showLabel: false
       },
       tablet: {
         slot: 'banner',
-        dismissable: true,
+        dismissible: true,
         exclusive: false,
-        initiallyOpen: true
+        open: true,
+        showLabel: false,
+        width: '380px'
       },
       desktop: {
         slot: 'banner',
-        dismissable: true,
+        dismissible: true,
         exclusive: false,
-        initiallyOpen: true
+        open: true,
+        showLabel: false,
+        width: '380px'
       },
       html:
         '<div class="habitat-help-banner-content" role="status">' +
@@ -819,15 +2575,37 @@
       return null;
     }
 
-    var feature = getFeatureByTypeAndIndex(parsed.featureType, parsed.featureIndex);
+    var feature = getFeatureByTypeAndIndex(
+      parsed.featureType,
+      parsed.featureIndex
+    );
     var properties = feature && feature.properties ? feature.properties : {};
     var row = link ? link.closest('tr') : null;
     var cells = row
       ? Array.prototype.slice.call(row.querySelectorAll('th, td'))
       : [];
 
-    var metricLabel = parsed.featureType === 'parcel' ? 'Area' : 'Length';
-    var metricValue = getCellText(cells, 2) || '-';
+    var metricLabel =
+      parsed.featureType === 'parcel'
+        ? 'Area'
+        : parsed.featureType === 'tree'
+          ? 'Size'
+          : 'Length';
+    var metricValue = getCellText(cells, 2);
+    if (!metricValue && parsed.featureType === 'parcel') {
+      var storedArea = firstDefinedValue([
+        properties['Area (ha)'],
+        properties['Area ha'],
+        properties.area_ha,
+        properties.areaHa
+      ]);
+      var calculatedArea = Number(properties.__imAreaHa);
+      metricValue = storedArea ||
+        (isFinite(calculatedArea) && calculatedArea > 0
+          ? calculatedArea.toFixed(2) + ' ha'
+          : 'Not available');
+    }
+    metricValue = metricValue || 'Not available';
 
     var habitatType = getCellText(cells, 1);
     if (!habitatType) {
@@ -847,6 +2625,13 @@
           properties['Baseline River Type'],
           properties['Proposed River Type']
         ]);
+      } else if (parsed.featureType === 'tree') {
+        habitatType = firstDefinedValue([
+          properties['Baseline Tree Type'],
+          properties['Proposed Tree Type'],
+          properties['Baseline Habitat Type'],
+          properties['Proposed Habitat Type']
+        ]);
       }
     }
 
@@ -854,52 +2639,70 @@
       featureType: parsed.featureType,
       reference:
         (link && getTrimmedText(link.textContent)) ||
-        firstDefinedValue([properties['Parcel Ref']]) ||
-        parsed.featureType + ' ' + (parsed.featureIndex + 1),
+        firstDefinedValue([
+          properties['Parcel Ref'],
+          properties['Feature Ref'],
+          properties.reference,
+          properties.ref,
+          properties.id
+        ]) ||
+        (parsed.featureType === 'parcel'
+          ? 'HP-' + String(parsed.featureIndex + 1).padStart(3, '0')
+          : parsed.featureType + ' ' + (parsed.featureIndex + 1)),
       titlePrefix:
         parsed.featureType === 'parcel'
           ? 'Habitat '
           : parsed.featureType === 'hedgerow'
             ? 'Hedgerow '
-            : 'Watercourse ',
+            : parsed.featureType === 'watercourse'
+              ? 'Watercourse '
+              : 'Tree ',
       habitatType: habitatType || '-',
+      broadHabitat:
+        parsed.featureType === 'parcel'
+          ? properties.__imBroadHabitat || getAreaBroadHabitat(properties) || '-'
+          : '',
       metricLabel: metricLabel,
       metricValue: metricValue,
-      position: toSentenceCase(firstDefinedValue([
-        properties.Position,
-        properties.position,
-        properties.positionType,
-        properties.position_type,
-        properties['Baseline Position'],
-        properties['Baseline position'],
-        properties['Proposed Position'],
-        properties['Proposed position']
-      ]) || '-'),
-      adjacentTo: firstDefinedValue([
-        properties['Adjacent To'],
-        properties['Adjacent to'],
-        properties.adjacentTo,
-        properties.adjacent_to,
-        properties.AdjacentTo,
-        properties['Adjent To'],
-        properties['Baseline Adjacent To'],
-        properties['Baseline Adjacent to'],
-        properties['Proposed Adjacent To'],
-        properties['Proposed Adjacent to']
-      ]) || '-',
-      boundaryEdge: firstDefinedValue([
-        properties['Boundary edge'],
-        properties['Boundary Edge'],
-        properties['Boundary-edge'],
-        properties.boundaryEdge,
-        properties.boundary_edge,
-        properties.BoundaryEdge,
-        properties['On boundary edge'],
-        properties['Baseline Boundary edge'],
-        properties['Baseline Boundary Edge'],
-        properties['Proposed Boundary edge'],
-        properties['Proposed Boundary Edge']
-      ]) || '-',
+      position: toSentenceCase(
+        firstDefinedValue([
+          properties.Position,
+          properties.position,
+          properties.positionType,
+          properties.position_type,
+          properties['Baseline Position'],
+          properties['Baseline position'],
+          properties['Proposed Position'],
+          properties['Proposed position']
+        ]) || '-'
+      ),
+      adjacentTo:
+        firstDefinedValue([
+          properties['Adjacent To'],
+          properties['Adjacent to'],
+          properties.adjacentTo,
+          properties.adjacent_to,
+          properties.AdjacentTo,
+          properties['Adjent To'],
+          properties['Baseline Adjacent To'],
+          properties['Baseline Adjacent to'],
+          properties['Proposed Adjacent To'],
+          properties['Proposed Adjacent to']
+        ]) || '-',
+      boundaryEdge:
+        firstDefinedValue([
+          properties['Boundary edge'],
+          properties['Boundary Edge'],
+          properties['Boundary-edge'],
+          properties.boundaryEdge,
+          properties.boundary_edge,
+          properties.BoundaryEdge,
+          properties['On boundary edge'],
+          properties['Baseline Boundary edge'],
+          properties['Baseline Boundary Edge'],
+          properties['Proposed Boundary edge'],
+          properties['Proposed Boundary Edge']
+        ]) || '-',
       editUrl:
         parsed.featureType === 'parcel' && row
           ? withQueryParam(getRowActionHref(row), 'returnSource', 'map')
@@ -929,23 +2732,28 @@
     }
 
     mapApp.addPanel(HABITAT_DETAILS_PANEL_ID, {
-      label: escapeHtml(details.titlePrefix || 'Habitat ') + escapeHtml(details.reference || ''),
+      label:
+        escapeHtml(details.titlePrefix || 'Habitat ') +
+        escapeHtml(details.reference || ''),
       mobile: {
-        slot: 'inset',
-        dismissable: true,
-        exclusive: true,
+        slot: 'drawer',
+        dismissible: true,
+        exclusive: false,
+        modal: false,
         width: '340px'
       },
       tablet: {
-        slot: 'inset',
-        dismissable: true,
-        exclusive: true,
+        slot: 'left-top',
+        dismissible: true,
+        exclusive: false,
+        modal: false,
         width: '380px'
       },
       desktop: {
-        slot: 'inset',
-        dismissable: true,
-        exclusive: true,
+        slot: 'left-top',
+        dismissible: true,
+        exclusive: false,
+        modal: false,
         width: '420px'
       },
       html: buildHabitatDetailsPanelHtml(details)
@@ -981,6 +2789,7 @@
 
   function buildHabitatDetailsPanelHtml(details) {
     var safeHabitatType = escapeHtml(details.habitatType || '-');
+    var safeBroadHabitat = escapeHtml(details.broadHabitat || '-');
     var safeMetricLabel = escapeHtml(details.metricLabel || 'Area');
     var safeMetricValue = escapeHtml(details.metricValue || '-');
     var safePosition = escapeHtml(details.position || '-');
@@ -995,6 +2804,11 @@
       '</p>' +
       '<table class="govuk-table govuk-!-margin-bottom-4">' +
       '<tbody class="govuk-table__body">' +
+      (details.featureType === 'parcel'
+        ? '<tr class="govuk-table__row"><th scope="row" class="govuk-table__header">Broad habitat</th><td class="govuk-table__cell">' +
+          safeBroadHabitat +
+          '</td></tr>'
+        : '') +
       '<tr class="govuk-table__row"><th scope="row" class="govuk-table__header">Position</th><td class="govuk-table__cell">' +
       safePosition +
       '</td></tr>' +
@@ -1096,7 +2910,9 @@
   function parseFeatureKey(featureKey, properties) {
     var key =
       featureKey ||
-      (properties && properties.__imFeatureKey ? properties.__imFeatureKey : null);
+      (properties && properties.__imFeatureKey
+        ? properties.__imFeatureKey
+        : null);
 
     if (!key || typeof key !== 'string') {
       return null;
@@ -1244,7 +3060,10 @@
       return coordinates;
     }
 
-    if (typeof coordinates[0] === 'number' && typeof coordinates[1] === 'number') {
+    if (
+      typeof coordinates[0] === 'number' &&
+      typeof coordinates[1] === 'number'
+    ) {
       return transformCoordinate(coordinates);
     }
 
@@ -1291,11 +3110,11 @@
     var bounds = null;
 
     datasets.forEach(function (dataset) {
-      if (!dataset.data || !dataset.data.features) {
+      if (!dataset.geojson || !dataset.geojson.features) {
         return;
       }
 
-      dataset.data.features.forEach(function (feature) {
+      dataset.geojson.features.forEach(function (feature) {
         if (!feature.geometry) {
           return;
         }
@@ -1319,7 +3138,10 @@
       return bounds;
     }
 
-    if (typeof coordinates[0] === 'number' && typeof coordinates[1] === 'number') {
+    if (
+      typeof coordinates[0] === 'number' &&
+      typeof coordinates[1] === 'number'
+    ) {
       return includeCoordinate(bounds, coordinates[0], coordinates[1]);
     }
 
@@ -1358,5 +3180,16 @@
     }
 
     return bounds;
+  }
+
+  if (typeof module !== 'undefined' && module.exports) {
+    module.exports = {
+      DASHBOARD_DATASET_CONFIG: DASHBOARD_DATASET_CONFIG,
+      interactiveMapState: interactiveMapState,
+      normalizeDashboardMapData: normalizeDashboardMapData,
+      replaceDashboardMapData: replaceDashboardMapData,
+      switchDashboardMapView: switchDashboardMapView,
+      updateDashboardLayerAvailability: updateDashboardLayerAvailability
+    };
   }
 })();

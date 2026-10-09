@@ -32,7 +32,8 @@
       !window.defra ||
       !window.defra.InteractiveMap ||
       !window.defra.maplibreProvider ||
-      !window.defra.datasetsPlugin
+      !window.defra.datasetsPlugin ||
+      !window.defra.mapKeyPlugin
     ) {
       showMapPlaceholder(mapContainer, 'Interactive map library not available');
       return;
@@ -63,7 +64,10 @@
     var boundaryGeoJson = getLayerGeoJson(geometries, boundaryLayerName);
     var parcelsGeoJson = getLayerGeoJson(geometries, parcelsLayerName);
     var hedgerowsGeoJson = getLayerGeoJson(geometries, hedgerowsLayerName);
-    var watercoursesGeoJson = getLayerGeoJson(geometries, watercoursesLayerName);
+    var watercoursesGeoJson = getLayerGeoJson(
+      geometries,
+      watercoursesLayerName
+    );
 
     var datasets = [];
 
@@ -71,12 +75,14 @@
       datasets.push({
         id: 'site-boundary-im',
         label: 'Site boundary',
-        data: normalizeToWgs84(boundaryGeoJson),
-        fill: 'transparent',
-        stroke: '#d4351c',
-        strokeWidth: 3,
-        strokeDashArray: [3, 2],
-        showInLayers: true,
+        geojson: normalizeToWgs84(boundaryGeoJson),
+        style: {
+          fill: 'transparent',
+          stroke: '#d4351c',
+          strokeWidth: 3,
+          strokeDashArray: [3, 2]
+        },
+        showInMenu: true,
         showInKey: true
       });
     }
@@ -85,12 +91,14 @@
       datasets.push({
         id: 'habitat-parcels-im',
         label: 'Habitat parcels',
-        data: normalizeToWgs84(parcelsGeoJson),
-        fill: '#1d70b8',
-        stroke: '#1d70b8',
-        strokeWidth: 2,
-        opacity: 0.3,
-        showInLayers: true,
+        geojson: normalizeToWgs84(parcelsGeoJson),
+        style: {
+          fill: '#1d70b8',
+          stroke: '#1d70b8',
+          strokeWidth: 2,
+          opacity: 0.3
+        },
+        showInMenu: true,
         showInKey: true
       });
     }
@@ -99,11 +107,13 @@
       datasets.push({
         id: 'hedgerows-im',
         label: 'Hedgerows',
-        data: normalizeToWgs84(hedgerowsGeoJson),
-        stroke: '#00703c',
-        strokeWidth: 3,
-        keySymbolShape: 'line',
-        showInLayers: true,
+        geojson: normalizeToWgs84(hedgerowsGeoJson),
+        style: {
+          stroke: '#00703c',
+          strokeWidth: 3,
+          keySymbolShape: 'line'
+        },
+        showInMenu: true,
         showInKey: true
       });
     }
@@ -112,11 +122,13 @@
       datasets.push({
         id: 'watercourses-im',
         label: 'Watercourses',
-        data: normalizeToWgs84(watercoursesGeoJson),
-        stroke: '#1d70b8',
-        strokeWidth: 3,
-        keySymbolShape: 'line',
-        showInLayers: true,
+        geojson: normalizeToWgs84(watercoursesGeoJson),
+        style: {
+          stroke: '#1d70b8',
+          strokeWidth: 3,
+          keySymbolShape: 'line'
+        },
+        showInMenu: true,
         showInKey: true
       });
     }
@@ -136,7 +148,10 @@
           behaviour: 'inline',
           mapLabel: 'Interactive map preview',
           containerHeight: '400px',
-          bounds: mapBounds || [[-7.57, 49.96], [1.68, 58.64]],
+          bounds: mapBounds || [
+            [-7.57, 49.96],
+            [1.68, 58.64]
+          ],
           minZoom: 5,
           maxZoom: 20,
           enableZoomControls: true,
@@ -146,7 +161,8 @@
           plugins: [
             window.defra.datasetsPlugin({
               datasets: datasets
-            })
+            }),
+            window.defra.mapKeyPlugin()
           ]
         }
       );
@@ -157,7 +173,12 @@
   }
 
   function clearPersistedMapView(mapId) {
-    if (!mapId || !window.history || !window.history.replaceState || !window.location) {
+    if (
+      !mapId ||
+      !window.history ||
+      !window.history.replaceState ||
+      !window.location
+    ) {
       return;
     }
 
@@ -177,7 +198,8 @@
     }
 
     var nextSearch = searchParams.toString();
-    var nextUrl = url.pathname + (nextSearch ? '?' + nextSearch : '') + url.hash;
+    var nextUrl =
+      url.pathname + (nextSearch ? '?' + nextSearch : '') + url.hash;
 
     window.history.replaceState(window.history.state, '', nextUrl);
   }
@@ -229,7 +251,9 @@
         return feature;
       }
 
-      feature.geometry.coordinates = transformCoordinates(feature.geometry.coordinates);
+      feature.geometry.coordinates = transformCoordinates(
+        feature.geometry.coordinates
+      );
       return feature;
     });
 
@@ -310,11 +334,11 @@
     var bounds = null;
 
     datasets.forEach(function (dataset) {
-      if (!dataset || !dataset.data || !dataset.data.features) {
+      if (!dataset || !dataset.geojson || !dataset.geojson.features) {
         return;
       }
 
-      dataset.data.features.forEach(function (feature) {
+      dataset.geojson.features.forEach(function (feature) {
         if (!feature || !feature.geometry) {
           return;
         }
@@ -355,18 +379,15 @@
     }
 
     if (!bounds) {
-      return [[lng, lat], [lng, lat]];
+      return [
+        [lng, lat],
+        [lng, lat]
+      ];
     }
 
     return [
-      [
-        Math.min(bounds[0][0], lng),
-        Math.min(bounds[0][1], lat)
-      ],
-      [
-        Math.max(bounds[1][0], lng),
-        Math.max(bounds[1][1], lat)
-      ]
+      [Math.min(bounds[0][0], lng), Math.min(bounds[0][1], lat)],
+      [Math.max(bounds[1][0], lng), Math.max(bounds[1][1], lat)]
     ];
   }
 })();

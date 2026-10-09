@@ -1,0 +1,691 @@
+{
+  "siteName": "Oakfield Farm (demo data)",
+  "boundary": {
+    "properties": {
+      "Area": 14861.8,
+      "Site Name": "Oakfield Farm (demo data)"
+    },
+    "geometry": {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [425807.8, 431466.1],
+          [425955, 431531.1],
+          [426013.4, 431455.5],
+          [425838.4, 431392.6],
+          [425807.8, 431466.1]
+        ]
+      ]
+    }
+  },
+  "baselineParcels": [
+    {
+      "properties": {
+        "Parcel Ref": "H1",
+        "Baseline Broad Habitat Type": "Urban",
+        "Baseline Habitat Type": "Developed land; sealed surface",
+        "Area": 676,
+        "Baseline Condition": "6. N/A - Other",
+        "Baseline Strategic Significance": "Area/compensation not in local strategy/ no local strategy",
+        "Retention Category": "Retained",
+        "Baseline Distinctiveness": "V.Low",
+        "Site Name": "Oakfield Farm (demo data)"
+      },
+      "geometry": {
+        "type": "MultiPolygon",
+        "coordinates": [
+          [
+            [
+              [425957.3, 431528.1],
+              [425949.3, 431524.5],
+              [425932.2, 431516.8],
+              [425930.3, 431515.9],
+              [425921.4, 431511.9],
+              [425912.8, 431508.1],
+              [425904.8, 431504.5],
+              [425895.3, 431500.2],
+              [425886.1, 431496.1],
+              [425876.5, 431491.8],
+              [425867.7, 431487.8],
+              [425858.8, 431483.8],
+              [425848.2, 431479.1],
+              [425836.9, 431474],
+              [425828, 431470],
+              [425826.7, 431469.4],
+              [425809.6, 431461.7],
+              [425807.8, 431466.1],
+              [425955, 431531.1],
+              [425957.3, 431528.1]
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "properties": {
+        "Parcel Ref": "H2",
+        "Baseline Broad Habitat Type": "Grassland",
+        "Baseline Habitat Type": "Modified grassland",
+        "Area": 2460,
+        "Baseline Condition": "3. Moderate",
+        "Baseline Strategic Significance": "Area/compensation not in local strategy/ no local strategy",
+        "Retention Category": "Enhanced",
+        "Baseline Distinctiveness": "Low",
+        "Site Name": "Oakfield Farm (demo data)"
+      },
+      "geometry": {
+        "type": "MultiPolygon",
+        "coordinates": [
+          [
+            [
+              [425838.4, 431392.6],
+              [425832.7, 431406.4],
+              [425831.3, 431409.6],
+              [425809.6, 431461.7],
+              [425826.7, 431469.4],
+              [425828, 431470],
+              [425836.9, 431474],
+              [425848.2, 431479.1],
+              [425858.8, 431483.8],
+              [425867.7, 431487.8],
+              [425876.5, 431491.8],
+              [425886.1, 431496.1],
+              [425895.3, 431500.2],
+              [425904.8, 431504.5],
+              [425912.8, 431508.1],
+              [425921.4, 431511.9],
+              [425930.3, 431515.9],
+              [425932.2, 431516.8],
+              [425949.3, 431524.5],
+              [425957.3, 431528.1],
+              [425991.1, 431484.3],
+              [425990.3, 431483.3],
+              [425990, 431481.4],
+              [425990.3, 431479.9],
+              [425990.9, 431478.5],
+              [425991, 431474.6],
+              [425989.7, 431471.4],
+              [425985.5, 431467.6],
+              [425984.2, 431465.9],
+              [425982.8, 431464.2],
+              [425983.5, 431455.4],
+              [425988.9, 431446.7],
+              [425960.7, 431436.5],
+              [425932.4, 431426.4],
+              [425901.7, 431415.3],
+              [425870.2, 431404],
+              [425838.4, 431392.6]
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "properties": {
+        "Parcel Ref": "H3",
+        "Baseline Broad Habitat Type": "Heathland and shrub",
+        "Baseline Habitat Type": "Mixed scrub",
+        "Area": 568,
+        "Baseline Condition": "5. Poor",
+        "Baseline Strategic Significance": "Area/compensation not in local strategy/ no local strategy",
+        "Retention Category": "Enhanced",
+        "Baseline Distinctiveness": "Medium",
+        "Site Name": "Oakfield Farm (demo data)"
+      },
+      "geometry": {
+        "type": "MultiPolygon",
+        "coordinates": [
+          [
+            [
+              [425988.9, 431446.7],
+              [425983.5, 431455.4],
+              [425982.8, 431464.2],
+              [425984.2, 431465.9],
+              [425985.5, 431467.6],
+              [425989.7, 431471.4],
+              [425991, 431474.6],
+              [425990.9, 431478.5],
+              [425990.3, 431479.9],
+              [425990, 431481.4],
+              [425990.3, 431483.3],
+              [425991.1, 431484.3],
+              [426013.4, 431455.5],
+              [425988.9, 431446.7]
+            ]
+          ]
+        ]
+      }
+    }
+  ],
+  "postParcels": [
+    {
+      "properties": {
+        "Parcel Ref": "H2-1",
+        "Baseline Broad Habitat Type": "Grassland",
+        "Baseline Habitat Type": "Modified grassland",
+        "Area": 127,
+        "Baseline Condition": "3. Moderate",
+        "Baseline Strategic Significance": "Area/compensation not in local strategy/ no local strategy",
+        "Retention Category": "Lost",
+        "Proposed Broad Habitat Type": "Urban",
+        "Proposed Habitat Type": "Developed land; sealed surface",
+        "Proposed Condition": "6. N/A - Other",
+        "Proposed Strategic Significance": "Area/compensation not in local strategy/ no local strategy",
+        "Habitat created in advance/years": "0",
+        "Delay in starting habitat creation/years": "0",
+        "Spatial risk category": "N/A",
+        "Location": "On-site",
+        "Baseline Distinctiveness": "Low",
+        "Proposed Distinctiveness": "Low",
+        "Site Name": "Oakfield Farm (demo data)"
+      },
+      "geometry": {
+        "type": "MultiPolygon",
+        "coordinates": [
+          [
+            [
+              [425867.6, 431407.2],
+              [425859.3, 431417.4],
+              [425855.5, 431422.1],
+              [425854.5, 431421.6],
+              [425841.7, 431442],
+              [425842.1, 431443.2],
+              [425826.7, 431469.4],
+              [425828, 431470],
+              [425836.9, 431474],
+              [425848.2, 431479.1],
+              [425858.8, 431483.8],
+              [425867.7, 431487.8],
+              [425876.5, 431491.8],
+              [425886.1, 431496.1],
+              [425895.3, 431500.2],
+              [425904.8, 431504.5],
+              [425912.8, 431508.1],
+              [425921.4, 431511.9],
+              [425930.3, 431515.9],
+              [425932.2, 431516.8],
+              [425949.2, 431492.4],
+              [425937.9, 431487.2],
+              [425946.9, 431473.2],
+              [425950.2, 431464.9],
+              [425950.7, 431461.2],
+              [425947.2, 431458.7],
+              [425960.7, 431436.5],
+              [425932.4, 431426.4],
+              [425901.7, 431415.3],
+              [425870.2, 431404],
+              [425867.6, 431407.2]
+            ],
+            [
+              [425884.9, 431414],
+              [425895.3, 431418.1],
+              [425885.8, 431429.7],
+              [425876.7, 431425.5],
+              [425869.1, 431422],
+              [425868.3, 431421.6],
+              [425868.5, 431421.4],
+              [425863.8, 431419.3],
+              [425863, 431419],
+              [425866.6, 431414.1],
+              [425871.7, 431416.9],
+              [425876.2, 431410.6],
+              [425884.9, 431414]
+            ],
+            [
+              [425922.5, 431430.4],
+              [425914.6, 431442],
+              [425906.3, 431438.3],
+              [425899.7, 431435.4],
+              [425899.5, 431435.3],
+              [425899.3, 431435.2],
+              [425898.7, 431435],
+              [425898.8, 431434.9],
+              [425893.7, 431432.4],
+              [425892.9, 431432],
+              [425895, 431428.6],
+              [425901.1, 431431.6],
+              [425907, 431423.4],
+              [425914.2, 431426.6],
+              [425922.5, 431430.4]
+            ],
+            [
+              [425951.5, 431441.9],
+              [425943.2, 431454.1],
+              [425934.7, 431450.3],
+              [425929.2, 431447.9],
+              [425923.9, 431445.5],
+              [425923.2, 431445.2],
+              [425925.9, 431441.5],
+              [425930.8, 431444],
+              [425936.5, 431434.4],
+              [425944, 431438.1],
+              [425951.5, 431441.9]
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "properties": {
+        "Parcel Ref": "H2-2",
+        "Baseline Broad Habitat Type": "Grassland",
+        "Baseline Habitat Type": "Modified grassland",
+        "Area": 1598,
+        "Baseline Condition": "3. Moderate",
+        "Baseline Strategic Significance": "Area/compensation not in local strategy/ no local strategy",
+        "Retention Category": "Retained",
+        "Proposed Broad Habitat Type": "Grassland",
+        "Proposed Habitat Type": "Modified grassland",
+        "Proposed Condition": "3. Moderate",
+        "Proposed Strategic Significance": "Area/compensation not in local strategy/ no local strategy",
+        "Habitat created in advance/years": "0",
+        "Delay in starting habitat creation/years": "0",
+        "Spatial risk category": "N/A",
+        "Location": "On-site",
+        "Baseline Distinctiveness": "Low",
+        "Proposed Distinctiveness": "Low",
+        "Site Name": "Oakfield Farm (demo data)"
+      },
+      "geometry": {
+        "type": "MultiPolygon",
+        "coordinates": [
+          [
+            [
+              [425809.6, 431461.7],
+              [425826.7, 431469.4],
+              [425842.1, 431443.2],
+              [425841.7, 431442],
+              [425854.5, 431421.6],
+              [425855.5, 431422.1],
+              [425859.3, 431417.4],
+              [425867.6, 431407.2],
+              [425870.2, 431404],
+              [425838.4, 431392.6],
+              [425832.7, 431406.4],
+              [425831.3, 431409.6],
+              [425809.6, 431461.7]
+            ],
+            [
+              [425846.5, 431418.7],
+              [425844.9, 431420.6],
+              [425843.3, 431421],
+              [425839.6, 431421.2],
+              [425836.5, 431413.1],
+              [425836.1, 431412.1],
+              [425837.9, 431406.6],
+              [425838.7, 431406.1],
+              [425840, 431405.6],
+              [425840.1, 431405.4],
+              [425841.6, 431404.2],
+              [425842.1, 431403.5],
+              [425842.3, 431403.1],
+              [425842.8, 431402.2],
+              [425843.3, 431401.9],
+              [425844.2, 431401.3],
+              [425845.3, 431401],
+              [425847.4, 431400.8],
+              [425849.2, 431400.6],
+              [425849.9, 431401.2],
+              [425850.1, 431401.2],
+              [425851.6, 431403.3],
+              [425852.7, 431404.9],
+              [425853.1, 431405.6],
+              [425853.6, 431407.2],
+              [425853.6, 431407.7],
+              [425853.2, 431409.5],
+              [425852.9, 431411.3],
+              [425852, 431413],
+              [425850.8, 431414.6],
+              [425850.1, 431415],
+              [425849.2, 431415.5],
+              [425848.8, 431416],
+              [425848.4, 431416.5],
+              [425848.1, 431416.7],
+              [425846.5, 431418.7]
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "properties": {
+        "Parcel Ref": "H2-3",
+        "Baseline Broad Habitat Type": "Grassland",
+        "Baseline Habitat Type": "Modified grassland",
+        "Area": 2460,
+        "Baseline Condition": "3. Moderate",
+        "Baseline Strategic Significance": "Area/compensation not in local strategy/ no local strategy",
+        "Retention Category": "Enhanced",
+        "Proposed Broad Habitat Type": "Grassland",
+        "Proposed Habitat Type": "Other neutral grassland",
+        "Proposed Condition": "1. Good",
+        "Proposed Strategic Significance": "Area/compensation not in local strategy/ no local strategy",
+        "Habitat created in advance/years": "0",
+        "Delay in starting habitat creation/years": "0",
+        "Spatial risk category": "N/A",
+        "Location": "On-site",
+        "Baseline Distinctiveness": "Low",
+        "Proposed Distinctiveness": "Medium",
+        "Site Name": "Oakfield Farm (demo data)"
+      },
+      "geometry": {
+        "type": "MultiPolygon",
+        "coordinates": [
+          [
+            [
+              [425982.8, 431464.2],
+              [425983.5, 431455.4],
+              [425988.9, 431446.7],
+              [425960.7, 431436.5],
+              [425947.2, 431458.7],
+              [425950.7, 431461.2],
+              [425950.2, 431464.9],
+              [425946.9, 431473.2],
+              [425937.9, 431487.2],
+              [425949.2, 431492.4],
+              [425932.2, 431516.8],
+              [425949.3, 431524.5],
+              [425957.3, 431528.1],
+              [425991.1, 431484.3],
+              [425990.3, 431483.3],
+              [425990, 431481.4],
+              [425990.3, 431479.9],
+              [425990.9, 431478.5],
+              [425991, 431474.6],
+              [425989.7, 431471.4],
+              [425985.5, 431467.6],
+              [425984.2, 431465.9],
+              [425982.8, 431464.2]
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "properties": {
+        "Parcel Ref": "H1",
+        "Baseline Broad Habitat Type": "Urban",
+        "Baseline Habitat Type": "Developed land; sealed surface",
+        "Area": 676,
+        "Baseline Condition": "6. N/A - Other",
+        "Baseline Strategic Significance": "Area/compensation not in local strategy/ no local strategy",
+        "Retention Category": "Retained",
+        "Proposed Broad Habitat Type": "Urban",
+        "Proposed Habitat Type": "Developed land; sealed surface",
+        "Proposed Condition": "6. N/A - Other",
+        "Proposed Strategic Significance": "Area/compensation not in local strategy/ no local strategy",
+        "Habitat created in advance/years": "0",
+        "Delay in starting habitat creation/years": "0",
+        "Spatial risk category": "N/A",
+        "Location": "On-site",
+        "Baseline Distinctiveness": "V.Low",
+        "Proposed Distinctiveness": "V.Low",
+        "Site Name": "Oakfield Farm (demo data)"
+      },
+      "geometry": {
+        "type": "MultiPolygon",
+        "coordinates": [
+          [
+            [
+              [425957.3, 431528.1],
+              [425949.3, 431524.5],
+              [425932.2, 431516.8],
+              [425930.3, 431515.9],
+              [425921.4, 431511.9],
+              [425912.8, 431508.1],
+              [425904.8, 431504.5],
+              [425895.3, 431500.2],
+              [425886.1, 431496.1],
+              [425876.5, 431491.8],
+              [425867.7, 431487.8],
+              [425858.8, 431483.8],
+              [425848.2, 431479.1],
+              [425836.9, 431474],
+              [425828, 431470],
+              [425826.7, 431469.4],
+              [425809.6, 431461.7],
+              [425807.8, 431466.1],
+              [425955, 431531.1],
+              [425957.3, 431528.1]
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "properties": {
+        "Parcel Ref": "H3",
+        "Baseline Broad Habitat Type": "Heathland and shrub",
+        "Baseline Habitat Type": "Mixed scrub",
+        "Area": 568,
+        "Baseline Condition": "5. Poor",
+        "Baseline Strategic Significance": "Area/compensation not in local strategy/ no local strategy",
+        "Retention Category": "Enhanced",
+        "Proposed Broad Habitat Type": "Heathland and shrub",
+        "Proposed Habitat Type": "Mixed scrub",
+        "Proposed Condition": "1. Good",
+        "Proposed Strategic Significance": "Area/compensation not in local strategy/ no local strategy",
+        "Habitat created in advance/years": "0",
+        "Delay in starting habitat creation/years": "0",
+        "Spatial risk category": "N/A",
+        "Location": "On-site",
+        "Baseline Distinctiveness": "Medium",
+        "Proposed Distinctiveness": "Medium",
+        "Site Name": "Oakfield Farm (demo data)"
+      },
+      "geometry": {
+        "type": "MultiPolygon",
+        "coordinates": [
+          [
+            [
+              [425988.9, 431446.7],
+              [425983.5, 431455.4],
+              [425982.8, 431464.2],
+              [425984.2, 431465.9],
+              [425985.5, 431467.6],
+              [425989.7, 431471.4],
+              [425991, 431474.6],
+              [425990.9, 431478.5],
+              [425990.3, 431479.9],
+              [425990, 431481.4],
+              [425990.3, 431483.3],
+              [425991.1, 431484.3],
+              [426013.4, 431455.5],
+              [425988.9, 431446.7]
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "properties": {
+        "Parcel Ref": "H2-4",
+        "Baseline Broad Habitat Type": "Grassland",
+        "Baseline Habitat Type": "Modified grassland",
+        "Area": 159,
+        "Baseline Condition": "3. Moderate",
+        "Baseline Strategic Significance": "Area/compensation not in local strategy/ no local strategy",
+        "Retention Category": "Lost",
+        "Proposed Broad Habitat Type": "Urban",
+        "Proposed Habitat Type": "Developed land; sealed surface",
+        "Proposed Condition": "6. N/A - Other",
+        "Proposed Strategic Significance": "Area/compensation not in local strategy/ no local strategy",
+        "Habitat created in advance/years": "0",
+        "Delay in starting habitat creation/years": "0",
+        "Spatial risk category": "N/A",
+        "Location": "On-site",
+        "Baseline Distinctiveness": "Low",
+        "Proposed Distinctiveness": "V.Low",
+        "Site Name": "Oakfield Farm (demo data)"
+      },
+      "geometry": {
+        "type": "MultiPolygon",
+        "coordinates": [
+          [
+            [
+              [425876.7, 431425.5],
+              [425884.9, 431414],
+              [425876.2, 431410.6],
+              [425871.7, 431416.9],
+              [425866.6, 431414.1],
+              [425863, 431419],
+              [425863.8, 431419.3],
+              [425868.5, 431421.4],
+              [425868.3, 431421.6],
+              [425869.1, 431422],
+              [425876.7, 431425.5]
+            ]
+          ]
+        ]
+      }
+    }
+  ],
+  "hedgerows": [
+    {
+      "properties": {
+        "Parcel Ref": "H1",
+        "Baseline Hedge Type": "Native hedgerow",
+        "Baseline Condition": "Moderate",
+        "Baseline Strategic Significance": "Formally identified in local strategy",
+        "Length": 78,
+        "Habitat created in advance/years": "0",
+        "Delay in starting habitat creation/years": "0",
+        "Spatial risk category": "N/A",
+        "Location": "On-site",
+        "Baseline Distinctiveness": "Low"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [425814.5, 431450.1],
+          [425818.6, 431449.3],
+          [425824.7, 431449.3],
+          [425831.3, 431449.9],
+          [425834.2, 431450.2],
+          [425839.1, 431442.7],
+          [425849.1, 431427.5],
+          [425857.7, 431415.5],
+          [425866.4, 431404.5],
+          [425867.5, 431403.1]
+        ]
+      }
+    },
+    {
+      "properties": {
+        "Parcel Ref": "H2",
+        "Baseline Hedge Type": "Native hedgerow - associated with bank or ditch",
+        "Baseline Condition": "Good",
+        "Baseline Strategic Significance": "Formally identified in local strategy",
+        "Length": 176,
+        "Habitat created in advance/years": "0",
+        "Delay in starting habitat creation/years": "0",
+        "Spatial risk category": "N/A",
+        "Location": "On-site",
+        "Baseline Distinctiveness": "Medium"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [425813.3, 431452.9],
+          [425818.5, 431451.5],
+          [425823.2, 431451.4],
+          [425829.2, 431452.2],
+          [425835, 431452.5],
+          [425841.9, 431454.8],
+          [425850.8, 431459],
+          [425859.1, 431462.6],
+          [425868.2, 431468],
+          [425877.9, 431472.7],
+          [425934.5, 431499.3],
+          [425948.1, 431503.4],
+          [425957.6, 431503.9],
+          [425977.8, 431501.6]
+        ]
+      }
+    }
+  ],
+  "watercourses": [
+    {
+      "properties": {
+        "Parcel Ref": "R1",
+        "Baseline River Type": "Ditches",
+        "Baseline Condition": "3. Moderate",
+        "Baseline Strategic Significance": "Formally identified in local strategy",
+        "Baseline Encroachment into Watercourse": "Major",
+        "Baseline Encroachment into riparian zone": "1. Major/Moderate",
+        "Retention Category": "Null",
+        "Proposed River Type": "Null",
+        "Proposed Condition": "Null",
+        "Proposed Strategic Significance": "Null",
+        "Length": 177,
+        "Habitat created in advance/years": "0",
+        "Delay in starting habitat creation/years": "0",
+        "Spatial risk category": "N/A",
+        "Proposed Encroachment into Watercourse": "Null",
+        "Proposed Encroachment into riparian zone": "Null",
+        "Baseline Distinctiveness": "Medium"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [425813.6, 431452.2],
+          [425816.2, 431451.4],
+          [425818.6, 431450.8],
+          [425822.9, 431450.6],
+          [425826.7, 431450.8],
+          [425830.2, 431451.4],
+          [425835, 431451.4],
+          [425839.3, 431453],
+          [425843.3, 431454.2],
+          [425849.2, 431457.1],
+          [425855.1, 431459.3],
+          [425859.5, 431461.5],
+          [425863.2, 431463.7],
+          [425865.8, 431465.4],
+          [425870, 431467.6],
+          [425875.5, 431470],
+          [425877.3, 431471.2],
+          [425881.2, 431473.3],
+          [425883.6, 431474.1],
+          [425889.5, 431475.1],
+          [425891.7, 431476.1],
+          [425900, 431478.9],
+          [425904.6, 431480.9],
+          [425908.7, 431483.6],
+          [425910.7, 431485],
+          [425914.6, 431487.2],
+          [425916.8, 431488.4],
+          [425920.6, 431490.5],
+          [425923.3, 431492.1],
+          [425926.1, 431493.5],
+          [425927.7, 431494.5],
+          [425930.1, 431495.5],
+          [425932.8, 431497.1],
+          [425936.6, 431498.3],
+          [425938.8, 431498.7],
+          [425941.6, 431499.7],
+          [425944.7, 431500.6],
+          [425946.9, 431501.4],
+          [425950, 431501.4],
+          [425954.2, 431502.2],
+          [425956.4, 431502.5],
+          [425958.3, 431502.6],
+          [425959.9, 431502.5],
+          [425961.8, 431502.2],
+          [425963.9, 431501.7],
+          [425965.8, 431501.3],
+          [425966.6, 431501.1],
+          [425969, 431500.5],
+          [425970.7, 431500.4],
+          [425971.8, 431500.4],
+          [425973.7, 431500.3],
+          [425974.7, 431500.4],
+          [425976.1, 431500.4],
+          [425977.7, 431500.6],
+          [425978.4, 431500.7],
+          [425978.4, 431500.7]
+        ]
+      }
+    }
+  ]
+}

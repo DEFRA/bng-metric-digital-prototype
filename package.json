@@ -18,10 +18,12 @@
     "likec4:export": "docker run --rm -v \"$PWD:/data\" -w /data likec4/likec4 export png -o ./arch-diagrams",
     "format": "prettier --write \"**/*.{cjs,js,json,md}\"",
     "format:check": "prettier --check \"**/*.{cjs,js,json,md}\"",
+    "postinstall": "node scripts/postinstall.mjs",
+    "setup:husky": "node -e \"try { (await import('husky')).default() } catch (e) { if (e.code !== 'ERR_MODULE_NOT_FOUND') throw e }\" --input-type module",
+    "install:gitleaks": "node scripts/install-gitleaks.mjs",
     "import:metric": "node tools/metric-workbook/import.js",
     "scenario:metric": "node tools/metric-workbook/scenario.js",
     "screenshots": "node tools/screenshots/capture.js",
-    "setup:husky": "node -e \"try { (await import('husky')).default() } catch (e) { if (e.code !== 'ERR_MODULE_NOT_FOUND') throw e }\" --input-type module",
     "test": "npm run test:unit && npm run test:features",
     "test:unit": "node --test \"test/**/*.test.{js,mjs}\"",
     "test:features": "cucumber-js features/"
@@ -43,8 +45,7 @@
     "ol-mapbox-style": "^13.5.1",
     "pdfkit": "0.20.2",
     "shpjs": "^6.1.0",
-    "undici": "8.11.2",
-    "wkx": "0.5.0"
+    "undici": "8.11.2"
   },
   "devDependencies": {
     "husky": "9.1.7",
@@ -52,6 +53,7 @@
     "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
   },
   "overrides": {
-    "better-sqlite3": "$better-sqlite3"
+    "better-sqlite3": "$better-sqlite3",
+    "xlsx": "$xlsx"
   }
 }

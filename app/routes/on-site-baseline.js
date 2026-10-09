@@ -580,7 +580,7 @@ function registerOnSiteBaselineRoutes(router) {
 
       try {
         // Parse the GeoPackage file
-        const gpkgData = parseGeoPackage(req.file.buffer)
+        const gpkgData = await parseGeoPackage(req.file.buffer)
 
         if (!gpkgData.layers || gpkgData.layers.length === 0) {
           return res.redirect(
