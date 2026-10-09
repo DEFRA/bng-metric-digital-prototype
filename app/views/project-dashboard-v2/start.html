@@ -4,7 +4,8 @@
 
 {% set pageName = "Calculate biodiversity net gain" %}
 
-{% block pageTitle %}{{ pageName }} – {{ serviceName }} – GOV.UK{% endblock %}
+{# The heading is the service name, so name it once (GOV.UK start page title). #}
+{% block pageTitle %}{{ serviceName }} – GOV.UK{% endblock %}
 
 {% block beforeContent %}
   {% include "project-dashboard-v2/_phase-banner.html" %}

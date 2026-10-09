@@ -10,13 +10,12 @@
 {% from "govuk/components/summary-list/macro.njk" import govukSummaryList %}
 
 {% set pageName = section.itemName ~ " " ~ habitat.ref %}
-{% set formAction = listHref ~ "/" ~ (habitat.ref | lower) %}
 
 {% block pageTitle %}{{ pageName }} – {{ serviceName }} – GOV.UK{% endblock %}
 
 {% block beforeContent %}
   {% include "project-dashboard-v2/_phase-banner.html" %}
-  {{ govukBackLink({ text: "Back", href: listHref }) }}
+  {{ govukBackLink({ text: "Back", href: returnHref }) }}
 {% endblock %}
 
 {% block content %}
@@ -59,7 +58,7 @@
         items: habitatTypeItems
       }) }}
 
-      <h3 class="govuk-heading-s govuk-!-margin-bottom-1">Distinctiveness</h3>
+      <h3 class="govuk-heading-s govuk-!-margin-bottom-1">Distinctiveness (multiplier)</h3>
       <p class="govuk-body">{{ distinctiveness }}</p>
 
       {{ govukSelect({
@@ -69,7 +68,7 @@
         items: conditionItems
       }) }}
 
-      <h3 class="govuk-heading-s govuk-!-margin-bottom-1">Strategic significance</h3>
+      <h3 class="govuk-heading-s govuk-!-margin-bottom-1">Strategic significance (multiplier)</h3>
       <p class="govuk-hint govuk-!-margin-bottom-2">{{ strategicSignificanceHint }}</p>
       <p class="govuk-body">{{ strategicSignificance }}</p>
 
@@ -77,7 +76,7 @@
       <p class="govuk-body">{{ tradingRule }}</p>
 
       {{ govukSummaryList({
-        classes: "govuk-!-margin-bottom-7",
+        classes: "app-summary-list--top-border govuk-!-margin-bottom-7",
         rows: [
           { key: { text: "Units in this " ~ (section.itemName | lower) }, value: { text: units } }
         ]
@@ -94,7 +93,7 @@
 
       <div class="govuk-button-group">
         {{ govukButton({ text: "Save" }) }}
-        <a class="govuk-link" href="{{ listHref }}">Cancel</a>
+        <a class="govuk-link" href="{{ returnHref }}">Cancel</a>
       </div>
     </form>
 

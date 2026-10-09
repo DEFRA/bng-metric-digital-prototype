@@ -1559,6 +1559,37 @@ $app-wide-page-width: 1280px;
 // Project dashboard v2 journey (User Research)
 // =========================================================================
 
+// Habitat units box on the habitat detail pages: a rule above as well as the
+// summary list's usual one below, in the same GOV.UK border grey.
+.govuk-summary-list.app-summary-list--top-border {
+  border-top: 1px solid #cecece; // matches .govuk-summary-list__row border
+
+  // Wider label column than GOV.UK's 30%, so "Habitat units delivered" fits on
+  // one line in the two-thirds column (it needs ~196px; 30% gives 189px).
+  // Summary lists stack below tablet width, where this doesn't apply.
+  // 25px between each rule and the text, per the Figma "Total" box (15px
+  // padding around a row with 10px padding). Table cells, so the padding goes
+  // on the key and value rather than the row.
+  @include govuk-media-query($from: tablet) {
+    .govuk-summary-list__key {
+      width: 40%;
+    }
+
+    .govuk-summary-list__key,
+    .govuk-summary-list__value {
+      padding-top: 25px;
+      padding-bottom: 25px;
+    }
+  }
+}
+
+// "Complete" status tag in habitat tables: GOV.UK grey tag with the light-grey
+// background (#f3f2f1) from the design, keeping the grey tag's text colour.
+// Doubled class to outrank .govuk-tag--grey regardless of source order.
+.govuk-tag.app-tag--complete {
+  background-color: #f3f2f1; // govuk light-grey
+}
+
 // "No data" placeholder in habitat tables (govuk secondary text colour)
 .app-no-data {
   color: #505a5f; // govuk dark-grey
