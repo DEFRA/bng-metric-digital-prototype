@@ -1,0 +1,44 @@
+{% extends "layouts/main.html" %}
+
+{% from "govuk/components/button/macro.njk" import govukButton %}
+
+{% set pageName = "Calculate biodiversity net gain" %}
+
+{% block pageTitle %}{{ pageName }} – {{ serviceName }} – GOV.UK{% endblock %}
+
+{% block beforeContent %}
+  {% include "project-dashboard-v2/_phase-banner.html" %}
+{% endblock %}
+
+{% block content %}
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+
+    <h1 class="govuk-heading-xl">{{ pageName }}</h1>
+
+    <p class="govuk-body">
+      Use this service to check your Biodiversity Net Gain (BNG) metric and produce a PDF for
+      submission to your local planning authority.
+    </p>
+
+    <p class="govuk-body">This service is only available for:</p>
+    <ul class="govuk-list govuk-list--bullet">
+      <li>Very Low, Low and Medium Distinctiveness habitats</li>
+      <li>on-site Biodiversity Net Gain</li>
+    </ul>
+
+    <p class="govuk-body">
+      You can use this service to edit your information to meet your Biodiversity Net Gain target.
+      You can also check for any flags and ensure you have met trading rules. Files must be
+      uploaded in GeoPackage (.gpkg) format.
+    </p>
+
+    {{ govukButton({
+      text: "Start now",
+      href: "/project-dashboard-v2/sign-in",
+      isStartButton: true
+    }) }}
+
+  </div>
+</div>
+{% endblock %}

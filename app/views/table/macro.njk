@@ -1,0 +1,45 @@
+{#
+  appTable(params) — the stock govukTable plus an optional <tfoot>.
+
+  govukTable has no footer, but a totals row must sit outside <tbody> when
+  the table is sortable: MOJ Frontend's sortable table
+  (data-module="moj-sortable-table") re-orders every <tbody> row. This wraps
+  govukTable unchanged and inserts the footer before </table>, so the table
+  markup still comes entirely from govuk-frontend.
+
+  Import with:
+    {% from "table/macro.njk" import appTable %}
+
+  params: everything govukTable accepts, plus
+    foot  (array of rows, optional) each row is an array of cells:
+          { text | html, format: "numeric", classes, colspan }
+
+  Making it sortable is done through govukTable's own params:
+    attributes: { "data-module": "moj-sortable-table" } on the table,
+    attributes: { "aria-sort": "none" | "ascending" | "descending" } on each
+    sortable head item, and attributes: { "data-sort-value": … } on cells
+    whose display text doesn't sort correctly (e.g. "0.42ha", "Low (2)").
+#}
+{% from "govuk/components/table/macro.njk" import govukTable %}
+
+{% macro appTable(params) %}
+  {%- set footHtml -%}
+    {%- if params.foot and params.foot.length -%}
+      <tfoot class="govuk-table__foot">
+        {%- for row in params.foot %}
+        <tr class="govuk-table__row">
+          {%- for cell in row %}
+          <td class="govuk-table__cell
+            {%- if cell.format %} govuk-table__cell--{{ cell.format }}{% endif %}
+            {%- if cell.classes %} {{ cell.classes }}{% endif %}"
+            {%- if cell.colspan %} colspan="{{ cell.colspan }}"{% endif %}>
+            {{- cell.html | safe if cell.html else cell.text -}}
+          </td>
+          {%- endfor %}
+        </tr>
+        {%- endfor %}
+      </tfoot>
+    {%- endif -%}
+  {%- endset -%}
+  {{ govukTable(params) | replace("</table>", footHtml + "</table>") | safe }}
+{% endmacro %}

@@ -1,0 +1,9 @@
+{
+  "description": "UR round 5: two baseline parcels with missing inputs, so their units can't be calculated (Figma 3200 AH-006 and the 'Retained - Incomplete' row example).",
+  "source": "app/data/UR-Round-5.xlsm",
+  "output": "app/data/UR-Round-5-incomplete.xlsx",
+  "blank": {
+    "AH-006": ["condition", "strategicSignificance"],
+    "AH-011": ["broadHabitat", "habitatType", "condition"]
+  }
+}

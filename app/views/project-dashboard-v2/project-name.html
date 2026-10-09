@@ -1,0 +1,36 @@
+{% extends "layouts/main.html" %}
+
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/input/macro.njk" import govukInput %}
+
+{% set pageName = "Add a name for your Biodiversity Net Gain project" %}
+
+{% block pageTitle %}{{ pageName }} – {{ serviceName }} – GOV.UK{% endblock %}
+
+{% block beforeContent %}
+  {% include "project-dashboard-v2/_phase-banner.html" %}
+{% endblock %}
+
+{% block content %}
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+
+    <form method="post" action="/project-dashboard-v2/project-name" novalidate>
+      {{ govukInput({
+        id: "projectName",
+        name: "projectName",
+        label: {
+          text: pageName,
+          classes: "govuk-label--l",
+          isPageHeading: true
+        },
+        hint: { text: "Give your project a unique name so you can find it later." },
+        value: data.projectName
+      }) }}
+
+      {{ govukButton({ text: "Save and continue" }) }}
+    </form>
+
+  </div>
+</div>
+{% endblock %}

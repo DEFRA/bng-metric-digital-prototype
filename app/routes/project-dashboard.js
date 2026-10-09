@@ -1262,9 +1262,13 @@ function registerProjectDashboardRoutes(router) {
 
   router.get(
     '/project-dashboard/area-habitats/habitat/:ref',
-    function (req, res) {
-      const habitat =
-        baselineHabitats[req.params.ref] || baselineHabitats['b-a1']
+    function (req, res, next) {
+      const habitat = Object.hasOwn(baselineHabitats, req.params.ref)
+        ? baselineHabitats[req.params.ref]
+        : null
+      if (!habitat) {
+        return next() // unknown ref: fall through to the 404 handler
+      }
       res.render('project-dashboard/habitat-edit', {
         habitat: habitat,
         broadHabitatItems: broadHabitatItems,
@@ -1283,10 +1287,13 @@ function registerProjectDashboardRoutes(router) {
 
   router.get(
     '/project-dashboard/area-habitats/post-intervention/habitat/:ref',
-    function (req, res) {
-      const habitat =
-        postInterventionHabitats[req.params.ref] ||
-        postInterventionHabitats['p-a1']
+    function (req, res, next) {
+      const habitat = Object.hasOwn(postInterventionHabitats, req.params.ref)
+        ? postInterventionHabitats[req.params.ref]
+        : null
+      if (!habitat) {
+        return next() // unknown ref: fall through to the 404 handler
+      }
       res.render('project-dashboard/post-intervention-habitat-edit', {
         habitat: habitat,
         strategicSignificanceItems: strategicSignificanceItems,

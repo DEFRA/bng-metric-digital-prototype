@@ -255,6 +255,166 @@
           "hash": "5c9cc840445f"
         }
       ]
+    },
+    {
+      "journey": "project-dashboard-v2",
+      "fileKey": "MCZmgs6nNcuhXT00u5i9At",
+      "node": "4950:34437",
+      "figmaUrl": "https://www.figma.com/design/MCZmgs6nNcuhXT00u5i9At/Private-Beta---Exploration-%F0%9F%94%8E?node-id=4950-34437",
+      "viewsDir": "app/views/project-dashboard-v2",
+      "routesFile": "app/routes/project-dashboard-v2.js",
+      "frames": [
+        {
+          "id": "4950:34482",
+          "name": "3300 - 1280 Area habitats - Post intervention habitats",
+          "view": "post-intervention.html",
+          "hash": "42f96a9b4c4b",
+          "wide": true
+        },
+        {
+          "id": "4950:34567",
+          "name": "3320 - 1280 - Post intervention habitat details - Enhanced",
+          "view": "post-intervention-habitat.html",
+          "hash": "6bcbd005f211"
+        },
+        {
+          "id": "4950:34684",
+          "name": "3310 - 1280 - Post intervention habitat details - Created",
+          "view": "post-intervention-habitat.html",
+          "hash": "13cc27b6e614"
+        },
+        {
+          "id": "4950:34790",
+          "name": "3330 - 1280 - Post intervention habitat details - Retained",
+          "view": "post-intervention-habitat.html",
+          "hash": "f5b00e7b308b"
+        },
+        {
+          "id": "4950:34868",
+          "name": "1000 - 1280 - Project overview",
+          "view": "overview.html",
+          "hash": "ccce7a4670f7",
+          "wide": true
+        },
+        {
+          "id": "4950:34996",
+          "name": "3000 - 1280 - Area habitats - Summary",
+          "view": "area-habitats.html",
+          "hash": "03ea1d7fd3d4",
+          "wide": true
+        },
+        {
+          "id": "4950:35155",
+          "name": "3200 - 1280 - Area habitats - Baseline habitats",
+          "view": "baseline.html",
+          "hash": "5eb2b595cc07",
+          "wide": true
+        },
+        {
+          "id": "4950:35241",
+          "name": "3100 - 1280 - Area habitats - Trading rules",
+          "view": "trading-summary.html",
+          "hash": "16eb158bf835",
+          "wide": true
+        },
+        {
+          "id": "4950:35684",
+          "name": "3210 - 1280 - Baseline habitat details",
+          "view": "baseline-habitat.html",
+          "hash": "203b928659d4"
+        },
+        {
+          "id": "4950:35830",
+          "name": "2000 - 1280 - Orange flags",
+          "view": "orange-flags.html",
+          "hash": "6b3cad65c6ab",
+          "wide": true
+        },
+        {
+          "id": "4950:37600",
+          "name": "0410 - 1280 - File upload 3 of 3",
+          "view": "upload.html",
+          "hash": "35f03e83b5f5"
+        },
+        {
+          "id": "4950:37613",
+          "name": "0400 - 1280 - File upload 2 of 3",
+          "view": "upload.html",
+          "hash": "e09c41aece08"
+        },
+        {
+          "id": "4950:37626",
+          "name": "0300 - 1280 - File upload 1 of 3",
+          "view": "upload-choose.html",
+          "hash": "166634269ba9"
+        },
+        {
+          "id": "4950:37641",
+          "name": "0200 - 1280 - Add project name",
+          "view": "project-name.html",
+          "hash": "6eec9b55b4bb"
+        },
+        {
+          "id": "4950:37652",
+          "name": "0100 - 1280 - Sign in",
+          "view": "sign-in.html",
+          "hash": "bd0955407b40"
+        },
+        {
+          "id": "4950:37654",
+          "name": "0000 - 1280 - Start page",
+          "view": "start.html",
+          "hash": "e71e755a2519"
+        },
+        {
+          "id": "4950:37789",
+          "name": "0420 - 1280 - File upload - Check file",
+          "view": "upload-checking.html",
+          "hash": "6ca9efe6e55c"
+        },
+        {
+          "id": "4950:38422",
+          "name": "6000 - 1280 - Reports",
+          "view": "export.html",
+          "hash": "572dae05c754",
+          "wide": true
+        },
+        {
+          "id": "4956:40169",
+          "name": "4300 - 1280 Hedgerows - Post intervention habitats",
+          "view": "post-intervention.html",
+          "hash": "b5aac995ea87",
+          "wide": true
+        },
+        {
+          "id": "4956:39365",
+          "name": "4000 - 1280 - Hedgerows - Summary",
+          "view": "area-habitats.html",
+          "hash": "308fc7be48fe",
+          "wide": true
+        },
+        {
+          "id": "4956:40254",
+          "name": "4200 - 1280 - Hedgerows - Baseline habitats",
+          "view": "baseline.html",
+          "hash": "f1213fd54f7a",
+          "wide": true
+        },
+        {
+          "id": "4963:3580",
+          "name": "4100 - 1280 - Hedgerows - Trading rules",
+          "view": "trading-summary.html",
+          "hash": "9863288dfc51",
+          "wide": true
+        },
+        {
+          "id": "4956:39183",
+          "name": "5000 - 1280 - Summary - Project details",
+          "view": "project-details.html",
+          "hash": "6ab0c2e91419",
+          "wide": true
+        }
+      ]
     }
   ]
 }
