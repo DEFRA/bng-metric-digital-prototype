@@ -1257,10 +1257,13 @@ function registerProjectDashboardV2Routes(router) {
     const postList = sectionHref(section, 'post-intervention')
     const postHabitats = postInterventionHabitats(section)
 
-    router.get(`${baselineList}/:ref`, function (req, res) {
-      const habitat =
-        section.data.baseline.find((h) => slug(h.ref) === req.params.ref) ||
-        section.data.baseline[0]
+    router.get(`${baselineList}/:ref`, function (req, res, next) {
+      const habitat = section.data.baseline.find(
+        (h) => slug(h.ref) === req.params.ref
+      )
+      if (!habitat) {
+        return next() // unknown ref: fall through to the 404 handler
+      }
       res.render('project-dashboard-v2/baseline-habitat', {
         section: section,
         habitat: habitat,
@@ -1306,10 +1309,11 @@ function registerProjectDashboardV2Routes(router) {
     // The "Intervention" select drives which detail variant renders
     // (Created / Enhanced / Retained). Pressing "Calculate" posts back and
     // re-renders with the chosen intervention via ?intervention=.
-    router.get(`${postList}/:ref`, function (req, res) {
-      const habitat =
-        postHabitats.find((h) => slug(h.ref) === req.params.ref) ||
-        postHabitats[0]
+    router.get(`${postList}/:ref`, function (req, res, next) {
+      const habitat = postHabitats.find((h) => slug(h.ref) === req.params.ref)
+      if (!habitat) {
+        return next() // unknown ref: fall through to the 404 handler
+      }
       const intervention = INTERVENTIONS.includes(req.query.intervention)
         ? req.query.intervention
         : habitat.intervention
