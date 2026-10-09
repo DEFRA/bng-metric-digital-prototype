@@ -1400,7 +1400,6 @@ function registerProjectDashboardV2Routes(router) {
           ? condition(habitat.baselineCondition, habitat.baselineConditionScore)
           : 'Not recorded',
         strategicSignificanceHint: STRATEGIC_SIGNIFICANCE_HINT,
-        interventionItems: toItems(INTERVENTIONS, intervention),
         habitatTypeItems: toItems(options.habitatTypes, habitat.habitatType),
         strategicSignificanceItems: toItems(
           STRATEGIC_SIGNIFICANCE,

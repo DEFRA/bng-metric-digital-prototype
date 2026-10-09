@@ -49,12 +49,10 @@
     <form method="post" action="{{ formAction }}" novalidate>
       <h2 class="govuk-heading-m">Post-intervention {{ section.itemName | lower }} details</h2>
 
-      {{ govukSelect({
-        id: "intervention",
-        name: "intervention",
-        label: { text: "Intervention", classes: "govuk-label--s" },
-        items: interventionItems
-      }) }}
+      {# Read-only (Figma 3310-3330): the intervention comes from the uploaded
+         file and can't be changed here. #}
+      <h3 class="govuk-heading-s govuk-!-margin-bottom-1">Intervention</h3>
+      <p class="govuk-body">{{ intervention }}</p>
 
       <h3 class="govuk-heading-s govuk-!-margin-bottom-1">{{ section.measure.detailLabel }}</h3>
       <p class="govuk-body">{{ measureValue }}</p>
