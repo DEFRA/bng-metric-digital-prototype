@@ -268,91 +268,91 @@
           "id": "4950:34482",
           "name": "3300 - 1280 Area habitats - Post intervention habitats",
           "view": "post-intervention.html",
-          "hash": "42f96a9b4c4b",
+          "hash": "967f51ae59c5",
           "wide": true
         },
         {
           "id": "4950:34567",
           "name": "3320 - 1280 - Post intervention habitat details - Enhanced",
           "view": "post-intervention-habitat.html",
-          "hash": "6bcbd005f211"
+          "hash": "9f7d10b52b4a"
         },
         {
           "id": "4950:34684",
-          "name": "3310 - 1280 - Post intervention habitat details - Created",
+          "name": "3330 - 1280 - Post intervention habitat details - Created",
           "view": "post-intervention-habitat.html",
-          "hash": "13cc27b6e614"
+          "hash": "64ae4cae0db7"
         },
         {
           "id": "4950:34790",
-          "name": "3330 - 1280 - Post intervention habitat details - Retained",
+          "name": "3310 - 1280 - Post intervention habitat details - Retained",
           "view": "post-intervention-habitat.html",
-          "hash": "f5b00e7b308b"
+          "hash": "162d277caa44"
         },
         {
           "id": "4950:34868",
           "name": "1000 - 1280 - Project overview",
           "view": "overview.html",
-          "hash": "ccce7a4670f7",
+          "hash": "3cde6a83c5a1",
           "wide": true
         },
         {
           "id": "4950:34996",
           "name": "3000 - 1280 - Area habitats - Summary",
           "view": "area-habitats.html",
-          "hash": "03ea1d7fd3d4",
+          "hash": "b27563f6b91e",
           "wide": true
         },
         {
           "id": "4950:35155",
           "name": "3200 - 1280 - Area habitats - Baseline habitats",
           "view": "baseline.html",
-          "hash": "5eb2b595cc07",
+          "hash": "7395743cbcc4",
           "wide": true
         },
         {
           "id": "4950:35241",
           "name": "3100 - 1280 - Area habitats - Trading rules",
           "view": "trading-summary.html",
-          "hash": "16eb158bf835",
+          "hash": "6493bb5d57a0",
           "wide": true
         },
         {
           "id": "4950:35684",
           "name": "3210 - 1280 - Baseline habitat details",
           "view": "baseline-habitat.html",
-          "hash": "203b928659d4"
+          "hash": "a306620aa500"
         },
         {
           "id": "4950:35830",
           "name": "2000 - 1280 - Orange flags",
           "view": "orange-flags.html",
-          "hash": "6b3cad65c6ab",
+          "hash": "aa9eae1944c8",
           "wide": true
         },
         {
           "id": "4950:37600",
           "name": "0410 - 1280 - File upload 3 of 3",
           "view": "upload.html",
-          "hash": "35f03e83b5f5"
+          "hash": "e4345a280cc8"
         },
         {
           "id": "4950:37613",
           "name": "0400 - 1280 - File upload 2 of 3",
           "view": "upload.html",
-          "hash": "e09c41aece08"
+          "hash": "529ee3b1a8eb"
         },
         {
           "id": "4950:37626",
           "name": "0300 - 1280 - File upload 1 of 3",
           "view": "upload-choose.html",
-          "hash": "166634269ba9"
+          "hash": "4267f1cd180e"
         },
         {
           "id": "4950:37641",
           "name": "0200 - 1280 - Add project name",
           "view": "project-name.html",
-          "hash": "6eec9b55b4bb"
+          "hash": "d3a52fc9738f"
         },
         {
           "id": "4950:37652",
@@ -364,54 +364,54 @@
           "id": "4950:37654",
           "name": "0000 - 1280 - Start page",
           "view": "start.html",
-          "hash": "e71e755a2519"
+          "hash": "d7361849b411"
         },
         {
           "id": "4950:37789",
           "name": "0420 - 1280 - File upload - Check file",
           "view": "upload-checking.html",
-          "hash": "6ca9efe6e55c"
+          "hash": "c4b01ec17990"
         },
         {
           "id": "4950:38422",
           "name": "6000 - 1280 - Reports",
           "view": "export.html",
-          "hash": "572dae05c754",
+          "hash": "c967cce003f9",
           "wide": true
         },
         {
           "id": "4956:40169",
           "name": "4300 - 1280 Hedgerows - Post intervention habitats",
           "view": "post-intervention.html",
-          "hash": "b5aac995ea87",
+          "hash": "f1b7291a31a1",
           "wide": true
         },
         {
           "id": "4956:39365",
           "name": "4000 - 1280 - Hedgerows - Summary",
           "view": "area-habitats.html",
-          "hash": "308fc7be48fe",
+          "hash": "60e3584ae5ce",
           "wide": true
         },
         {
           "id": "4956:40254",
           "name": "4200 - 1280 - Hedgerows - Baseline habitats",
           "view": "baseline.html",
-          "hash": "f1213fd54f7a",
+          "hash": "3ee90eb0c0cd",
           "wide": true
         },
         {
           "id": "4963:3580",
           "name": "4100 - 1280 - Hedgerows - Trading rules",
           "view": "trading-summary.html",
-          "hash": "9863288dfc51",
+          "hash": "61c85885c473",
           "wide": true
         },
         {
           "id": "4956:39183",
           "name": "5000 - 1280 - Summary - Project details",
           "view": "project-details.html",
-          "hash": "6ab0c2e91419",
+          "hash": "d455670422af",
           "wide": true
         }
       ]

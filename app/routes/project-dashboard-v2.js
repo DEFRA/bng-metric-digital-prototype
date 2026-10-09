@@ -318,7 +318,7 @@ function tradingRuleCopy(section, h) {
 }
 
 const STRATEGIC_SIGNIFICANCE_HINT =
-  'All baseline habitats default to Low (1.00). High (1.15) or Medium (1.10) can only be selected if formally designated in an authority-approved local strategy prior to LNRS publication. Once an LNRS is published, baseline is strictly Low (1.00).'
+  "Habitats are always 'Low' unless designated as otherwise in an authority-approved local strategy."
 
 // --- Tables ------------------------------------------------------------------
 
@@ -444,7 +444,10 @@ function statusCell(incomplete) {
         attributes: sortValue('Incomplete')
       }
     : {
-        html: tagHtml({ text: 'Complete', classes: 'govuk-tag--grey' }),
+        html: tagHtml({
+          text: 'Complete',
+          classes: 'govuk-tag--grey app-tag--complete'
+        }),
         attributes: sortValue('Complete')
       }
 }
@@ -612,7 +615,10 @@ function postInterventionTable(section, intervention) {
             : NO_DATA,
           h.distinctiveness
             ? {
-                text: distinctiveness(h.distinctiveness, h.distinctivenessScore),
+                text: distinctiveness(
+                  h.distinctiveness,
+                  h.distinctivenessScore
+                ),
                 attributes: sortValue(h.distinctivenessScore)
               }
             : NO_DATA,
@@ -674,6 +680,28 @@ function postInterventionTable(section, intervention) {
   })
 }
 
+// Pages a detail page can return to, named by ?from= on the link that opened
+// it. Only these values are honoured, so ?from= can't redirect anywhere else.
+const RETURN_PAGES = {
+  'orange-flags': `${BASE}/orange-flags`
+}
+
+/**
+ * Where a detail page's Back, Cancel and Save go, and the query string its
+ * form must carry so that survives Save.
+ * @param {object} req
+ * @param {string} fallback - the page to return to when not opened from elsewhere
+ */
+function returnTo(req, fallback) {
+  const from = Object.hasOwn(RETURN_PAGES, req.query.from)
+    ? req.query.from
+    : null
+  return {
+    href: from ? RETURN_PAGES[from] : fallback,
+    query: from ? `?from=${from}` : ''
+  }
+}
+
 function flagHref(flag) {
   const section = Object.values(SECTIONS).find(
     (s) => s.unitType === flag.unitType
@@ -682,7 +710,7 @@ function flagHref(flag) {
     return null
   }
   const page = flag.phase === 'Baseline' ? 'baseline' : 'post-intervention'
-  return `${sectionHref(section, page)}/${slug(flag.ref)}`
+  return `${sectionHref(section, page)}/${slug(flag.ref)}?from=orange-flags`
 }
 
 // Orange flags wraps freely (.app-scrollable-table--wrap); Detail and Note
@@ -1116,6 +1144,13 @@ function overviewActions(req, complete) {
  * @param {Router} router - Express router instance
  */
 function registerProjectDashboardV2Routes(router) {
+  // The v2 service name (Figma header: "Calculate biodiversity net gain"),
+  // without renaming the other journeys that share app/config.json.
+  router.use(BASE, function (req, res, next) {
+    res.locals.serviceName = 'Calculate biodiversity net gain'
+    next()
+  })
+
   router.get(BASE, function (req, res) {
     res.render('project-dashboard-v2/start')
   })
@@ -1264,10 +1299,12 @@ function registerProjectDashboardV2Routes(router) {
       if (!habitat) {
         return next() // unknown ref: fall through to the 404 handler
       }
+      const back = returnTo(req, baselineList)
       res.render('project-dashboard-v2/baseline-habitat', {
         section: section,
         habitat: habitat,
-        listHref: baselineList,
+        returnHref: back.href,
+        formAction: `${baselineList}/${slug(habitat.ref)}${back.query}`,
         measureValue: fixed(habitat[section.measure.key], 4),
         units: habitat.units == null ? NO_DATA_TEXT : fixed(habitat.units),
         distinctiveness: habitat.distinctiveness
@@ -1303,12 +1340,12 @@ function registerProjectDashboardV2Routes(router) {
     })
 
     router.post(`${baselineList}/:ref`, function (req, res) {
-      res.redirect(baselineList)
+      res.redirect(returnTo(req, baselineList).href)
     })
 
-    // The "Intervention" select drives which detail variant renders
-    // (Created / Enhanced / Retained). Pressing "Calculate" posts back and
-    // re-renders with the chosen intervention via ?intervention=.
+    // Renders the variant for the habitat's own intervention (Created /
+    // Enhanced / Retained). ?intervention= previews another variant — there's
+    // no Calculate button this UR round, so it's for setting up sessions.
     router.get(`${postList}/:ref`, function (req, res, next) {
       const habitat = postHabitats.find((h) => slug(h.ref) === req.params.ref)
       if (!habitat) {
@@ -1324,11 +1361,12 @@ function registerProjectDashboardV2Routes(router) {
         habitat.targetCondition,
         habitat.targetConditionScore
       )
+      const back = returnTo(req, `${postList}#${intervention.toLowerCase()}`)
       res.render('project-dashboard-v2/post-intervention-habitat', {
         section: section,
         habitat: habitat,
-        slug: slug(habitat.ref),
-        listHref: postList,
+        returnHref: back.href,
+        formAction: `${postList}/${slug(habitat.ref)}${back.query}`,
         intervention: intervention,
         measureValue: section.measure.format(habitat[section.measure.key], 4),
         units: habitat.units == null ? NO_DATA_TEXT : fixed(habitat.units),
@@ -1380,13 +1418,7 @@ function registerProjectDashboardV2Routes(router) {
     })
 
     router.post(`${postList}/:ref`, function (req, res) {
-      if (req.body.action === 'calculate') {
-        const intervention = encodeURIComponent(req.body.intervention || '')
-        return res.redirect(
-          `${postList}/${req.params.ref}?intervention=${intervention}`
-        )
-      }
-      res.redirect(postList)
+      res.redirect(returnTo(req, postList).href)
     })
   }
 

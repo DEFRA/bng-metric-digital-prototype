@@ -20,14 +20,12 @@
 {% from "govuk/components/summary-list/macro.njk" import govukSummaryList %}
 
 {% set pageName = section.itemName ~ " " ~ habitat.ref %}
-{% set formAction = listHref ~ "/" ~ slug %}
-{% set backHref = listHref ~ "#" ~ (intervention | lower) %}
 
 {% block pageTitle %}{{ pageName }} – {{ serviceName }} – GOV.UK{% endblock %}
 
 {% block beforeContent %}
   {% include "project-dashboard-v2/_phase-banner.html" %}
-  {{ govukBackLink({ text: "Back", href: backHref }) }}
+  {{ govukBackLink({ text: "Back", href: returnHref }) }}
 {% endblock %}
 
 {% block content %}
@@ -55,11 +53,10 @@
         id: "intervention",
         name: "intervention",
         label: { text: "Intervention", classes: "govuk-label--s" },
-        hint: { text: "Choose an intervention and select Calculate to update this habitat." },
         items: interventionItems
       }) }}
 
-      <h3 class="govuk-heading-s govuk-!-margin-bottom-1">{{ "Area" if section.hasBroadHabitat else section.measure.label }}</h3>
+      <h3 class="govuk-heading-s govuk-!-margin-bottom-1">{{ section.measure.detailLabel }}</h3>
       <p class="govuk-body">{{ measureValue }}</p>
 
       {% if section.hasBroadHabitat %}
@@ -79,13 +76,13 @@
         <p class="govuk-body">{{ habitat.habitatType }}</p>
       {% endif %}
 
-      <h3 class="govuk-heading-s govuk-!-margin-bottom-1">Distinctiveness</h3>
+      <h3 class="govuk-heading-s govuk-!-margin-bottom-1">Distinctiveness (multiplier)</h3>
       <p class="govuk-body">{{ distinctiveness }}</p>
 
       {{ govukSelect({
         id: "strategicSignificance",
         name: "strategicSignificance",
-        label: { text: "Strategic significance", classes: "govuk-label--s" },
+        label: { text: "Strategic significance (multiplier)", classes: "govuk-label--s" },
         hint: { text: strategicSignificanceHint },
         items: strategicSignificanceItems
       }) }}
@@ -106,7 +103,7 @@
         {{ govukSelect({
           id: "targetCondition",
           name: "targetCondition",
-          label: { text: "Target condition", classes: "govuk-label--s" },
+          label: { text: "Target condition (multiplier)", classes: "govuk-label--s" },
           items: targetConditionItems
         }) }}
 
@@ -162,22 +159,15 @@
           ]
         }) }}
 
-        <h3 class="govuk-heading-s govuk-!-margin-bottom-1">Final time to target condition</h3>
+        <h3 class="govuk-heading-s govuk-!-margin-bottom-1">Final time to target condition (multiplier)</h3>
         <p class="govuk-body">{{ finalTime | default("Not calculated", true) }}</p>
 
         <h3 class="govuk-heading-s govuk-!-margin-bottom-1">Applied difficulty multiplier</h3>
         <p class="govuk-body">{{ appliedDifficulty | default("Not calculated", true) }}</p>
       {% endif %}
 
-      {{ govukButton({
-        text: "Calculate",
-        classes: "govuk-button--secondary",
-        name: "action",
-        value: "calculate"
-      }) }}
-
       {{ govukSummaryList({
-        classes: "govuk-!-margin-bottom-7",
+        classes: "app-summary-list--top-border govuk-!-margin-bottom-7",
         rows: [
           { key: { text: "Habitat units delivered" }, value: { text: units } }
         ]
@@ -194,7 +184,7 @@
 
       <div class="govuk-button-group">
         {{ govukButton({ text: "Save", name: "action", value: "save" }) }}
-        <a class="govuk-link" href="{{ backHref }}">Cancel</a>
+        <a class="govuk-link" href="{{ returnHref }}">Cancel</a>
       </div>
     </form>
 
