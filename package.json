@@ -42,10 +42,10 @@
     "ol-mapbox-style": "^13.1.1",
     "shpjs": "^6.1.0",
     "undici": "8.6.0",
-    "wkx": "0.5.0",
-    "xlsx": "^0.18.5"
+    "wkx": "0.5.0"
   },
   "devDependencies": {
-    "prettier": "3.9.4"
+    "prettier": "3.9.4",
+    "xlsx": "^0.18.5"
   }
 }
