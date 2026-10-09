@@ -1,0 +1,35 @@
+{# Trading summary — Area habitats (Figma 3100) and Hedgerows (4100). #}
+{% extends "project-dashboard-v2/_dashboard-layout.html" %}
+
+{% from "govuk/components/table/macro.njk" import govukTable %}
+{% from "govuk/components/details/macro.njk" import govukDetails %}
+{% from "govuk/components/inset-text/macro.njk" import govukInsetText %}
+{% from "dashboard/macro.njk" import appDashboard %}
+
+{% block dashboardContent %}
+  {% if not complete %}
+    {{ govukInsetText({
+      html: 'Trading rules are checked against your post-intervention habitats. <a class="govuk-link" href="/project-dashboard-v2/upload/choose">Upload a post-intervention file</a> to see whether they are met.'
+    }) }}
+  {% else %}
+    {{ govukTable(tradingStatusTable) }}
+
+    {% for band in bands %}
+      <h2 class="govuk-heading-m govuk-!-margin-top-8">{{ band.heading }}</h2>
+      {{ govukDetails({ summaryText: "Trading rule", open: true, text: band.rule }) }}
+
+      {{ appDashboard(band.dashboard) }}
+
+      {% for group in band.tables %}
+        {% if group.heading %}
+          <h3 class="govuk-heading-s">{{ group.heading }}</h3>
+        {% endif %}
+        {{ govukTable(group.table) }}
+      {% endfor %}
+    {% endfor %}
+  {% endif %}
+
+  <p class="govuk-body">
+    For help using this service visit the official guidance on <a class="govuk-link" href="https://www.gov.uk/guidance/biodiversity-net-gain">GOV.UK</a>.
+  </p>
+{% endblock %}

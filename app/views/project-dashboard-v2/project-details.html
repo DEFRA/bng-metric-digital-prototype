@@ -1,0 +1,71 @@
+{# Project details (Figma 5000) — reached from the side nav and the
+   overview "Actions" table. Values persist in the session. #}
+{% extends "project-dashboard-v2/_dashboard-layout.html" %}
+
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/input/macro.njk" import govukInput %}
+{% from "govuk/components/date-input/macro.njk" import govukDateInput %}
+{% from "govuk/components/select/macro.njk" import govukSelect %}
+
+{% set pageName = "Project details" %}
+{% set hideCaption = true %}
+{% set hideUploadButton = true %}
+
+{% block dashboardContent %}
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-two-thirds">
+      <p class="govuk-body">
+        Enter the details for the project. You do not need to add them all straight away,
+        but you will need to complete all of these details before you can export your metric.
+      </p>
+
+      <form method="post" action="/project-dashboard-v2/project-details" novalidate>
+        {{ govukInput({
+          id: "projectName",
+          name: "projectName",
+          label: { text: "Project name", classes: "govuk-label--s" },
+          value: data.projectName
+        }) }}
+
+        {{ govukInput({
+          id: "surveyCompletedBy",
+          name: "surveyCompletedBy",
+          label: { text: "Survey completed by", classes: "govuk-label--s" },
+          value: data.surveyCompletedBy
+        }) }}
+
+        {{ govukDateInput({
+          id: "surveyDate",
+          namePrefix: "surveyDate",
+          fieldset: {
+            legend: { text: "Survey date", classes: "govuk-fieldset__legend--s" }
+          },
+          items: [
+            { name: "day", classes: "govuk-input--width-2", value: data["surveyDate-day"] },
+            { name: "month", classes: "govuk-input--width-2", value: data["surveyDate-month"] },
+            { name: "year", classes: "govuk-input--width-4", value: data["surveyDate-year"] }
+          ]
+        }) }}
+
+        {{ govukInput({
+          id: "planningPermissionApplicantName",
+          name: "planningPermissionApplicantName",
+          label: { text: "Planning permission applicant name", classes: "govuk-label--s" },
+          value: data.planningPermissionApplicantName
+        }) }}
+
+        {{ govukSelect({
+          id: "localPlanningAuthority",
+          name: "localPlanningAuthority",
+          label: { text: "Local planning authority", classes: "govuk-label--s" },
+          items: localPlanningAuthorityItems
+        }) }}
+
+        <div class="govuk-button-group">
+          {{ govukButton({ text: "Save" }) }}
+          <a class="govuk-link" href="/project-dashboard-v2/overview">Cancel</a>
+        </div>
+      </form>
+    </div>
+  </div>
+{% endblock %}

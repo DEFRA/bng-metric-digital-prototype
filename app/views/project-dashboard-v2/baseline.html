@@ -1,0 +1,16 @@
+{# Baseline — Area habitats (Figma 3200) and Hedgerows (4200). #}
+{% extends "project-dashboard-v2/_dashboard-layout.html" %}
+
+{% from "table/macro.njk" import appTable %}
+{% from "dashboard/macro.njk" import appDashboard %}
+
+{% block dashboardContent %}
+  {% include "project-dashboard-v2/_results.html" %}
+
+  <hr class="govuk-section-break govuk-section-break--l govuk-section-break--visible">
+
+  <h2 class="govuk-heading-m">{{ section.detailsHeading }}</h2>
+  <div class="app-scrollable-table" role="region" tabindex="0" aria-label="{{ section.detailsHeading }}, scroll horizontally to see more columns">
+    {{ appTable(baselineTable) }}
+  </div>
+{% endblock %}

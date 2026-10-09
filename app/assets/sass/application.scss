@@ -1318,6 +1318,26 @@
   padding-top: 15px;
 }
 
+// Tight spacing (params.classes: "app-dashboard--tight", used by
+// project-dashboard-v2), per the Figma "Headline-data" tiles (4950:34912,
+// 4950:34922): whatever follows the number or title — a link, then a tag —
+// sits 10px below it, and the tag is not pinned to the card foot, so tags in
+// a row needn't line up. Covers both labelled and value-first cards.
+.app-dashboard--tight {
+  .app-dashboard__value {
+    margin-bottom: 0;
+  }
+
+  .app-dashboard__caption {
+    margin: 10px 0 0;
+  }
+
+  .app-dashboard__footer {
+    margin-top: 0;
+    padding-top: 12px; // 10px visible: .govuk-tag has margin-top: -2px
+  }
+}
+
 .app-dashboard__metrics {
   display: flex;
   flex-wrap: wrap;
@@ -1401,6 +1421,46 @@
   text-decoration: none;
 }
 
+// "Plain" variant — Figma "SideMenu" component (node 4970:4116), used by
+// project-dashboard-v2. Links are not underlined (underline on hover), the
+// current page is blue + bold with no left bar, rows are 55px (15px padding
+// around a 25px line), sub-items indent 15px and the last item has no rule.
+// The parent of a current sub-item stays regular weight.
+.app-side-nav--plain {
+  .app-side-nav__item:last-child {
+    border-bottom: 0;
+  }
+
+  .app-side-nav__link {
+    padding: 15px 0;
+    text-decoration: none;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+
+  .app-side-nav__item--current > .app-side-nav__link,
+  .app-side-nav__sub-item--current > .app-side-nav__link {
+    padding-left: 0;
+    border-left: 0;
+    font-weight: 700;
+    color: #1d70b8; // govuk blue
+  }
+
+  .app-side-nav__item--open > .app-side-nav__link {
+    padding-bottom: 5px;
+  }
+
+  .app-side-nav__sub-list {
+    margin: 0 0 15px 15px;
+  }
+
+  .app-side-nav__sub-item .app-side-nav__link {
+    padding: 5px 0;
+  }
+}
+
 // Dashboard page header — caption + heading on the left, actions on the right
 
 .app-page-header {
@@ -1437,6 +1497,39 @@
   .govuk-table__cell {
     white-space: nowrap;
   }
+
+  // Opt-in wrapping for one long-text column (e.g. "Habitat type"). 13em fits
+  // the longest habitat type names on two lines.
+  .app-scrollable-table__wrap {
+    width: 13em;
+    min-width: 13em;
+    white-space: normal;
+  }
+
+}
+
+// Wrapping variant for tables of prose (e.g. Orange flags): cells wrap and the
+// browser shares the width between columns, so the table fits its container
+// rather than scrolling. Still scrolls as a fallback on narrow screens.
+.app-scrollable-table--wrap {
+  .govuk-table__header,
+  .govuk-table__cell {
+    white-space: normal;
+  }
+
+  // The first column holds references (e.g. "AH-003-1"), which must not
+  // break at their hyphens.
+  .govuk-table__header:first-child,
+  .govuk-table__cell:first-child {
+    white-space: nowrap;
+  }
+
+  // A floor for prose columns that would otherwise be squeezed into very
+  // short lines (e.g. Orange flags "Detail" and "Note"). Columns sharing it
+  // come out roughly equal.
+  .app-scrollable-table__min-width {
+    min-width: 9em;
+  }
 }
 
 // =========================================================================
@@ -1460,4 +1553,34 @@ $app-wide-page-width: 1280px;
 // against 1280px instead, restoring the gutters at every viewport size.
 .app-wide .govuk-width-container {
   @include govuk-width-container($app-wide-page-width);
+}
+
+// =========================================================================
+// Project dashboard v2 journey (User Research)
+// =========================================================================
+
+// "No data" placeholder in habitat tables (govuk secondary text colour)
+.app-no-data {
+  color: #505a5f; // govuk dark-grey
+}
+
+// "Checking your file..." spinner on the upload checking page
+.app-spinner {
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 30px;
+  border: 12px solid #b1b4b6; // govuk mid-grey
+  border-top-color: #1d70b8; // govuk blue
+  border-radius: 50%;
+  animation: app-spinner-rotate 1s linear infinite;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
+
+@keyframes app-spinner-rotate {
+  to {
+    transform: rotate(360deg);
+  }
 }

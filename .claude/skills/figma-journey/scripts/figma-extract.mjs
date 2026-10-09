@@ -41,7 +41,7 @@ function addDest(seen, node, toId, navigation) {
 function nodeDestinations(node) {
   const dests = []
   for (const interaction of node.interactions || []) {
-    for (const action of interaction.actions || []) {
+    for (const action of (interaction.actions || []).filter(Boolean)) {
       if (action.destinationId) {
         dests.push(action.destinationId)
       }
@@ -58,7 +58,8 @@ function collectTransitions(screens) {
   for (const screen of screens) {
     walk(screen, (node) => {
       for (const interaction of node.interactions || []) {
-        for (const action of interaction.actions || []) {
+        // Figma returns null for an interaction whose action was never set.
+        for (const action of (interaction.actions || []).filter(Boolean)) {
           addDest(seen, node, action.destinationId, action.navigation || 'NAVIGATE')
         }
       }

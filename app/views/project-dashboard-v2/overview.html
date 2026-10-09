@@ -1,0 +1,42 @@
+{% extends "project-dashboard-v2/_dashboard-layout.html" %}
+
+{% from "govuk/components/table/macro.njk" import govukTable %}
+{% from "dashboard/macro.njk" import appDashboard %}
+
+{% set pageName = "Overview" %}
+
+{% block dashboardContent %}
+  <h2 class="govuk-heading-m">Actions</h2>
+  {% if actionsTable.rows.length %}
+    {{ govukTable(actionsTable) }}
+  {% else %}
+    <p class="govuk-body">You have no outstanding actions.</p>
+  {% endif %}
+
+  {# No section break here (Figma 1000): spacing alone separates Actions from
+     Area habitats. 60px: it collapses with the table's 30px bottom margin. #}
+  <h2 class="govuk-heading-m govuk-!-margin-top-9">
+    <a class="govuk-link" href="/project-dashboard-v2/area-habitats">Area habitats</a>
+  </h2>
+  {{ appDashboard(areaResultsHeadline) }}
+  {{ appDashboard(areaResultsBreakdown) }}
+  <p class="govuk-body">
+    <a class="govuk-link" href="/project-dashboard-v2/area-habitats">View area habitats</a>
+  </p>
+
+  <hr class="govuk-section-break govuk-section-break--l govuk-section-break--visible">
+
+  <h2 class="govuk-heading-m">
+    <a class="govuk-link" href="/project-dashboard-v2/hedgerows">Hedgerows</a>
+  </h2>
+  {{ appDashboard(hedgerowResultsHeadline) }}
+  {{ appDashboard(hedgerowResultsBreakdown) }}
+  <p class="govuk-body">
+    <a class="govuk-link" href="/project-dashboard-v2/hedgerows">View hedgerows</a>
+  </p>
+
+  <hr class="govuk-section-break govuk-section-break--l govuk-section-break--visible">
+
+  <h2 class="govuk-heading-m">Site details</h2>
+  {{ appDashboard(projectTargets) }}
+{% endblock %}

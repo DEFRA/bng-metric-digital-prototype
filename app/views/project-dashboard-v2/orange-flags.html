@@ -1,0 +1,15 @@
+{% extends "project-dashboard-v2/_dashboard-layout.html" %}
+
+{% from "table/macro.njk" import appTable %}
+
+{% set pageName = "Orange flags" %}
+
+{% block dashboardContent %}
+  <p class="govuk-body">
+    These habitats use values that need evidence or checking before your metric is submitted.
+  </p>
+
+  <div class="app-scrollable-table app-scrollable-table--wrap" role="region" tabindex="0" aria-label="Orange flags, scroll horizontally to see more columns">
+    {{ appTable(flagsTable) }}
+  </div>
+{% endblock %}

@@ -1,0 +1,21 @@
+{% extends "layouts/main.html" %}
+
+{% set pageName = "Checking your file" %}
+
+{% block pageTitle %}{{ pageName }} – {{ serviceName }} – GOV.UK{% endblock %}
+
+{# UR mock: no real file processing — auto-advance to the overview after a
+   short delay, echoing the Figma "Checking your file..." spinner. #}
+{% block meta %}
+  <meta http-equiv="refresh" content="2;url={{ destination }}">
+{% endblock %}
+
+{% block content %}
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-full govuk-!-text-align-centre govuk-!-padding-top-6">
+    <div class="app-spinner" aria-hidden="true"></div>
+    <h1 class="govuk-heading-l" role="status">Checking your file&hellip;</h1>
+    <p class="govuk-body">This may take a few seconds.</p>
+  </div>
+</div>
+{% endblock %}

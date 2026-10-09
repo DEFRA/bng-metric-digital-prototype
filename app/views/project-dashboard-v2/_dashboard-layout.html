@@ -1,0 +1,45 @@
+{#
+  Shared shell for the project-dashboard-v2 side-nav screens (overview,
+  orange flags, area habitats, export). Child views set `pageName` and fill
+  `dashboardContent`; set `hideUploadButton` to drop the header action.
+#}
+{% extends "layouts/main.html" %}
+
+{% set bodyClasses = "app-wide" %}
+
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "dashboard/macro.njk" import appSideNav %}
+
+{% block pageTitle %}{{ pageName }} – {{ serviceName }} – GOV.UK{% endblock %}
+
+{% block beforeContent %}
+  {% include "project-dashboard-v2/_phase-banner.html" %}
+{% endblock %}
+
+{% block content %}
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-one-quarter">
+    {{ appSideNav(sideNav) }}
+  </div>
+
+  <div class="govuk-grid-column-three-quarters">
+
+    <div class="app-page-header">
+      <div>
+        {% if not hideCaption %}
+          <span class="govuk-caption-l">{{ data.projectName | default("Project name", true) }}</span>
+        {% endif %}
+        <h1 class="govuk-heading-l">{{ pageName }}</h1>
+      </div>
+      {% if not hideUploadButton %}
+        <div class="app-page-header__actions">
+          {{ govukButton({ text: "Upload file", href: "/project-dashboard-v2/upload/choose" }) }}
+        </div>
+      {% endif %}
+    </div>
+
+    {% block dashboardContent %}{% endblock %}
+
+  </div>
+</div>
+{% endblock %}

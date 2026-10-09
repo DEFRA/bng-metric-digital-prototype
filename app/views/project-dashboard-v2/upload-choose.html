@@ -1,0 +1,63 @@
+{% extends "layouts/main.html" %}
+
+{% from "govuk/components/radios/macro.njk" import govukRadios %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/back-link/macro.njk" import govukBackLink %}
+{% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
+
+{% set pageName = "What would you like to upload?" %}
+
+{% block pageTitle %}{{ "Error: " if error }}{{ pageName }} – {{ serviceName }} – GOV.UK{% endblock %}
+
+{% block beforeContent %}
+  {% include "project-dashboard-v2/_phase-banner.html" %}
+  {{ govukBackLink({ text: "Back", href: "/project-dashboard-v2/project-name" }) }}
+{% endblock %}
+
+{% block content %}
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+
+    {% if error %}
+      {{ govukErrorSummary({
+        titleText: "There is a problem",
+        errorList: [ { text: error, href: "#uploadChoice" } ]
+      }) }}
+    {% endif %}
+
+    <form method="post" action="/project-dashboard-v2/upload/choose" novalidate>
+      {% set introHtml %}
+        <p class="govuk-body">
+          You can either use a baseline file to check the details of your project, or a
+          post-intervention file to review its BNG status. Your file must be in
+          GeoPackage (.gpkg) format.
+        </p>
+        <p class="govuk-body">Choose from the following options:</p>
+      {% endset %}
+
+      {{ govukRadios({
+        name: "uploadChoice",
+        fieldset: {
+          legend: {
+            html: '<span class="govuk-caption-l">' + (data.projectName | default("Project name", true) | escape) + '</span>' + pageName,
+            isPageHeading: true,
+            classes: "govuk-fieldset__legend--l"
+          }
+        },
+        hint: { html: introHtml },
+        errorMessage: { text: error } if error else undefined,
+        items: [
+          { value: "baseline", text: "Baseline only", checked: data.uploadChoice == "baseline" },
+          { value: "complete", text: "Complete project (baseline and post-intervention)", checked: data.uploadChoice == "complete" }
+        ]
+      }) }}
+
+      <div class="govuk-button-group">
+        {{ govukButton({ text: "Continue" }) }}
+        <a class="govuk-link" href="/project-dashboard-v2/overview">Cancel</a>
+      </div>
+    </form>
+
+  </div>
+</div>
+{% endblock %}

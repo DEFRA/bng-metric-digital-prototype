@@ -25,6 +25,15 @@
         tag: { text: "Met", classes: "govuk-tag--green" }
       }
 
+    Labelled metric card (label above value, link below value, { label: ... }):
+      {
+        label:   { text: "On-site baseline" },                  # bold label, rendered first
+        value:   "28.79 units",
+        valueModifier: "primary" | "success" | "error",
+        link:    { text: "View on-site area baseline", href: "/..." },  # optional, below the value
+        tag:     { text: "Met", classes: "govuk-tag--green" }
+      }
+
     Composite/wide card ({ wide: true }):
       {
         wide: true,
@@ -71,6 +80,24 @@
               </div>
             {% endfor %}
           </dl>
+        {% endif %}
+
+      {% elif card.label %}
+
+        <h{{ headingLevel }} class="app-dashboard__label">{{ card.label.text }}</h{{ headingLevel }}>
+
+        {% if card.value %}
+          <p class="app-dashboard__value{{ ' app-dashboard__value--' + card.valueModifier if card.valueModifier }}">{{ card.value }}</p>
+        {% endif %}
+
+        {% if card.link %}
+          <p class="app-dashboard__caption">
+            <a class="govuk-link" href="{{ card.link.href }}">{{ card.link.text }}</a>
+          </p>
+        {% endif %}
+
+        {% if card.tag %}
+          <div class="app-dashboard__footer">{{ govukTag(card.tag) }}</div>
         {% endif %}
 
       {% elif card.valueFirst %}

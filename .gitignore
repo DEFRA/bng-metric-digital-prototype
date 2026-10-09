@@ -14,3 +14,9 @@ npm-debug.log
 migrate.log
 usage-data-config.json
 dist/
+# Metric workbooks — source data and generated copies stay local; the prototype
+# runs on app/data/project-dashboard-v2.json (rebuild with npm run import:metric
+# or npm run scenario:metric). ~$ files are Excel lock files.
+app/data/*.xlsm
+app/data/*.xlsx
+app/data/~$*

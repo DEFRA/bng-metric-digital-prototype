@@ -1,0 +1,14 @@
+{# Section summary — Area habitats (Figma 3000) and Hedgerows (4000).
+   `section` and `pageName` come from the route. #}
+{% extends "project-dashboard-v2/_dashboard-layout.html" %}
+
+{% from "dashboard/macro.njk" import appDashboard %}
+
+{% block dashboardContent %}
+  {% include "project-dashboard-v2/_results.html" %}
+
+  <hr class="govuk-section-break govuk-section-break--l govuk-section-break--visible">
+
+  <h2 class="govuk-heading-m">Targets</h2>
+  {{ appDashboard(targets) }}
+{% endblock %}
