@@ -29,7 +29,7 @@
     "test:features": "cucumber-js features/"
   },
   "dependencies": {
-    "@cucumber/cucumber": "13.2.1",
+    "@cucumber/cucumber": "13.3.0",
     "@defra/interactive-map": "0.0.41-alpha",
     "@govuk-prototype-kit/common-templates": "3.0.1",
     "@ministryofjustice/frontend": "11.1.0",
@@ -41,7 +41,7 @@
     "govuk-prototype-kit": "13.20.5",
     "lru-cache": "11.5.3",
     "multer": "^2.4.0",
-    "ol": "^10.10.0",
+    "ol": "^10.11.0",
     "ol-mapbox-style": "^13.5.1",
     "pdfkit": "0.20.2",
     "shpjs": "^6.1.0",
