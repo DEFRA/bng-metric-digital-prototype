@@ -49,7 +49,7 @@
   },
   "devDependencies": {
     "husky": "9.1.7",
-    "prettier": "3.9.9",
+    "prettier": "3.9.10",
     "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
   },
   "overrides": {
