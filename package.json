@@ -5,7 +5,7 @@
   "author": "Defra DDTS",
   "license": "(OGL-UK-3, MIT) see licenses in /LICENSES",
   "engines": {
-    "node": ">=24.14.1"
+    "node": ">=24.22.1"
   },
   "scripts": {
     "dev": "node -e \"process.env.PORT='3010'; const child = require('node:child_process').spawn('govuk-prototype-kit', ['dev'], { stdio: 'inherit', shell: true }); child.on('exit', code => process.exit(code));\"",
