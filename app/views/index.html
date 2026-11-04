@@ -5,6 +5,7 @@
 {#
   One entry per user research round. The most recent untested round gets the
   primary button; earlier rounds are kept so their journeys can be revisited.
+  Only tested rounds get a tag; a round without a description shows "-".
   A round without an href shows a disabled button until its journey is built.
 #}
 {% set rounds = [
@@ -37,15 +38,6 @@
   }
 ] %}
 
-{% block beforeContent %}
-  {{ govukPhaseBanner({
-    tag: {
-      text: "Beta"
-    },
-    html: 'This is a new service. Help us improve it and <a class="govuk-link" href="#" target="_blank" rel="noreferrer noopener">give your feedback (opens in new tab)</a>.'
-  }) }}
-{% endblock %}
-
 {% block content %}
 
 <div class="govuk-grid-row">
@@ -55,19 +47,22 @@
 
     {% for round in rounds %}
       <div class="govuk-!-margin-bottom-9">
-        {{ govukTag({
-          text: "Tested" if round.tested else "Not tested",
-          classes: "govuk-tag--green" if round.tested else "govuk-tag--red"
-        }) }}
+        {% if round.tested %}
+          {{ govukTag({
+            text: "Tested",
+            classes: "govuk-tag--green govuk-!-margin-bottom-2"
+          }) }}
+        {% endif %}
 
-        <h2 class="govuk-heading-l govuk-!-margin-top-2">{{ round.title }}</h2>
+        <h2 class="govuk-heading-l">{{ round.title }}</h2>
 
         {{ govukSummaryList({
           rows: [
             { key: { text: "Date" }, value: { text: round.date } },
             { key: { text: "Phase" }, value: { text: "Private beta" } },
             { key: { text: "Type" }, value: { text: "Usability Testing" } },
-            { key: { text: "Participants" }, value: { text: round.participants } }
+            { key: { text: "Participants" }, value: { text: round.participants } },
+            { key: { text: "Description" }, value: { text: round.description or "-" } }
           ]
         }) }}
 
