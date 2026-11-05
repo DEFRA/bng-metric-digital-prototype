@@ -1508,6 +1508,104 @@
 
 }
 
+// MOJ scrollable pane — copied from MOJ Frontend 12.0.0
+// (src/moj/components/scrollable-pane/_scrollable-pane.scss). This project is
+// on MOJ Frontend 11.1.0, which doesn't have it; delete this block after
+// upgrading to 12. Shadows appear at an edge only while there is more content
+// to scroll to: the white "local" gradients scroll with the content and
+// cover the fixed "scroll" shadows once the end is reached.
+// https://design-patterns.service.justice.gov.uk/components/scrollable-pane/
+.moj-scrollable-pane {
+  --moj-scrollable-pane-background-colour: #ffffff;
+  --moj-scrollable-pane-transparent-colour: rgb(255, 255, 255, 0);
+  --moj-scrollable-pane-shadow-colour: rgb(0, 0, 0, 0.3);
+  --moj-scrollable-pane-shadow-size: 1.25em;
+}
+
+.moj-scrollable-pane[role="region"][tabindex][aria-label],
+.moj-scrollable-pane[role="region"][tabindex][aria-labelledby] {
+  overflow-x: scroll;
+  background:
+    linear-gradient(
+      to right,
+      var(--moj-scrollable-pane-background-colour),
+      var(--moj-scrollable-pane-background-colour),
+      var(--moj-scrollable-pane-transparent-colour) calc(var(--moj-scrollable-pane-shadow-size) * 2)
+    ),
+    radial-gradient(
+      farthest-side at 0 50%,
+      var(--moj-scrollable-pane-shadow-colour),
+      var(--moj-scrollable-pane-transparent-colour)
+    ),
+    linear-gradient(
+      to left,
+      var(--moj-scrollable-pane-background-colour),
+      var(--moj-scrollable-pane-background-colour),
+      var(--moj-scrollable-pane-transparent-colour) calc(var(--moj-scrollable-pane-shadow-size) * 2)
+    ),
+    radial-gradient(
+        farthest-side at 100% 50%,
+        var(--moj-scrollable-pane-shadow-colour),
+        var(--moj-scrollable-pane-transparent-colour)
+      )
+      100%;
+  background-color: var(--moj-scrollable-pane-background-colour);
+  background-repeat: no-repeat;
+  background-attachment: local, scroll, local, scroll;
+  background-size:
+    100% 100%,
+    var(--moj-scrollable-pane-shadow-size) 100%,
+    100% 100%,
+    var(--moj-scrollable-pane-shadow-size) 100%;
+
+  &:focus {
+    @include govuk-focused-box;
+  }
+}
+
+// Sticky first column (v3 Baseline and Post intervention): the Ref stays in
+// view while the rest of the table scrolls under it. The white background
+// hides the cells passing beneath, and the right-hand rule marks the edge.
+// The column covers the scrollable pane's left shadow, so where the browser
+// supports scroll-driven animations the shadow is redrawn beside the column,
+// fading in over the first 2em of scrolling. It's a pseudo-element because
+// cells in a collapsed-border table don't paint an outer box-shadow.
+.app-scrollable-table--sticky-first {
+  .govuk-table__header:first-child,
+  .govuk-table__cell:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    background-color: #ffffff;
+    box-shadow: inset -1px 0 0 #b1b4b6;
+
+    @supports (animation-timeline: scroll()) {
+      &::after {
+        content: "";
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: 100%;
+        width: 0.75em;
+        background: linear-gradient(to right, rgb(0, 0, 0, 0.2), rgb(0, 0, 0, 0));
+        pointer-events: none;
+        animation: app-sticky-column-shadow linear both;
+        animation-timeline: scroll(nearest inline);
+        animation-range: 0 2em;
+      }
+    }
+  }
+}
+
+@keyframes app-sticky-column-shadow {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
 // Wrapping variant for tables of prose (e.g. Orange flags): cells wrap and the
 // browser shares the width between columns, so the table fits its container
 // rather than scrolling. Still scrolls as a fallback on narrow screens.

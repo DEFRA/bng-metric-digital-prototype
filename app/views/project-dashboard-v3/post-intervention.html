@@ -23,7 +23,7 @@
     {% set tabItems = [] %}
     {% for tab in tabs %}
       {% set panelHtml %}
-        <div class="app-scrollable-table" role="region" tabindex="0" aria-label="{{ tab.table.caption }}, scroll horizontally to see more columns">
+        <div class="moj-scrollable-pane app-scrollable-table app-scrollable-table--sticky-first" role="region" tabindex="0" aria-label="{{ tab.table.caption }}, scroll horizontally to see more columns">
           {{ appTable(tab.table) }}
         </div>
       {% endset %}
