@@ -1387,8 +1387,9 @@ function overviewActions(req, complete) {
     actions.push({
       description: `${incomplete} incomplete enhanced area habitat ${incomplete === 1 ? 'record' : 'records'}. (Entries may have been removed as part of the data validation process)`,
       link: {
-        text: 'View post-intervention habitat list',
-        href: sectionHref(area, 'post-intervention')
+        text: 'View enhanced area habitats list',
+        // The tabs component opens the tab named in the URL fragment.
+        href: `${sectionHref(area, 'post-intervention')}#enhanced`
       }
     })
   }
