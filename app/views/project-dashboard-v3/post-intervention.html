@@ -23,6 +23,8 @@
     {% set tabItems = [] %}
     {% for tab in tabs %}
       {% set panelHtml %}
+        {# Outside the pane so it stays put while the table scrolls. #}
+        <h3 class="govuk-heading-s govuk-!-margin-bottom-3">{{ tab.table.caption }}</h3>
         <div class="moj-scrollable-pane app-scrollable-table app-scrollable-table--sticky-first" role="region" tabindex="0" aria-label="{{ tab.table.caption }}, scroll horizontally to see more columns">
           {{ appTable(tab.table) }}
         </div>

@@ -736,7 +736,10 @@ function postInterventionTable(section, intervention) {
 
   return sortable({
     caption: `${intervention} ${section.noun === 'area' ? 'area habitats' : 'hedgerows'}`,
-    captionClasses: 'govuk-table__caption--s',
+    // The view shows the caption as a heading above the scrollable pane, so it
+    // doesn't scroll sideways with the table; the caption still names the
+    // table for screen readers.
+    captionClasses: 'govuk-visually-hidden',
     head: head,
     rows: rows.map((h) =>
       [
