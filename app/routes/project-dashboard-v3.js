@@ -36,7 +36,29 @@
  * Visiting a dashboard page directly (no answer yet) shows the complete state.
  */
 
-const metric = require('../data/project-dashboard-v2.json')
+// Cloned so the Round 6 adjustments below don't leak into the v2 journey,
+// which shares the same cached require().
+const metric = structuredClone(require('../data/project-dashboard-v2.json'))
+
+// Round 6 moves the incomplete records from the baseline to the enhanced area
+// habitats: the two baseline rows the workbook couldn't score are dropped (as
+// if removed during data validation; neither has units, so totals are
+// unchanged), and two enhanced rows lose their target condition and so
+// their units.
+const DROPPED_BASELINE_REFS = ['AH-006', 'AH-011']
+const INCOMPLETE_ENHANCED_REFS = ['AH-008', 'AH-017']
+metric.area.baseline = metric.area.baseline.filter(
+  (h) => !DROPPED_BASELINE_REFS.includes(h.ref)
+)
+metric.area.postIntervention.enhanced.forEach((h) => {
+  if (INCOMPLETE_ENHANCED_REFS.includes(h.ref)) {
+    Object.assign(h, {
+      targetCondition: '',
+      targetConditionScore: null,
+      units: null
+    })
+  }
+})
 
 const BASE = '/project-dashboard-v3'
 const UPLOAD_HREF = `${BASE}/upload/choose`
@@ -1355,13 +1377,18 @@ function isComplete(req) {
 // Overview "Actions" (Figma 1000): outstanding work derived from the data.
 function overviewActions(req, complete) {
   const actions = []
-  const incomplete = area.data.baseline.filter(isIncomplete).length
+  // Enhanced records only exist once the post-intervention file is uploaded.
+  const incomplete = complete
+    ? area.data.postIntervention.enhanced.filter((h) =>
+        isPostInterventionIncomplete(h, true)
+      ).length
+    : 0
   if (incomplete) {
     actions.push({
-      description: `${incomplete} incomplete baseline habitat ${incomplete === 1 ? 'record' : 'records'}. (Entries may have been removed as part of the data validation process)`,
+      description: `${incomplete} incomplete enhanced area habitat ${incomplete === 1 ? 'record' : 'records'}. (Entries may have been removed as part of the data validation process)`,
       link: {
-        text: 'View baseline habitat list',
-        href: sectionHref(area, 'baseline')
+        text: 'View post-intervention habitat list',
+        href: sectionHref(area, 'post-intervention')
       }
     })
   }

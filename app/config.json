@@ -1,5 +1,5 @@
 {
-  "serviceName": "Calculate biodiversity net gain",
+  "serviceName": "Biodiversity Net Gain Metric",
   "plugins": {
     "govuk-frontend": {
       "rebrand": true
