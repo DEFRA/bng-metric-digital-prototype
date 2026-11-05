@@ -54,7 +54,14 @@ metric.area.baseline = metric.area.baseline.filter(
 metric.area.postIntervention.enhanced
   .filter((h) => INCOMPLETE_ENHANCED_REFS.includes(h.ref))
   .forEach((h) => {
-    removePostInterventionUnits(metric.area, h)
+    // A regenerated data file may not have this row as expected; leave it
+    // complete rather than stop the server for every journey.
+    if (!removePostInterventionUnits(metric.area, h)) {
+      console.warn(
+        `project-dashboard-v3: ${h.ref} not in the trading summary as expected; left complete`
+      )
+      return
+    }
     Object.assign(h, {
       targetCondition: '',
       targetConditionScore: null,
@@ -66,19 +73,29 @@ metric.area.postIntervention.enhanced
  * Take one post-intervention row's units out of the workbook results and
  * the trading summary, recalculating the figures derived from them.
  * Medium and Low are the only bands the trading summary itemises.
+ * Returns false, changing nothing, if the row has no units or no matching
+ * trading summary item.
  */
 function removePostInterventionUnits(sectionData, h) {
+  const ts = sectionData.tradingSummary
+  const band = h.distinctiveness && ts[h.distinctiveness.toLowerCase()]
+  const item =
+    band &&
+    band.items &&
+    band.items.find(
+      (i) =>
+        i.broadHabitat === h.broadHabitat && i.habitatType === h.habitatType
+    )
+  if (h.units == null || !item) {
+    return false
+  }
+
   const r = sectionData.results
   r.postInterventionUnits -= h.units
   r.netUnitChange = r.postInterventionUnits - r.baselineUnits
   r.netPercentChange = r.netUnitChange / r.baselineUnits
   r.unitDeficit = r.unitsRequired - r.postInterventionUnits
 
-  const ts = sectionData.tradingSummary
-  const band = ts[h.distinctiveness.toLowerCase()]
-  const item = band.items.find(
-    (i) => i.broadHabitat === h.broadHabitat && i.habitatType === h.habitatType
-  )
   item.change -= h.units
   band.total -= h.units
   band.cumulativeSurplus -= h.units
@@ -100,6 +117,7 @@ function removePostInterventionUnits(sectionData, h) {
     .reduce((a, b) => a + b, 0)
   ts.low.netChange = ts.low.total
   ts.low.unitsAvailableFromHigher = ts.medium.total
+  return true
 }
 
 const BASE = '/project-dashboard-v3'
