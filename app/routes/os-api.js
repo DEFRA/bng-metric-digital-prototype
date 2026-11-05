@@ -34,7 +34,7 @@ function registerOsApiRoutes(router) {
 
   // Tiles Style Endpoint - proxies OS NGD Vector Tile Styles API
   // Supports both EPSG:27700 (British National Grid) and EPSG:3857 (Web Mercator)
-  router.get('/api/os/tiles/style/:crs?', async function (req, res) {
+  router.get('/api/os/tiles/style{/:crs}', async function (req, res) {
     const referer = req.get('referer')
     const requestOrigin =
       req.get('origin') ||
