@@ -1,74 +1,79 @@
 {% extends "layouts/main.html" %}
 
-{% set pageName="Home" %}
+{% set pageName="User journey experiments" %}
+
+{#
+  One entry per user research round. The most recent untested round gets the
+  primary button; earlier rounds are kept so their journeys can be revisited.
+  Only tested rounds get a tag; a round without a description shows "-".
+  A round without an href shows a disabled button until its journey is built.
+#}
+{% set rounds = [
+  {
+    title: "Round 1",
+    tested: true,
+    date: "11 - 15 May 2026",
+    participants: "8",
+    href: "/government-gateway"
+  },
+  {
+    title: "Round 3",
+    tested: true,
+    date: "28 - 31 July 2026",
+    participants: "7",
+    href: "/project-dashboard"
+  },
+  {
+    title: "Round 5",
+    tested: true,
+    date: "12 - 14 October 2026",
+    participants: "9",
+    href: "/project-dashboard-v2"
+  },
+  {
+    title: "Round 6",
+    tested: false,
+    date: "9 - 10 November 2026",
+    participants: "-"
+  }
+] %}
 
 {% block content %}
 
 <div class="govuk-grid-row">
   <div class="govuk-grid-column-two-thirds">
 
-    <h1 class="govuk-heading-xl">
-      {{ serviceName }}
-    </h1>
+    <h1 class="govuk-heading-xl">User journey experiments</h1>
 
-    <p class="govuk-body-l">
-      Calculate biodiversity units for your development site using the statutory biodiversity metric.
-    </p>
+    {% for round in rounds %}
+      <div class="govuk-!-margin-bottom-9">
+        {% if round.tested %}
+          {{ govukTag({
+            text: "Tested",
+            classes: "govuk-tag--green govuk-!-margin-bottom-2"
+          }) }}
+        {% endif %}
 
-    <!--
-    <div class="govuk-!-margin-bottom-8">
-      <h2 class="govuk-heading-m">On-site baseline habitats</h2>
-      <p class="govuk-body">
-        Record the existing habitats within your site boundary before development. You can upload habitat data from a GeoPackage or shapefile, or manually draw habitat parcels on the map. This establishes the baseline biodiversity value that must be maintained or enhanced.
-      </p>
-      
-    </div>
-    -->
+        <h2 class="govuk-heading-l">{{ round.title }}</h2>
 
-    {{ govukButton({
-      text: "Start now",
-      href: "/government-gateway",
-      isStartButton: true
-    }) }}
+        {{ govukSummaryList({
+          rows: [
+            { key: { text: "Date" }, value: { text: round.date } },
+            { key: { text: "Phase" }, value: { text: "Private beta" } },
+            { key: { text: "Type" }, value: { text: "Usability Testing" } },
+            { key: { text: "Participants" }, value: { text: round.participants } },
+            { key: { text: "Description" }, value: { text: round.description or "-" } }
+          ]
+        }) }}
 
-    <h2 class="govuk-heading-m govuk-!-margin-top-8">User research journeys</h2>
-    <p class="govuk-body">
-      Standalone mock journeys used for User Research. Each explores a specific research question.
-    </p>
-
-    <h3 class="govuk-heading-s govuk-!-margin-bottom-1">Metric results dashboard</h3>
-    <p class="govuk-body">
-      Explores whether users understand their BNG metric results — the on-site net unit change,
-      trading-rules status, and remaining unit deficit — when presented as an at-a-glance results
-      dashboard after uploading a baseline GeoPackage. Reconstructed from the Figma "AI prototype demo".
-    </p>
-    <a href="/metric-results/start" class="govuk-button govuk-button--secondary" data-module="govuk-button">
-      Start metric results journey
-    </a>
-
-    <h3 class="govuk-heading-s govuk-!-margin-bottom-1">Project dashboard</h3>
-    <p class="govuk-body">
-      Explores the full journey from signing in and uploading baseline and post-intervention
-      GeoPackage files through to a top-level results summary, drilling down into individual
-      habitat parcels — through area habitats, flagged items needing review, and trading rules
-      status — to review and edit a single habitat's details. Reconstructed from the
-      Figma "Private Beta - Exploration" prototype.
-    </p>
-    <a href="/project-dashboard" class="govuk-button govuk-button--secondary" data-module="govuk-button">
-      Start project dashboard journey
-    </a>
-
-    <h3 class="govuk-heading-s govuk-!-margin-bottom-1">Project dashboard (v2)</h3>
-    <p class="govuk-body">
-      The next iteration of the project dashboard. Explores whether users can find their way
-      around a project once it is split into an overview, orange flags, area habitats
-      (trading summary, baseline and post intervention) and export — and whether separating
-      retained, enhanced and created post-intervention habitats helps them review and edit
-      each parcel. Reconstructed from the Figma "Private Beta - Exploration" prototype.
-    </p>
-    <a href="/project-dashboard-v2" class="govuk-button govuk-button--secondary" data-module="govuk-button">
-      Start project dashboard v2 journey
-    </a>
+        {{ govukButton({
+          text: "Start prototype",
+          href: round.href,
+          disabled: not round.href,
+          classes: "govuk-button--secondary" if round.tested
+        }) }}
+      </div>
+    {% endfor %}
 
   </div>
 </div>
