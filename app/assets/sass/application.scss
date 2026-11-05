@@ -1595,6 +1595,13 @@
       }
     }
   }
+
+  // GOV.UK cells have no left padding, which would leave the second column
+  // (Status) touching the rule.
+  .govuk-table__header:nth-child(2),
+  .govuk-table__cell:nth-child(2) {
+    padding-left: govuk-spacing(3);
+  }
 }
 
 @keyframes app-sticky-column-shadow {
