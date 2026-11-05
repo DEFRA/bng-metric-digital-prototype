@@ -1,0 +1,39 @@
+{% extends "layouts/main.html" %}
+
+{# Dropout page for an uploaded file that can't be used (Figma 6000-6080).
+   `error` comes from FILE_ERRORS in the route: a fixable error has a
+   category heading and an upload link, the rest are a single paragraph. #}
+
+{% from "govuk/components/back-link/macro.njk" import govukBackLink %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+
+{% set pageName = "There is a problem with your file" %}
+
+{% block pageTitle %}{{ pageName }} – {{ serviceName }} – GOV.UK{% endblock %}
+
+{% block beforeContent %}
+  {% include "project-dashboard-v3/_phase-banner.html" %}
+  {% if backHref %}
+    {{ govukBackLink({ text: "Back", href: backHref }) }}
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+    <h1 class="govuk-heading-l">{{ pageName }}</h1>
+
+    {% if error.category %}
+      <p class="govuk-body">
+        You will need to fix the errors below and <a class="govuk-link" href="{{ uploadHref }}">upload a new file</a> to proceed.
+      </p>
+      <h2 class="govuk-heading-m">{{ error.category }}</h2>
+      <p class="govuk-body">{{ error.message }}</p>
+    {% else %}
+      <p class="govuk-body">{{ error.html | safe }}</p>
+    {% endif %}
+
+    {{ govukButton({ text: "Next", href: nextHref, classes: "govuk-button--secondary" }) }}
+  </div>
+</div>
+{% endblock %}

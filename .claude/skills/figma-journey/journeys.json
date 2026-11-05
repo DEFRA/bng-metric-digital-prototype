@@ -415,6 +415,226 @@
           "wide": true
         }
       ]
+    },
+    {
+      "journey": "project-dashboard-v3",
+      "fileKey": "MCZmgs6nNcuhXT00u5i9At",
+      "node": "5140:13218",
+      "figmaUrl": "https://www.figma.com/design/MCZmgs6nNcuhXT00u5i9At/Private-Beta---Exploration-%F0%9F%94%8E?node-id=5140-13218",
+      "viewsDir": "app/views/project-dashboard-v3",
+      "routesFile": "app/routes/project-dashboard-v3.js",
+      "frames": [
+        {
+          "id": "5140:13219",
+          "name": "3300 - 1280 Area habitats - Post intervention habitats",
+          "view": "post-intervention.html",
+          "hash": "4ec154f93f10"
+        },
+        {
+          "id": "5140:13305",
+          "name": "4300 - 1280 Hedgerows - Post intervention habitats",
+          "view": "post-intervention.html",
+          "hash": "3d2fb3642d07"
+        },
+        {
+          "id": "5140:13692",
+          "name": "1000 - 1280 - Project overview",
+          "view": "overview.html",
+          "hash": "a49132900ec7"
+        },
+        {
+          "id": "5140:13846",
+          "name": "3000 - 1280 - Area habitats - Summary",
+          "view": "area-habitats.html",
+          "hash": "8c30eefe6a08"
+        },
+        {
+          "id": "5140:14000",
+          "name": "4000 - 1280 - Hedgerows - Summary",
+          "view": "area-habitats.html",
+          "hash": "13f177522d2f"
+        },
+        {
+          "id": "5140:14244",
+          "name": "4200 - 1280 - Hedgerows - Baseline habitats",
+          "view": "baseline.html",
+          "hash": "ff775005baa6"
+        },
+        {
+          "id": "5140:14331",
+          "name": "3100 - 1280 - Area habitats - Trading rules",
+          "view": "trading-summary.html",
+          "hash": "8d130e8da5cd"
+        },
+        {
+          "id": "5147:21484",
+          "name": "3110 - 1280 - Area habitats - Trading rules - Trading rule expanded",
+          "view": "trading-summary.html",
+          "hash": "c925e4d139db"
+        },
+        {
+          "id": "5140:14844",
+          "name": "0410 - 1280 - File upload 3 of 3",
+          "view": "upload.html",
+          "hash": "e4345a280cc8"
+        },
+        {
+          "id": "5140:14857",
+          "name": "0400 - 1280 - File upload 2 of 3",
+          "view": "upload.html",
+          "hash": "529ee3b1a8eb"
+        },
+        {
+          "id": "5140:14870",
+          "name": "0300 - 1280 - File upload 1 of 3",
+          "view": "upload-choose.html",
+          "hash": "4267f1cd180e"
+        },
+        {
+          "id": "5140:14882",
+          "name": "0200 - 1280 - Add project name",
+          "view": "project-name.html",
+          "hash": "d3a52fc9738f"
+        },
+        {
+          "id": "5140:14893",
+          "name": "0100 - 1280 - Sign in",
+          "view": "sign-in.html",
+          "hash": "bd0955407b40"
+        },
+        {
+          "id": "5140:14895",
+          "name": "0000 - 1280 - Start page",
+          "view": "start.html",
+          "hash": "d7361849b411"
+        },
+        {
+          "id": "5140:14909",
+          "name": "0420 - 1280 - File upload - Check file",
+          "view": "upload-checking.html",
+          "hash": "c4b01ec17990"
+        },
+        {
+          "id": "5140:15044",
+          "name": "4100 - 1280 - Hedgerows - Trading rules",
+          "view": "trading-summary.html",
+          "hash": "f2dd310e094e"
+        },
+        {
+          "id": "5147:21910",
+          "name": "4110 - 1280 - Hedgerows - Trading rules - Trading rule expanded",
+          "view": "trading-summary.html",
+          "hash": "80ec20700673"
+        },
+        {
+          "id": "5140:19023",
+          "name": "5000 - 1280 - Summary - Project details",
+          "view": "project-details.html",
+          "hash": "a7a73d5cbdc4"
+        },
+        {
+          "id": "5147:19940",
+          "name": "3320 - 1280 - Post intervention habitat details - Enhanced",
+          "view": "post-intervention-habitat.html",
+          "hash": "b15d2add56a2"
+        },
+        {
+          "id": "5147:20057",
+          "name": "3330 - 1280 - Post intervention habitat details - Created",
+          "view": "post-intervention-habitat.html",
+          "hash": "76b3cf20e012"
+        },
+        {
+          "id": "5147:20175",
+          "name": "3320 - 1280 - Post intervention habitat details - Enhanced - Error",
+          "view": "post-intervention-habitat.html",
+          "hash": "7885004effc4"
+        },
+        {
+          "id": "5147:20294",
+          "name": "3310 - 1280 - Post intervention habitat details - Retained - No supporting information",
+          "view": "post-intervention-habitat.html",
+          "hash": "bd0421f88318"
+        },
+        {
+          "id": "5147:20415",
+          "name": "3310 - 1280 - Post intervention habitat details - Retained - Supporting information imported from file",
+          "view": "post-intervention-habitat.html",
+          "hash": "4b1f41a17726"
+        },
+        {
+          "id": "5211:31607",
+          "name": "2000 - 1280 - Flags",
+          "view": "flags.html",
+          "hash": "337ca315a773"
+        },
+        {
+          "id": "5211:32278",
+          "name": "3200 - 1280 - Area habitats - Baseline habitats",
+          "view": "baseline.html",
+          "hash": "ec0937819caf"
+        },
+        {
+          "id": "5211:32949",
+          "name": "3210 - 1280 - Baseline habitat details",
+          "view": "baseline-habitat.html",
+          "hash": "e96e3f43d774"
+        },
+        {
+          "id": "5231:33669",
+          "name": "6010 - 1280 - Error 39",
+          "view": "file-error.html",
+          "hash": "be76ad95383c"
+        },
+        {
+          "id": "5231:33770",
+          "name": "6020 - 1280 - Error 5",
+          "view": "file-error.html",
+          "hash": "b8f78f44a094"
+        },
+        {
+          "id": "5231:34215",
+          "name": "6030 - 1280 - Error 6",
+          "view": "file-error.html",
+          "hash": "cf14d122e723"
+        },
+        {
+          "id": "5231:34310",
+          "name": "6040 - 1280 - Error 7",
+          "view": "file-error.html",
+          "hash": "a86ecdc7c08e"
+        },
+        {
+          "id": "5231:34405",
+          "name": "6050 - 1280 - Error 13",
+          "view": "file-error.html",
+          "hash": "74e1f913b05b"
+        },
+        {
+          "id": "5231:34500",
+          "name": "6060 - 1280 - Error 15",
+          "view": "file-error.html",
+          "hash": "6af6797919c2"
+        },
+        {
+          "id": "5231:34595",
+          "name": "6070 - 1280 - Error 37",
+          "view": "file-error.html",
+          "hash": "d6239e062b10"
+        },
+        {
+          "id": "5231:34690",
+          "name": "6080 - 1280 - Error 42",
+          "view": "file-error.html",
+          "hash": "3de5de474c99"
+        },
+        {
+          "id": "5231:33984",
+          "name": "6000 - 1280 - Error 34",
+          "view": "file-error.html",
+          "hash": "e66fc31a3aa5"
+        }
+      ]
     }
   ]
 }

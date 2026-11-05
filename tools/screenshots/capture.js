@@ -1,9 +1,11 @@
 #!/usr/bin/env node
 /**
- * Capture full-page PNGs of the project-dashboard-v2 journey for design review.
+ * Capture full-page PNGs of a project dashboard journey for design review.
  *
- *   npm run dev                       # in another terminal
- *   npm run screenshots               # or: node tools/screenshots/capture.js [baseUrl]
+ *   npm run dev                                # in another terminal
+ *   npm run screenshots                        # v2 (UR round 5)
+ *   npm run screenshots -- --journey=v3        # v3 (UR round 6)
+ *   node tools/screenshots/capture.js [--journey=v2|v3] [baseUrl]
  *
  * Drives the locally installed Google Chrome in headless mode over the
  * DevTools protocol (Node's built-in WebSocket) — no Puppeteer/Playwright
@@ -11,7 +13,7 @@
  * Files are prefixed with the Figma frame number they reconstruct, and split
  * into the two dashboard states (Complete project / Baseline only).
  *
- * Output: ~/Downloads/project-dashboard-v2-screens-<YYYY-MM-DD>/ (+ .zip)
+ * Output: ~/Downloads/project-dashboard-<journey>-screens-<YYYY-MM-DD>/ (+ .zip)
  */
 
 const fs = require('node:fs')
@@ -19,8 +21,12 @@ const os = require('node:os')
 const path = require('node:path')
 const { execFileSync, spawn } = require('node:child_process')
 
-const BASE_URL = process.argv[2] || 'http://localhost:3010'
-const JOURNEY = '/project-dashboard-v2'
+const args = process.argv.slice(2)
+const journeyArg = args.find((a) => a.startsWith('--journey='))
+const VERSION = journeyArg ? journeyArg.split('=')[1] : 'v2'
+const BASE_URL =
+  args.find((a) => !a.startsWith('--')) || 'http://localhost:3010'
+const JOURNEY = `/project-dashboard-${VERSION}`
 const WIDTH = 1280
 
 const CHROME_CANDIDATES = [
@@ -33,7 +39,9 @@ const CHROME_CANDIDATES = [
   '/usr/bin/chromium'
 ]
 
-// [file name, path] — file names lead with the Figma frame number.
+// [file name, path, options] — file names lead with the Figma frame number.
+// options.script runs in the page before capture; with options.submits it
+// submits a form, and the capture waits for the resulting page.
 const ONBOARDING = [
   ['0000-start', ''],
   ['0100-sign-in', '/sign-in'],
@@ -70,7 +78,7 @@ const COMPLETE_ONLY = [
     '/area-habitats/post-intervention#created'
   ],
   [
-    '3310-post-intervention-detail-created-AH-006',
+    '3330-post-intervention-detail-created-AH-006',
     '/area-habitats/post-intervention/ah-006'
   ],
   [
@@ -78,12 +86,71 @@ const COMPLETE_ONLY = [
     '/area-habitats/post-intervention/ah-003-1'
   ],
   [
-    '3330-post-intervention-detail-retained-AH-002',
+    '3310-post-intervention-detail-retained-AH-002',
     '/area-habitats/post-intervention/ah-002'
   ],
   ['5000-project-details', '/project-details'],
   ['2000-export', '/export']
 ]
+
+// v3 (UR round 6): Orange flags is now Flags, Export is gone, and trading
+// rules sit in a closed Details component.
+const OPEN_DETAILS = {
+  script: "document.querySelectorAll('details').forEach((d) => (d.open = true))"
+}
+
+// Figma 3320 error state: a habitat set both in advance and delayed.
+const ADVANCE_AND_DELAY = {
+  script: `document.getElementById('advanceYears').value = '2'
+    document.getElementById('delayYears').value = '3'
+    document.querySelector('form[method="post"]').submit()`,
+  submits: true
+}
+
+const V3_DASHBOARD = DASHBOARD.map(([name, pagePath]) =>
+  pagePath === '/orange-flags' ? ['2000-flags', '/flags'] : [name, pagePath]
+)
+
+const V3_COMPLETE_ONLY = COMPLETE_ONLY.filter(
+  ([, pagePath]) => pagePath !== '/export'
+).concat([
+  [
+    '3110-area-habitats-trading-rule-expanded',
+    '/area-habitats/trading-summary',
+    OPEN_DETAILS
+  ],
+  [
+    '4110-hedgerows-trading-rule-expanded',
+    '/hedgerows/trading-summary',
+    OPEN_DETAILS
+  ],
+  [
+    '3320-post-intervention-detail-enhanced-AH-003-1-error',
+    '/area-habitats/post-intervention/ah-003-1',
+    ADVANCE_AND_DELAY
+  ]
+])
+
+// Dropout pages (Figma 6000-6080), a standalone series keyed by error code.
+const V3_FILE_ERRORS = [
+  ['6000', '34'],
+  ['6010', '39'],
+  ['6020', '5'],
+  ['6030', '6'],
+  ['6040', '7'],
+  ['6050', '13'],
+  ['6060', '15'],
+  ['6070', '37'],
+  ['6080', '42']
+].map(([frame, code]) => [`${frame}-file-error-${code}`, `/file-error/${code}`])
+
+const PAGES = {
+  v2: { dashboard: DASHBOARD, completeOnly: COMPLETE_ONLY },
+  v3: {
+    dashboard: V3_DASHBOARD,
+    completeOnly: V3_COMPLETE_ONLY.concat(V3_FILE_ERRORS)
+  }
+}
 
 function fail(message) {
   console.error(`screenshots: ${message}`)
@@ -187,7 +254,7 @@ async function evaluate(cdp, expression) {
   return result.value
 }
 
-async function capture(cdp, url, file) {
+async function capture(cdp, url, file, options = {}) {
   await cdp.send('Emulation.setDeviceMetricsOverride', {
     width: WIDTH,
     height: 800,
@@ -197,6 +264,11 @@ async function capture(cdp, url, file) {
   const loaded = cdp.once('Page.loadEventFired')
   await cdp.send('Page.navigate', { url })
   await loaded
+  if (options.script) {
+    const submitted = options.submits ? cdp.once('Page.loadEventFired') : null
+    await evaluate(cdp, options.script)
+    await submitted
+  }
   // Fonts and govuk-frontend JS (tabs, file upload) settle after load.
   await evaluate(cdp, 'document.fonts.ready.then(() => true)')
   await new Promise((resolve) => setTimeout(resolve, 300))
@@ -236,6 +308,10 @@ async function setState(cdp, choice) {
 }
 
 async function main() {
+  if (!PAGES[VERSION]) {
+    fail(`unknown journey "${VERSION}" — use --journey=v2 or --journey=v3`)
+  }
+  const { dashboard, completeOnly } = PAGES[VERSION]
   try {
     await fetch(`${BASE_URL}${JOURNEY}`)
   } catch {
@@ -243,7 +319,7 @@ async function main() {
   }
 
   const date = new Date().toISOString().slice(0, 10)
-  const name = `project-dashboard-v2-screens-${date}`
+  const name = `project-dashboard-${VERSION}-screens-${date}`
   // SCREENSHOTS_DIR overrides ~/Downloads (e.g. for a quick local check).
   const outDir = path.join(
     process.env.SCREENSHOTS_DIR || path.join(os.homedir(), 'Downloads'),
@@ -258,8 +334,8 @@ async function main() {
   await cdp.send('Page.enable')
 
   const runs = [
-    ['complete', 'complete', ONBOARDING.concat(DASHBOARD, COMPLETE_ONLY)],
-    ['baseline-only', 'baseline', DASHBOARD]
+    ['complete', 'complete', ONBOARDING.concat(dashboard, completeOnly)],
+    ['baseline-only', 'baseline', dashboard]
   ]
 
   let count = 0
@@ -267,13 +343,13 @@ async function main() {
     for (const [folder, choice, pages] of runs) {
       const dir = path.join(outDir, folder)
       fs.mkdirSync(dir, { recursive: true })
-      for (const [name, pagePath] of pages) {
+      for (const [name, pagePath, options] of pages) {
         // Onboarding pages come first, so set the state before the dashboard.
         if (pagePath === '/overview') {
           await setState(cdp, choice)
         }
         const file = path.join(dir, `${name}.png`)
-        await capture(cdp, `${BASE_URL}${JOURNEY}${pagePath}`, file)
+        await capture(cdp, `${BASE_URL}${JOURNEY}${pagePath}`, file, options)
         count++
         console.log(`  ${folder}/${name}.png`)
       }

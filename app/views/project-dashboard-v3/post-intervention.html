@@ -1,0 +1,43 @@
+{# Post intervention — Area habitats (Figma 3300) and Hedgerows (4300). #}
+{% extends "project-dashboard-v3/_dashboard-layout.html" %}
+
+{% from "table/macro.njk" import appTable %}
+{% from "govuk/components/tabs/macro.njk" import govukTabs %}
+{% from "govuk/components/inset-text/macro.njk" import govukInsetText %}
+{% from "dashboard/macro.njk" import appDashboard %}
+
+{% block dashboardContent %}
+  {% include "project-dashboard-v3/_results.html" %}
+
+  <hr class="govuk-section-break govuk-section-break--l govuk-section-break--visible">
+
+  <h2 class="govuk-heading-m">{{ section.detailsHeading }}</h2>
+
+  {% if not complete %}
+    {{ govukInsetText({
+      html: 'You have not uploaded any post-intervention habitats yet. <a class="govuk-link" href="/project-dashboard-v3/upload/choose">Upload a post-intervention file</a>.'
+    }) }}
+  {% elif not tabs.length %}
+    <p class="govuk-body">{{ emptyText }}</p>
+  {% else %}
+    {% set tabItems = [] %}
+    {% for tab in tabs %}
+      {% set panelHtml %}
+        {# Outside the pane so it stays put while the table scrolls. #}
+        <h3 class="govuk-heading-s govuk-!-margin-bottom-3">{{ tab.table.caption }}</h3>
+        <div class="moj-scrollable-pane app-scrollable-table app-scrollable-table--sticky-first" role="region" tabindex="0" aria-label="{{ tab.table.caption }}, scroll horizontally to see more columns">
+          {{ appTable(tab.table) }}
+        </div>
+      {% endset %}
+      {% set _ = tabItems.push({ label: tab.label, id: tab.id, panel: { html: panelHtml } }) %}
+    {% endfor %}
+
+    {% if tabItems.length == 1 %}
+      {# A single intervention: GOV.UK says not to use tabs for one panel. #}
+      {{ tabItems[0].panel.html | safe }}
+    {% else %}
+      {# Figma opens on the first tab, "Retained" — govuk-frontend's default. #}
+      {{ govukTabs({ items: tabItems }) }}
+    {% endif %}
+  {% endif %}
+{% endblock %}
