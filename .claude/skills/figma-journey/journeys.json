@@ -440,7 +440,7 @@
           "id": "5140:13692",
           "name": "1000 - 1280 - Project overview",
           "view": "overview.html",
-          "hash": "953ab1dc69fe"
+          "hash": "a49132900ec7"
         },
         {
           "id": "5140:13846",
@@ -566,13 +566,7 @@
           "id": "5211:31607",
           "name": "2000 - 1280 - Flags",
           "view": "flags.html",
-          "hash": "78e12d3ebec7"
-        },
-        {
-          "id": "5211:32275",
-          "name": "Flag table",
-          "view": "flags.html",
-          "hash": "21a5b6aa74da"
+          "hash": "337ca315a773"
         },
         {
           "id": "5211:32278",
@@ -584,7 +578,61 @@
           "id": "5211:32949",
           "name": "3210 - 1280 - Baseline habitat details",
           "view": "baseline-habitat.html",
-          "hash": "5c2935ed675c"
+          "hash": "e96e3f43d774"
+        },
+        {
+          "id": "5231:33669",
+          "name": "6010 - 1280 - Error 39",
+          "view": "file-error.html",
+          "hash": "be76ad95383c"
+        },
+        {
+          "id": "5231:33770",
+          "name": "6020 - 1280 - Error 5",
+          "view": "file-error.html",
+          "hash": "b8f78f44a094"
+        },
+        {
+          "id": "5231:34215",
+          "name": "6030 - 1280 - Error 6",
+          "view": "file-error.html",
+          "hash": "cf14d122e723"
+        },
+        {
+          "id": "5231:34310",
+          "name": "6040 - 1280 - Error 7",
+          "view": "file-error.html",
+          "hash": "a86ecdc7c08e"
+        },
+        {
+          "id": "5231:34405",
+          "name": "6050 - 1280 - Error 13",
+          "view": "file-error.html",
+          "hash": "74e1f913b05b"
+        },
+        {
+          "id": "5231:34500",
+          "name": "6060 - 1280 - Error 15",
+          "view": "file-error.html",
+          "hash": "6af6797919c2"
+        },
+        {
+          "id": "5231:34595",
+          "name": "6070 - 1280 - Error 37",
+          "view": "file-error.html",
+          "hash": "d6239e062b10"
+        },
+        {
+          "id": "5231:34690",
+          "name": "6080 - 1280 - Error 42",
+          "view": "file-error.html",
+          "hash": "3de5de474c99"
+        },
+        {
+          "id": "5231:33984",
+          "name": "6000 - 1280 - Error 34",
+          "view": "file-error.html",
+          "hash": "e66fc31a3aa5"
         }
       ]
     }

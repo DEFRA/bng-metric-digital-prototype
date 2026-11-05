@@ -1524,6 +1524,12 @@
     white-space: nowrap;
   }
 
+  // The same for a references column that isn't first (e.g. v3 Flags, where
+  // Stage comes first).
+  .app-scrollable-table__nowrap {
+    white-space: nowrap;
+  }
+
   // A floor for prose columns that would otherwise be squeezed into very
   // short lines (e.g. Orange flags "Detail" and "Note"). Columns sharing it
   // come out roughly equal.

@@ -9,8 +9,36 @@ https://prototype-kit.service.gov.uk/docs/how-to-use-layouts
 {% block header %}
 
     {{ govukHeader() }}
+    {# Journeys can make the service name a link by setting `serviceNameHref` in
+       res.locals (GDS: link it to the service's homepage or start page). #}
     {{ govukServiceNavigation({
-        serviceName: serviceName
+        serviceName: serviceName,
+        serviceUrl: serviceNameHref
     })}}
 
+{% endblock %}
+
+{#
+  Journeys can add links to the footer by setting `footerLinks` (a list of
+  { href, text }) in res.locals, e.g. project-dashboard-v3's dropout pages.
+  The Prototype Kit's own links are kept, matching its footer.
+#}
+{% block govukFooter %}
+  {% if footerLinks %}
+    {% from "govuk/components/footer/macro.njk" import govukFooter %}
+    {% set kitFooterItems = [
+      { href: "/manage-prototype", text: "Manage your prototype" },
+      { href: "/manage-prototype/clear-data", text: "Clear data" }
+    ] if GOVUKPrototypeKit.isDevelopment else [
+      { href: "/manage-prototype/clear-data", text: "Clear data" }
+    ] %}
+    {{ govukFooter({
+      meta: {
+        items: footerLinks.concat(kitFooterItems),
+        visuallyHiddenTitle: "Footer links"
+      }
+    }) }}
+  {% else %}
+    {{ super() }}
+  {% endif %}
 {% endblock %}

@@ -261,10 +261,11 @@ function targets(section, complete) {
         label: { text: `Units required to meet ${targetPercentage}` },
         value: units(r.unitsRequired)
       },
+      // No Met / Not met tag (Figma 3000 / 4000, round 6): the sign of the
+      // number already says whether the target is reached.
       {
         label: { text: 'Unit surplus (or deficit)' },
-        value: complete ? units(surplus) : 'Not applicable',
-        tag: complete ? metTag(surplus >= 0) : undefined
+        value: complete ? units(surplus) : 'Not applicable'
       }
     ]
   }
@@ -329,6 +330,11 @@ function tradingRuleCopy(section, h) {
 const STRATEGIC_SIGNIFICANCE_HINT =
   "Habitats are always of 'Low' strategic significance unless designated as otherwise in a Local Nature Recovery Strategy (LNRS)."
 
+// Baseline detail wording (Figma 3210); post-intervention pages keep the
+// LNRS hint above.
+const BASELINE_STRATEGIC_SIGNIFICANCE_HINT =
+  'Strategic significance is always ‘Low’ for baseline habitats'
+
 // --- Tables ------------------------------------------------------------------
 
 // Habitat tables (baseline, post intervention, flags) use MOJ
@@ -341,17 +347,25 @@ const STRATEGIC_SIGNIFICANCE_HINT =
 const sortValue = (value) => ({ 'data-sort-value': String(value) })
 
 /**
- * @param {object} table - govukTable params plus `foot`
+ * @param {object} table - govukTable params plus `foot`. A head item with
+ *   `sortable: false` gets no sort button: MOJ only adds one to headings
+ *   that carry aria-sort.
  * @param {number} [initialColumn=0] - column sorted ascending on load
  */
 function sortable(table, initialColumn = 0) {
   return {
     ...table,
     attributes: { 'data-module': 'moj-sortable-table' },
-    head: table.head.map((item, i) => ({
-      ...item,
-      attributes: { 'aria-sort': i === initialColumn ? 'ascending' : 'none' }
-    }))
+    head: table.head.map(({ sortable: canSort = true, ...item }, i) =>
+      canSort
+        ? {
+            ...item,
+            attributes: {
+              'aria-sort': i === initialColumn ? 'ascending' : 'none'
+            }
+          }
+        : item
+    )
   }
 }
 
@@ -608,9 +622,9 @@ function interventionSplitTable(h, complete) {
     classes: 'govuk-!-margin-bottom-7',
     head: [{ text: 'Intervention' }, { text: 'Units (hectares)' }],
     rows: [
-      ['retained', 'Baseline habitats retained'],
-      ['enhanced', 'Baseline habitats enhanced'],
-      ['lost', 'Habitats lost']
+      ['retained', 'Baseline habitat retained'],
+      ['enhanced', 'Baseline habitat enhanced'],
+      ['lost', 'Habitat lost']
     ].map(([key, label]) => [
       { text: label, classes: 'govuk-!-font-weight-bold' },
       { text: `${fixed(split[key].units)} (${hectares(split[key].area)})` }
@@ -832,7 +846,7 @@ function visibleFlags(complete) {
 const flagStage = (f) => (f.phase === 'Baseline' ? 'Baseline' : f.intervention)
 
 // The workbook raises one flag per check, so a habitat can have several.
-// Figma 2000 shows one row per habitat with its flags as a bulleted list.
+// The Flags page shows one row per habitat (and stage) with all its flags.
 function groupedFlags(complete) {
   const groups = new Map()
   for (const f of visibleFlags(complete)) {
@@ -843,6 +857,23 @@ function groupedFlags(complete) {
     groups.get(key).details.push(f.detail)
   }
   return [...groups.values()]
+}
+
+// Several flags in one cell show as separate paragraphs, not a bulleted list
+// (a list inside a table cell reads badly). A single flag is plain text.
+function flagCell(details) {
+  if (details.length === 1) {
+    return { text: details[0], classes: MIN_WIDTH }
+  }
+  return {
+    html: details
+      .map(
+        (detail, i) =>
+          `<p class="govuk-body ${i === details.length - 1 ? 'govuk-!-margin-bottom-0' : 'govuk-!-margin-bottom-2'}">${detail}</p>`
+      )
+      .join(''),
+    classes: MIN_WIDTH
+  }
 }
 
 /**
@@ -862,14 +893,10 @@ function habitatFlags(section, ref, stage) {
     .map((f) => f.detail)
 }
 
-const bulletList = (items) =>
-  `<ul class="govuk-list govuk-list--bullet govuk-!-font-size-16">${items
-    .map((item) => `<li>${item}</li>`)
-    .join('')}</ul>`
-
 // Flags wraps freely (.app-scrollable-table--wrap); Flag keeps a minimum
-// width so its bullets aren't squeezed into very short lines.
+// width so its text isn't squeezed into very short lines.
 const MIN_WIDTH = 'app-scrollable-table__min-width'
+const NOWRAP = 'app-scrollable-table__nowrap'
 
 // Stage sorts in journey order rather than alphabetically.
 const STAGE_ORDER = ['Baseline', 'Retained', 'Enhanced', 'Created']
@@ -880,19 +907,25 @@ function flagsTable(complete) {
   return sortable({
     head: [
       { text: 'Stage' },
-      { text: 'Ref' },
+      { text: 'Ref', classes: NOWRAP },
       { text: 'Unit type' },
       { text: 'Habitat type' },
-      { text: 'Flag', classes: MIN_WIDTH },
-      { text: 'Supporting information' }
+      // Free text: sorting it isn't useful.
+      { text: 'Flag', classes: MIN_WIDTH, sortable: false },
+      { text: 'Supporting information', sortable: false }
     ],
     rows: groupedFlags(complete).map((f) => [
       { text: f.stage, attributes: sortValue(STAGE_ORDER.indexOf(f.stage)) },
-      refCell(flagHref(f), f.ref),
+      {
+        ...refCell(flagHref(f), f.ref),
+        classes: `govuk-!-font-weight-bold ${NOWRAP}`
+      },
       { text: section(f) ? section(f).title : f.unitType },
       { text: f.habitatType },
-      { html: bulletList(f.details), classes: MIN_WIDTH },
-      { text: '–' }
+      flagCell(f.details),
+      // No supporting information is imported for flagged habitats yet, so
+      // every cell uses the Figma "No data" variant (grey text).
+      NO_DATA
     ])
   })
 }
@@ -1203,6 +1236,66 @@ const PROJECT_DETAIL_FIELDS = [
   'localPlanningAuthority'
 ]
 
+// --- File errors (dropout pages) ---------------------------------------------
+
+const METRIC_TOOL_HREF =
+  'https://www.gov.uk/government/publications/statutory-biodiversity-metric-tools-and-guides'
+
+/**
+ * Dropout pages shown when an uploaded file can't be used (Figma 6000-6080),
+ * in Figma order. Each is keyed by the service's error code. Errors with a
+ * `category` can be fixed and re-uploaded; the rest are a single paragraph.
+ * Shown as a standalone series for research: "Next" steps through them and
+ * the upload flow itself always succeeds.
+ */
+const FILE_ERRORS = [
+  {
+    code: '34',
+    category: 'Habitat parcels',
+    // Figma uses "{Habitat ref} / {Tree ref}"; a ref from the data reads
+    // more naturally in research.
+    message:
+      'AH-003-1 has both advance and delay years. Enter either advance or delay years, not both.'
+  },
+  {
+    code: '39',
+    html: `Your project contains habitats that have been enhanced to a level which is not yet included in this service. Use the <a class="govuk-link" href="${METRIC_TOOL_HREF}">metric tool (spreadsheet)</a> to calculate biodiversity value.`
+  },
+  {
+    code: '5',
+    category: 'Geopackage layers',
+    message: 'A layer uses the wrong map projection.'
+  },
+  {
+    code: '6',
+    category: 'Geopackage layers',
+    message:
+      "A layer's shape column is missing, misnamed, duplicated or of the wrong type."
+  },
+  {
+    code: '7',
+    category: 'Template',
+    message: 'A column is missing or set up differently from the template.'
+  },
+  {
+    code: '13',
+    category: 'Geometry',
+    message:
+      'Your hedgerows or watercourses cannot be read, or are not drawn as lines.'
+  },
+  { code: '15', html: "There was a problem with your file's metadata." },
+  {
+    code: '37',
+    html: 'Your habitat data does not match the required structure. Check your file against the Natural England template.'
+  },
+  {
+    code: '42',
+    html: 'Your file contains a comment which uses invalid characters. Comments can only use UTF8 characters.'
+  }
+]
+
+const fileErrorHref = (error) => `${BASE}/file-error/${error.code}`
+
 // --- Side navigation ---------------------------------------------------------
 
 /**
@@ -1265,7 +1358,7 @@ function overviewActions(req, complete) {
   const incomplete = area.data.baseline.filter(isIncomplete).length
   if (incomplete) {
     actions.push({
-      description: `${incomplete} incomplete baseline habitat ${incomplete === 1 ? 'record' : 'records'}`,
+      description: `${incomplete} incomplete baseline habitat ${incomplete === 1 ? 'record' : 'records'}. (Entries may have been removed as part of the data validation process)`,
       link: {
         text: 'View baseline habitat list',
         href: sectionHref(area, 'baseline')
@@ -1298,7 +1391,11 @@ function overviewActions(req, complete) {
     ]
   })
   return {
-    head: [{ text: 'Description' }, { text: 'Link' }],
+    // Equal-width columns.
+    head: [
+      { text: 'Description', classes: 'govuk-!-width-one-half' },
+      { text: 'Link', classes: 'govuk-!-width-one-half' }
+    ],
     rows: actions.map((a) => [
       { text: a.description },
       {
@@ -1319,6 +1416,12 @@ function registerProjectDashboardV3Routes(router) {
   // without renaming the other journeys that share app/config.json.
   router.use(BASE, function (req, res, next) {
     res.locals.serviceName = 'Calculate biodiversity net gain'
+    // The service name links back to the start of the round 6 prototype.
+    res.locals.serviceNameHref = BASE
+    // Lets facilitators open the dropout pages from anywhere in the journey.
+    res.locals.footerLinks = [
+      { href: fileErrorHref(FILE_ERRORS[0]), text: 'File errors' }
+    ]
     next()
   })
 
@@ -1494,7 +1597,7 @@ function registerProjectDashboardV3Routes(router) {
         interventionTable: section.showsInterventionSplit
           ? interventionSplitTable(habitat, isComplete(req))
           : null,
-        strategicSignificanceHint: STRATEGIC_SIGNIFICANCE_HINT,
+        strategicSignificanceHint: BASELINE_STRATEGIC_SIGNIFICANCE_HINT,
         broadHabitatItems: toItems(
           options.broadHabitats,
           habitat.broadHabitat,
@@ -1631,6 +1734,28 @@ function registerProjectDashboardV3Routes(router) {
       res.redirect(returnTo(req, postList).href)
     })
   }
+
+  // Dropout pages (Figma 6000-6080) as a standalone series.
+  router.get(`${BASE}/file-error`, function (req, res) {
+    res.redirect(fileErrorHref(FILE_ERRORS[0]))
+  })
+
+  router.get(`${BASE}/file-error/:code`, function (req, res, next) {
+    const index = FILE_ERRORS.findIndex((e) => e.code === req.params.code)
+    if (index === -1) {
+      return next() // unknown code: fall through to the 404 handler
+    }
+    const previous = FILE_ERRORS[index - 1]
+    const following = FILE_ERRORS[index + 1]
+    res.render('project-dashboard-v3/file-error', {
+      error: FILE_ERRORS[index],
+      // The first page has no back link in Figma (6000); the last "Next"
+      // returns to the research homepage.
+      backHref: previous ? fileErrorHref(previous) : null,
+      nextHref: following ? fileErrorHref(following) : '/',
+      uploadHref: UPLOAD_HREF
+    })
+  })
 
   router.get(`${BASE}/project-details`, function (req, res) {
     res.render('project-dashboard-v3/project-details', {
