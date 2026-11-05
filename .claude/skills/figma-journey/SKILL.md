@@ -6,7 +6,7 @@ description: >-
   Figma prototype URL (or fileKey#node-id), it pulls the page's frames, the wired click-flow, and
   rendered PNGs, reconciles them against a manifest of journeys it has already built to decide whether
   this is a NEW journey or an UPDATE, maps each screen to GOV.UK Design System components, and
-  scaffolds (or surgically patches) routes + views + a homepage link. Use when asked to turn a Figma
+  scaffolds (or surgically patches) routes + views + a start page entry. Use when asked to turn a Figma
   prototype/frame into a working prototype journey, recreate a Figma flow, add a new User Research
   journey from a design, or refresh/sync/update an existing journey after the designer changed the
   Figma. Requires a read-only FIGMA_TOKEN in the environment.
@@ -157,8 +157,10 @@ Pick a short kebab-case journey key (e.g. `dashboard-review`). Then:
    [Wide screens](#wide-screens).
 4. **Styles** — append any custom styles the design needs to `app/assets/sass/application.scss` (guard
    them under a clearly-commented block for this journey).
-5. **Homepage** — add a launcher link to the new journey and a short User-Research purpose description
-   to `app/views/index.html`.
+5. **Homepage** — `app/views/index.html` lists one entry per user research round in its `rounds`
+   array; don't add free-form markup. Add or update the round's entry: `title`, `tested` (`false`
+   until the round has run), `date` (e.g. "9 to 10 November 2026"), `participants` ("-" until
+   known), `href` (the journey's first page) and a short `description` of what the round explores.
 6. **Record the journey** — add an entry to `.claude/skills/figma-journey/journeys.json` so future
    re-runs recognise this journey (Step 3) instead of rebuilding it. Copy the frame ids, names,
    **hashes and `wide` flag straight from `flow.json`**, and map each frame id to the view file you
