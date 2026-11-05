@@ -88,13 +88,14 @@ It works in two modes, chosen automatically:
 
 Non-standard "dashboard" screens (stat cards, status tags, side navigation) that have no GDS equivalent
 use a reusable, accessible, config-driven macro at `app/views/dashboard/macro.njk` (`appDashboard` and
-`appSideNav`) rather than bespoke markup. Every journey built this way also adds a launcher link and a
-short User-Research purpose description to the homepage (`app/views/index.html`).
+`appSideNav`) rather than bespoke markup. Every journey built this way also adds or updates its round's
+entry in the `rounds` array on the start page (`app/views/index.html`), including a short
+User-Research `description`.
 
 Running it needs a read-only `FIGMA_TOKEN` in your environment. See the skill's `SKILL.md` for the full
 step-by-step, and `references/setup.md` for how to create and verify the token. The first journey built
 this way is **metric-results** (upload choice → upload baseline → results dashboard → area-habitats
-detail).
+detail). It was an internal demo, so it isn't listed on the start page; go to `/metric-results/start`.
 
 ## Using the refreshed GOV.UK brand
 
