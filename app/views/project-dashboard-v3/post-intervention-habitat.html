@@ -82,7 +82,7 @@
         name: "habitatReference",
         label: { text: section.itemName ~ " reference", classes: "govuk-label--s" },
         classes: "govuk-input--width-20",
-        value: habitat.ref
+        value: habitatReference
       }) }}
 
       {# Read-only (Figma 3310-3330): the intervention comes from the uploaded
@@ -224,7 +224,7 @@
           label: { text: "Supporting information", classes: "govuk-label--m" },
           hint: { text: "Add information to help the Local Planning Authority understand the post-intervention metric." },
           rows: 5,
-          value: habitat.comments
+          value: supportingInformation
         }) }}
       {% endif %}
 

@@ -44,21 +44,63 @@ const metric = structuredClone(require('../data/project-dashboard-v2.json'))
 // habitats: the two baseline rows the workbook couldn't score are dropped (as
 // if removed during data validation; neither has units, so totals are
 // unchanged), and two enhanced rows lose their target condition and so
-// their units.
+// their units. Those units then come off the workbook's post-intervention
+// results and trading summary, so the cards agree with the table totals.
 const DROPPED_BASELINE_REFS = ['AH-006', 'AH-011']
 const INCOMPLETE_ENHANCED_REFS = ['AH-008', 'AH-017']
 metric.area.baseline = metric.area.baseline.filter(
   (h) => !DROPPED_BASELINE_REFS.includes(h.ref)
 )
-metric.area.postIntervention.enhanced.forEach((h) => {
-  if (INCOMPLETE_ENHANCED_REFS.includes(h.ref)) {
+metric.area.postIntervention.enhanced
+  .filter((h) => INCOMPLETE_ENHANCED_REFS.includes(h.ref))
+  .forEach((h) => {
+    removePostInterventionUnits(metric.area, h)
     Object.assign(h, {
       targetCondition: '',
       targetConditionScore: null,
       units: null
     })
-  }
-})
+  })
+
+/**
+ * Take one post-intervention row's units out of the workbook results and
+ * the trading summary, recalculating the figures derived from them.
+ * Medium and Low are the only bands the trading summary itemises.
+ */
+function removePostInterventionUnits(sectionData, h) {
+  const r = sectionData.results
+  r.postInterventionUnits -= h.units
+  r.netUnitChange = r.postInterventionUnits - r.baselineUnits
+  r.netPercentChange = r.netUnitChange / r.baselineUnits
+  r.unitDeficit = r.unitsRequired - r.postInterventionUnits
+
+  const ts = sectionData.tradingSummary
+  const band = ts[h.distinctiveness.toLowerCase()]
+  const item = band.items.find(
+    (i) => i.broadHabitat === h.broadHabitat && i.habitatType === h.habitatType
+  )
+  item.change -= h.units
+  band.total -= h.units
+  band.cumulativeSurplus -= h.units
+
+  // Medium: losses and gains are netted per broad habitat (same broad
+  // habitat rule), and Low draws on what Medium has left over.
+  const broadTotals = [
+    ...new Set(ts.medium.items.map((i) => i.broadHabitat))
+  ].map((broadHabitat) =>
+    ts.medium.items
+      .filter((i) => i.broadHabitat === broadHabitat)
+      .reduce((total, i) => total + i.change, 0)
+  )
+  const losses = broadTotals.filter((t) => t < 0).reduce((a, b) => a + b, 0)
+  ts.medium.broadHabitatLosses = losses
+  ts.medium.unitDeficit = losses
+  ts.medium.unitsAvailableToOffsetLower = broadTotals
+    .filter((t) => t > 0)
+    .reduce((a, b) => a + b, 0)
+  ts.low.netChange = ts.low.total
+  ts.low.unitsAvailableFromHigher = ts.medium.total
+}
 
 const BASE = '/project-dashboard-v3'
 const UPLOAD_HREF = `${BASE}/upload/choose`
@@ -1654,26 +1696,44 @@ function registerProjectDashboardV3Routes(router) {
     // Renders the variant for the habitat's own intervention (Created /
     // Enhanced / Retained). ?intervention= previews another variant — there's
     // no Calculate button this UR round, so it's for setting up sessions.
-    // `submitted` is the posted form when re-showing it with an error.
-    function renderPostHabitat(req, res, habitat, submitted) {
-      const intervention = INTERVENTIONS.includes(req.query.intervention)
+    // `submitted` is the posted form (req.body) when re-showing it with an
+    // error, so the user's answers are kept rather than reset to the file's.
+    function renderPostHabitat(req, res, habitat, submitted, errors) {
+      const previewing = INTERVENTIONS.includes(req.query.intervention)
+      const intervention = previewing
         ? req.query.intervention
         : habitat.intervention
+      const answer = (field, stored) =>
+        submitted && field in submitted ? submitted[field] : stored
+      const storedStrategicSignificance = strategicSignificance(
+        habitat.strategicSignificance,
+        habitat.strategicSignificanceMultiplier
+      )
       const baseline = section.data.baseline.find(
         (h) => h.ref === habitat.baselineRef
       )
-      const targetCondition = condition(
-        habitat.targetCondition,
-        habitat.targetConditionScore
+      const targetCondition = answer(
+        'targetCondition',
+        condition(habitat.targetCondition, habitat.targetConditionScore)
       )
       const back = returnTo(req, `${postList}#${intervention.toLowerCase()}`)
+      // Keep ?from= and a previewed ?intervention= across the POST.
+      const query = new URLSearchParams(back.query)
+      if (previewing) {
+        query.set('intervention', intervention)
+      }
       res.render('project-dashboard-v3/post-intervention-habitat', {
         section: section,
         habitat: habitat,
         returnHref: back.href,
-        formAction: `${postList}/${slug(habitat.ref)}${back.query}`,
+        formAction: `${postList}/${slug(habitat.ref)}${query.size ? `?${query}` : ''}`,
         intervention: intervention,
-        measureValue: section.measure.format(habitat[section.measure.key], 4),
+        habitatReference: answer('habitatReference', habitat.ref),
+        supportingInformation: answer(
+          'supportingInformation',
+          habitat.comments
+        ),
+        measureValue: fixed(habitat[section.measure.key], 4),
         units: habitat.units == null ? NO_DATA_TEXT : fixed(habitat.units),
         distinctiveness: habitat.distinctiveness
           ? distinctiveness(
@@ -1700,12 +1760,12 @@ function registerProjectDashboardV3Routes(router) {
             )
           : NO_DATA_TEXT,
         advanceYearsItems: yearItems(
-          submitted ? submitted.advanceYears : habitat.advanceYears
+          Number(answer('advanceYears', habitat.advanceYears)) || 0
         ),
         delayYearsItems: yearItems(
-          submitted ? submitted.delayYears : habitat.delayYears
+          Number(answer('delayYears', habitat.delayYears)) || 0
         ),
-        errors: submitted ? submitted.errors : null,
+        errors: errors || null,
         baselineHref: baseline
           ? `${baselineList}/${slug(baseline.ref)}`
           : baselineList,
@@ -1713,14 +1773,17 @@ function registerProjectDashboardV3Routes(router) {
           ? condition(habitat.baselineCondition, habitat.baselineConditionScore)
           : 'Not recorded',
         strategicSignificanceHint: STRATEGIC_SIGNIFICANCE_HINT,
-        broadHabitatItems: toItems(options.broadHabitats, habitat.broadHabitat),
-        habitatTypeItems: toItems(options.habitatTypes, habitat.habitatType),
+        broadHabitatItems: toItems(
+          options.broadHabitats,
+          answer('broadHabitat', habitat.broadHabitat)
+        ),
+        habitatTypeItems: toItems(
+          options.habitatTypes,
+          answer('habitatType', habitat.habitatType)
+        ),
         strategicSignificanceItems: toItems(
           STRATEGIC_SIGNIFICANCE,
-          strategicSignificance(
-            habitat.strategicSignificance,
-            habitat.strategicSignificanceMultiplier
-          )
+          answer('strategicSignificance', storedStrategicSignificance)
         ),
         targetConditionItems: toItems(
           options.conditions,
@@ -1751,16 +1814,12 @@ function registerProjectDashboardV3Routes(router) {
       const advanceYears = Number(req.body.advanceYears) || 0
       const delayYears = Number(req.body.delayYears) || 0
       if (advanceYears > 0 && delayYears > 0) {
-        return renderPostHabitat(req, res, habitat, {
-          advanceYears: advanceYears,
-          delayYears: delayYears,
-          errors: [
-            {
-              text: 'A habitat cannot be created both in advance and with a delay',
-              href: '#advanceYears'
-            }
-          ]
-        })
+        return renderPostHabitat(req, res, habitat, req.body, [
+          {
+            text: 'A habitat cannot be created both in advance and with a delay',
+            href: '#advanceYears'
+          }
+        ])
       }
       res.redirect(returnTo(req, postList).href)
     })
