@@ -1666,6 +1666,47 @@ $app-wide-page-width: 1280px;
   @include govuk-width-container($app-wide-page-width);
 }
 
+// Table width experiment (project dashboard v3, after round 6) ------------
+// See router.use(BASE) in app/routes/project-dashboard-v3.js.
+
+.app-experiment-switcher {
+  @include govuk-font($size: 16);
+  margin-bottom: govuk-spacing(4);
+  padding: govuk-spacing(2) govuk-spacing(3);
+  border-left: 5px solid #ffdd00;
+  background-color: #f3f2f1;
+
+  > * + * {
+    margin-left: govuk-spacing(3);
+  }
+}
+
+.app-experiment-switcher__label {
+  font-weight: bold;
+}
+
+// "Browser width": the section breaks out of the centred 1280px container to
+// the window edges, keeping the usual GOV.UK gutter inside them.
+.app-full-bleed {
+  width: auto;
+  float: none;
+  margin-right: calc(50% - 50vw);
+  margin-left: calc(50% - 50vw);
+  padding-right: govuk-spacing(3);
+  padding-left: govuk-spacing(3);
+
+  @include govuk-media-query($from: tablet) {
+    padding-right: govuk-spacing(6);
+    padding-left: govuk-spacing(6);
+  }
+}
+
+// 100vw includes the vertical scrollbar where it takes up space (Windows),
+// so clip the few pixels of overflow rather than scroll sideways.
+.app-full-bleed-page {
+  overflow-x: clip;
+}
+
 // =========================================================================
 // Project dashboard v2 journey (User Research)
 // =========================================================================

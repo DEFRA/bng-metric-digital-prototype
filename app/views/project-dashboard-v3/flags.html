@@ -3,9 +3,14 @@
 {% from "table/macro.njk" import appTable %}
 
 {% set pageName = "Flags" %}
+{% set hasTables = true %}
 
 {% block dashboardContent %}
-  <div class="moj-scrollable-pane app-scrollable-table app-scrollable-table--wrap" role="region" tabindex="0" aria-label="Flags, scroll horizontally to see more columns">
-    {{ appTable(flagsTable) }}
-  </div>
+  {% if not fullWidthTables %}
+    {% include "project-dashboard-v3/_flags-tables.html" %}
+  {% endif %}
+{% endblock %}
+
+{% block fullWidthContent %}
+  {% include "project-dashboard-v3/_flags-tables.html" %}
 {% endblock %}

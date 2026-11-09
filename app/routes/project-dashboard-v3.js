@@ -121,6 +121,13 @@ function removePostInterventionUnits(sectionData, h) {
 }
 
 const BASE = '/project-dashboard-v3'
+
+// Table width experiment options, in switcher order (see router.use(BASE)).
+const TABLE_WIDTHS = [
+  { value: 'tested', text: 'As tested' },
+  { value: 'page', text: 'Page width' },
+  { value: 'screen', text: 'Browser width' }
+]
 const UPLOAD_HREF = `${BASE}/upload/choose`
 
 // Shared appDashboard settings. "app-dashboard--tight" is the Figma tile
@@ -1513,6 +1520,19 @@ function registerProjectDashboardV3Routes(router) {
     res.locals.footerLinks = [
       { href: fileErrorHref(FILE_ERRORS[0]), text: 'File errors' }
     ]
+    // Table width experiment (after round 6). ?tableWidth= is kept in the
+    // session by the kit's auto-store, so it sticks while clicking around:
+    //   page   - tables below the side nav, across the 1280px page
+    //   screen - tables across the whole browser window
+    //   tested - as tested in round 6 (also the default when unset)
+    // The switcher only shows once a value has been set.
+    const tableWidth = req.session.data.tableWidth
+    res.locals.tableWidthExperiment = Boolean(tableWidth)
+    res.locals.tableWidth = TABLE_WIDTHS.some((w) => w.value === tableWidth)
+      ? tableWidth
+      : 'tested'
+    res.locals.tableWidths = TABLE_WIDTHS
+    res.locals.currentPath = req.originalUrl.split('?')[0]
     next()
   })
 

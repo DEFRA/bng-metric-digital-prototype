@@ -2,10 +2,16 @@
   Shared shell for the project-dashboard-v3 side-nav screens (overview,
   flags, area habitats). Child views set `pageName` and fill
   `dashboardContent`; set `hideUploadButton` to drop the header action.
+  Table pages set `hasTables` and include their tables from a partial in
+  either `dashboardContent` or `fullWidthContent`, for the table width
+  experiment (see router.use(BASE) in the route file).
 #}
 {% extends "layouts/main.html" %}
 
-{% set bodyClasses = "app-wide" %}
+{# Table width experiment: "screen" lets the full-width section run edge to
+   edge, so the page must not scroll sideways. #}
+{% set fullWidthTables = hasTables and tableWidth != "tested" %}
+{% set bodyClasses = "app-wide" ~ (" app-full-bleed-page" if fullWidthTables and tableWidth == "screen" else "") %}
 
 {% from "govuk/components/button/macro.njk" import govukButton %}
 {% from "dashboard/macro.njk" import appSideNav %}
@@ -23,6 +29,19 @@
   </div>
 
   <div class="govuk-grid-column-three-quarters">
+
+    {% if hasTables and tableWidthExperiment %}
+      <nav class="app-experiment-switcher" aria-label="Table width experiment">
+        <span class="app-experiment-switcher__label">Table width experiment:</span>
+        {% for option in tableWidths %}
+          {% if option.value == tableWidth %}
+            <strong aria-current="true">{{ option.text }}</strong>
+          {% else %}
+            <a class="govuk-link" href="{{ currentPath }}?tableWidth={{ option.value }}">{{ option.text }}</a>
+          {% endif %}
+        {% endfor %}
+      </nav>
+    {% endif %}
 
     <div class="app-page-header">
       <div>
@@ -42,4 +61,14 @@
 
   </div>
 </div>
+
+{# Table pages put their tables here instead of in dashboardContent when the
+   experiment is on, so they span the page below the side nav. #}
+{% if fullWidthTables %}
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-full{{ ' app-full-bleed' if tableWidth == 'screen' }}">
+      {% block fullWidthContent %}{% endblock %}
+    </div>
+  </div>
+{% endif %}
 {% endblock %}
