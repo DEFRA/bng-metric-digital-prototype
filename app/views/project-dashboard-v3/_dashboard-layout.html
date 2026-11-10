@@ -13,10 +13,11 @@
    sideways); "fluid" widens the whole page and narrows the side nav. #}
 {% set fluidPage = tableWidth == "fluid" %}
 {% set fullWidthTables = hasTables and tableWidth in ["page", "screen"] %}
+{% set bleedRight = hasTables and tableWidth == "right" %}
 {% if fluidPage %}
   {% set bodyClasses = "app-fluid" %}
 {% else %}
-  {% set bodyClasses = "app-wide" ~ (" app-full-bleed-page" if fullWidthTables and tableWidth == "screen" else "") %}
+  {% set bodyClasses = "app-wide" ~ (" app-full-bleed-page" if (fullWidthTables and tableWidth == "screen") or bleedRight else "") %}
 {% endif %}
 
 {% from "govuk/components/button/macro.njk" import govukButton %}

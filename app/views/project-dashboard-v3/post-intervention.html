@@ -13,7 +13,11 @@
 
   <hr class="govuk-section-break govuk-section-break--l govuk-section-break--visible">
 
-  {% if not fullWidthTables %}
+  {% if bleedRight %}
+    <div class="app-bleed-right">
+      {% include "project-dashboard-v3/_post-intervention-tables.html" %}
+    </div>
+  {% elif not fullWidthTables %}
     {% include "project-dashboard-v3/_post-intervention-tables.html" %}
   {% endif %}
 {% endblock %}

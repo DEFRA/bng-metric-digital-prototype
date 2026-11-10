@@ -1701,6 +1701,18 @@ $app-wide-page-width: 1280px;
   }
 }
 
+// "To right edge": the table section stays in the content column, lined up
+// with the cards above, and extends past the column to the window's right
+// edge, less the usual 30px gutter. The container is centred at up to
+// 1280px and its right edge lines up with the column's content, so the gap
+// to fill is half of what's left of the window, less the gutter. Only once
+// the side nav sits beside the content (the grid columns' tablet breakpoint).
+.app-bleed-right {
+  @include govuk-media-query($from: tablet) {
+    margin-right: calc((100vw - min(#{$app-wide-page-width}, 100vw - #{govuk-spacing(6) * 2})) / -2 + #{govuk-spacing(6)});
+  }
+}
+
 // 100vw includes the vertical scrollbar where it takes up space (Windows),
 // so clip the few pixels of overflow rather than scroll sideways.
 .app-full-bleed-page {

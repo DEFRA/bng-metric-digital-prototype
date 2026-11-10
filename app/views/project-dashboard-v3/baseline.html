@@ -11,7 +11,11 @@
 
   <hr class="govuk-section-break govuk-section-break--l govuk-section-break--visible">
 
-  {% if not fullWidthTables %}
+  {% if bleedRight %}
+    <div class="app-bleed-right">
+      {% include "project-dashboard-v3/_baseline-tables.html" %}
+    </div>
+  {% elif not fullWidthTables %}
     {% include "project-dashboard-v3/_baseline-tables.html" %}
   {% endif %}
 {% endblock %}
