@@ -4,7 +4,9 @@
   `dashboardContent`; set `hideUploadButton` to drop the header action.
   Table pages set `hasTables` and include their tables from a partial in
   either `dashboardContent` or `fullWidthContent`, for the table width
-  experiment (see router.use(BASE) in the route file).
+  experiment (see router.use(BASE) in the route file). Pages with nothing
+  but tables also set `tablesOnly`, so in "fluid-tables" their header spans
+  the table width instead of the 992px cap.
 #}
 {% extends "layouts/main.html" %}
 
@@ -51,7 +53,7 @@
       </nav>
     {% endif %}
 
-    <div class="app-page-header">
+    <div class="app-page-header{{ ' app-uncapped' if uncappedTables and tablesOnly }}">
       <div>
         {% if not hideCaption %}
           <span class="govuk-caption-l">{{ data.projectName | default("Project name", true) }}</span>

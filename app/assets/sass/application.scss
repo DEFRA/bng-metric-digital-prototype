@@ -1723,7 +1723,8 @@ $app-wide-page-width: 1280px;
 // "Full-width tables, 188px menu" (Figma 5319:5151, updated): only the data
 // tables use the full width. Everything else, including the page heading and
 // Upload file button, keeps the width it would have on a 1280px screen:
-// 1280 - 30 - 188 - 40 - 30 = 992px.
+// 1280 - 30 - 188 - 40 - 30 = 992px. On a page with only tables (Flags) the
+// heading is marked .app-uncapped so it lines up with the table instead.
 .app-fluid--capped .app-sidebar-layout__main > :not(.app-uncapped) {
   max-width: 992px;
 }
