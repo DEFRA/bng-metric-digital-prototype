@@ -11,8 +11,8 @@
 
   <hr class="govuk-section-break govuk-section-break--l govuk-section-break--visible">
 
-  {% if bleedRight %}
-    <div class="app-bleed-right">
+  {% if uncappedTables %}
+    <div class="app-uncapped">
       {% include "project-dashboard-v3/_baseline-tables.html" %}
     </div>
   {% elif not fullWidthTables %}

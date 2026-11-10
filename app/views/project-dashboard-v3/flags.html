@@ -6,8 +6,8 @@
 {% set hasTables = true %}
 
 {% block dashboardContent %}
-  {% if bleedRight %}
-    <div class="app-bleed-right">
+  {% if uncappedTables %}
+    <div class="app-uncapped">
       {% include "project-dashboard-v3/_flags-tables.html" %}
     </div>
   {% elif not fullWidthTables %}

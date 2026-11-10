@@ -10,14 +10,15 @@
 
 {# Table width experiment: "page" and "screen" move the tables below the side
    nav ("screen" runs them edge to edge, so the page must not scroll
-   sideways); "fluid" widens the whole page and narrows the side nav. #}
-{% set fluidPage = tableWidth == "fluid" %}
+   sideways); "fluid" widens the whole page and narrows the side nav, and
+   "fluid-tables" then caps everything but the header and tables. #}
+{% set fluidPage = tableWidth in ["fluid", "fluid-tables"] %}
 {% set fullWidthTables = hasTables and tableWidth in ["page", "screen"] %}
-{% set bleedRight = hasTables and tableWidth == "right" %}
+{% set uncappedTables = hasTables and tableWidth == "fluid-tables" %}
 {% if fluidPage %}
-  {% set bodyClasses = "app-fluid" %}
+  {% set bodyClasses = "app-fluid" ~ (" app-fluid--capped" if tableWidth == "fluid-tables" else "") %}
 {% else %}
-  {% set bodyClasses = "app-wide" ~ (" app-full-bleed-page" if (fullWidthTables and tableWidth == "screen") or bleedRight else "") %}
+  {% set bodyClasses = "app-wide" ~ (" app-full-bleed-page" if (fullWidthTables and tableWidth == "screen") else "") %}
 {% endif %}
 
 {% from "govuk/components/button/macro.njk" import govukButton %}
