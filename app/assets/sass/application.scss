@@ -1707,6 +1707,44 @@ $app-wide-page-width: 1280px;
   overflow-x: clip;
 }
 
+// "Full-width page, 188px menu" (Figma 5319:5151): header, banner, content
+// and footer all run to the window edges with the usual GOV.UK gutters.
+.app-fluid .govuk-width-container {
+  max-width: none;
+  margin-right: govuk-spacing(3);
+  margin-left: govuk-spacing(3);
+
+  @include govuk-media-query($from: tablet) {
+    margin-right: govuk-spacing(6);
+    margin-left: govuk-spacing(6);
+  }
+}
+
+// A fixed 188px side menu, 40px gap, and the content filling the rest.
+// Stacks on narrow screens, like the GOV.UK grid columns it replaces.
+.app-sidebar-layout {
+  @include govuk-media-query($from: desktop) {
+    display: flex;
+    gap: 40px;
+  }
+}
+
+.app-sidebar-layout__nav {
+  @include govuk-media-query($from: desktop) {
+    flex: 0 0 188px;
+  }
+}
+
+.app-sidebar-layout__main {
+  // Lets the content shrink below its widest table, so the table scrolls
+  // inside its pane rather than stretching the page.
+  min-width: 0;
+
+  @include govuk-media-query($from: desktop) {
+    flex: 1 1 auto;
+  }
+}
+
 // =========================================================================
 // Project dashboard v2 journey (User Research)
 // =========================================================================

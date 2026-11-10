@@ -8,10 +8,16 @@
 #}
 {% extends "layouts/main.html" %}
 
-{# Table width experiment: "screen" lets the full-width section run edge to
-   edge, so the page must not scroll sideways. #}
-{% set fullWidthTables = hasTables and tableWidth != "tested" %}
-{% set bodyClasses = "app-wide" ~ (" app-full-bleed-page" if fullWidthTables and tableWidth == "screen" else "") %}
+{# Table width experiment: "page" and "screen" move the tables below the side
+   nav ("screen" runs them edge to edge, so the page must not scroll
+   sideways); "fluid" widens the whole page and narrows the side nav. #}
+{% set fluidPage = tableWidth == "fluid" %}
+{% set fullWidthTables = hasTables and tableWidth in ["page", "screen"] %}
+{% if fluidPage %}
+  {% set bodyClasses = "app-fluid" %}
+{% else %}
+  {% set bodyClasses = "app-wide" ~ (" app-full-bleed-page" if fullWidthTables and tableWidth == "screen" else "") %}
+{% endif %}
 
 {% from "govuk/components/button/macro.njk" import govukButton %}
 {% from "dashboard/macro.njk" import appSideNav %}
@@ -23,14 +29,14 @@
 {% endblock %}
 
 {% block content %}
-<div class="govuk-grid-row">
-  <div class="govuk-grid-column-one-quarter">
+<div class="{{ 'app-sidebar-layout' if fluidPage else 'govuk-grid-row' }}">
+  <div class="{{ 'app-sidebar-layout__nav' if fluidPage else 'govuk-grid-column-one-quarter' }}">
     {{ appSideNav(sideNav) }}
   </div>
 
-  <div class="govuk-grid-column-three-quarters">
+  <div class="{{ 'app-sidebar-layout__main' if fluidPage else 'govuk-grid-column-three-quarters' }}">
 
-    {% if hasTables and tableWidthExperiment %}
+    {% if tableWidthExperiment %}
       <nav class="app-experiment-switcher" aria-label="Table width experiment">
         <span class="app-experiment-switcher__label">Table width experiment:</span>
         {% for option in tableWidths %}

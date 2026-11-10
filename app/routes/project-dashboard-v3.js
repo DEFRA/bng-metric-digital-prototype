@@ -126,7 +126,10 @@ const BASE = '/project-dashboard-v3'
 const TABLE_WIDTHS = [
   { value: 'tested', text: 'As tested' },
   { value: 'page', text: 'Page width' },
-  { value: 'screen', text: 'Browser width' }
+  { value: 'screen', text: 'Browser width' },
+  // Figma 5319:5151: the whole page runs to the window edges, with a 188px
+  // side menu and the content (tables included) filling the rest.
+  { value: 'fluid', text: 'Full-width page, 188px menu' }
 ]
 const UPLOAD_HREF = `${BASE}/upload/choose`
 
@@ -1524,6 +1527,7 @@ function registerProjectDashboardV3Routes(router) {
     // session by the kit's auto-store, so it sticks while clicking around:
     //   page   - tables below the side nav, across the 1280px page
     //   screen - tables across the whole browser window
+    //   fluid  - the whole page across the window, 188px side menu
     //   tested - as tested in round 6 (also the default when unset)
     // The switcher only shows once a value has been set.
     const tableWidth = req.session.data.tableWidth
