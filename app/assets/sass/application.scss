@@ -1508,61 +1508,6 @@
 
 }
 
-// MOJ scrollable pane — copied from MOJ Frontend 12.0.0
-// (src/moj/components/scrollable-pane/_scrollable-pane.scss). This project is
-// on MOJ Frontend 11.1.0, which doesn't have it; delete this block after
-// upgrading to 12. Shadows appear at an edge only while there is more content
-// to scroll to: the white "local" gradients scroll with the content and
-// cover the fixed "scroll" shadows once the end is reached.
-// https://design-patterns.service.justice.gov.uk/components/scrollable-pane/
-.moj-scrollable-pane {
-  --moj-scrollable-pane-background-colour: #ffffff;
-  --moj-scrollable-pane-transparent-colour: rgb(255, 255, 255, 0);
-  --moj-scrollable-pane-shadow-colour: rgb(0, 0, 0, 0.3);
-  --moj-scrollable-pane-shadow-size: 1.25em;
-}
-
-.moj-scrollable-pane[role="region"][tabindex][aria-label],
-.moj-scrollable-pane[role="region"][tabindex][aria-labelledby] {
-  overflow-x: scroll;
-  background:
-    linear-gradient(
-      to right,
-      var(--moj-scrollable-pane-background-colour),
-      var(--moj-scrollable-pane-background-colour),
-      var(--moj-scrollable-pane-transparent-colour) calc(var(--moj-scrollable-pane-shadow-size) * 2)
-    ),
-    radial-gradient(
-      farthest-side at 0 50%,
-      var(--moj-scrollable-pane-shadow-colour),
-      var(--moj-scrollable-pane-transparent-colour)
-    ),
-    linear-gradient(
-      to left,
-      var(--moj-scrollable-pane-background-colour),
-      var(--moj-scrollable-pane-background-colour),
-      var(--moj-scrollable-pane-transparent-colour) calc(var(--moj-scrollable-pane-shadow-size) * 2)
-    ),
-    radial-gradient(
-        farthest-side at 100% 50%,
-        var(--moj-scrollable-pane-shadow-colour),
-        var(--moj-scrollable-pane-transparent-colour)
-      )
-      100%;
-  background-color: var(--moj-scrollable-pane-background-colour);
-  background-repeat: no-repeat;
-  background-attachment: local, scroll, local, scroll;
-  background-size:
-    100% 100%,
-    var(--moj-scrollable-pane-shadow-size) 100%,
-    100% 100%,
-    var(--moj-scrollable-pane-shadow-size) 100%;
-
-  &:focus {
-    @include govuk-focused-box;
-  }
-}
-
 // Sticky first column (v3 Baseline and Post intervention): the Ref stays in
 // view while the rest of the table scrolls under it. The white background
 // hides the cells passing beneath, and the right-hand rule marks the edge.
