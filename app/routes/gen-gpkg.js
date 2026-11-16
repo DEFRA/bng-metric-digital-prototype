@@ -174,6 +174,13 @@ async function handleWorkbook(req, res, gen) {
     })
   }
 
+  const format = req.body.format || gen.FORMAT_LEGACY
+  if (!gen.VALID_FORMATS.has(format)) {
+    return res.status(400).render('gen-gpkg/index', {
+      error: `Format must be one of: ${[...gen.VALID_FORMATS].join(', ')}`
+    })
+  }
+
   const strict = req.body.strict === 'on' || req.body.strict === 'true'
   const centre = parseCentre(req.body.centreEasting, req.body.centreNorthing)
 
@@ -182,7 +189,8 @@ async function handleWorkbook(req, res, gen) {
     workbookFilename: req.file.originalname,
     mode,
     strict,
-    centre
+    centre,
+    format
   })
 
   if (!result.success) {
@@ -190,6 +198,11 @@ async function handleWorkbook(req, res, gen) {
       success: false,
       messages: result.messages
     })
+  }
+
+  // The BNG Service template holds the whole site, both stages, in one file.
+  if (format === gen.FORMAT_BNG_SERVICE) {
+    return sendBuffer(res, result)
   }
 
   const files = []

@@ -151,3 +151,30 @@ test('POST source=permutations streams a zip through the route', async () => {
   assert.equal(res.headers['Content-Type'], 'application/zip')
   assert.match(res.headers['Content-Disposition'], /bng-permutations-\d+\.zip/)
 })
+
+test('POST source=workbook refuses a format the generator does not know', async () => {
+  const handler = getPostHandler()
+  const rendered = {}
+  const res = {
+    status(code) {
+      rendered.status = code
+      return res
+    },
+    render(view, data) {
+      rendered.view = view
+      rendered.data = data
+    }
+  }
+  const req = {
+    body: { source: 'workbook', format: 'shapefile', mode: 'both' },
+    file: { buffer: Buffer.from('not read'), originalname: 'metric.xlsm' }
+  }
+
+  await handler(req, res, (err) => {
+    if (err) throw err
+  })
+
+  assert.equal(rendered.status, 400)
+  assert.equal(rendered.view, 'gen-gpkg/index')
+  assert.match(rendered.data.error, /legacy, bng-service/)
+})

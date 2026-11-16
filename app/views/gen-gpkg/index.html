@@ -25,7 +25,7 @@
     </p>
 
     <p class="govuk-body">
-      Workbook mode reads a filled-in Statutory Biodiversity Metric workbook and produces a matching baseline + post-intervention pair.
+      Workbook mode reads a filled-in Statutory Biodiversity Metric workbook and produces a matching baseline + post-intervention pair in the Natural England template, or one file in the BNG Service template.
     </p>
 
     {% set syntheticBlock %}
@@ -107,6 +107,24 @@
         <div class="govuk-hint">Filled-in Statutory Biodiversity Metric v4 workbook (.xlsx or .xlsm). Max 25 MB.</div>
         <input class="govuk-file-upload" id="workbook" name="workbook" type="file" accept=".xlsx,.xlsm">
       </div>
+
+      {{ govukRadios({
+        name: "format",
+        fieldset: { legend: { text: "Template format", classes: "govuk-fieldset__legend--s" } },
+        items: [
+          {
+            value: "legacy",
+            text: "Natural England template (default)",
+            hint: { text: "A baseline file and a post-intervention file." },
+            checked: true
+          },
+          {
+            value: "bng-service",
+            text: "BNG Service template",
+            hint: { text: "One file that holds the baseline and the post-intervention habitats. \"Baseline only\" leaves the post-intervention layers empty; the other two choices give the same file." }
+          }
+        ]
+      }) }}
 
       {{ govukRadios({
         name: "mode",
