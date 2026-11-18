@@ -1270,7 +1270,6 @@ const surplusOrDeficit = (value) => (value < 0 ? 'deficit' : 'surplus')
 // red bar on their total row, as in the Figma.
 function broadHabitatTables(groups) {
   return groups.map((group) => ({
-    classes: 'app-trading-box__table',
     head: [{ text: `${group.broadHabitat} habitat types` }, UNIT_CHANGE_HEAD],
     rows: group.items
       .map((i) => [
@@ -1348,23 +1347,20 @@ function areaTradingBoxes(section) {
             title: `Low distinctiveness ${surplusOrDeficit(ts.low.netChange)}`,
             value: units(ts.low.netChange),
             tables: [
-              {
-                ...changeTable(
-                  [
-                    { text: 'Broad habitat' },
-                    { text: 'Habitat type' },
-                    UNIT_CHANGE_HEAD
-                  ],
-                  ts.low.items.map((i) => [
-                    { text: i.broadHabitat },
-                    { text: i.habitatType },
-                    { text: fixed(i.change), format: 'numeric' }
-                  ]),
-                  ts.low.netChange,
-                  'Total unit change'
-                ),
-                classes: 'app-trading-box__table'
-              }
+              changeTable(
+                [
+                  { text: 'Broad habitat' },
+                  { text: 'Habitat type' },
+                  UNIT_CHANGE_HEAD
+                ],
+                ts.low.items.map((i) => [
+                  { text: i.broadHabitat },
+                  { text: i.habitatType },
+                  { text: fixed(i.change), format: 'numeric' }
+                ]),
+                ts.low.netChange,
+                'Total unit change'
+              )
             ]
           },
           {
