@@ -40,17 +40,27 @@
 
   <div class="{{ 'app-sidebar-layout__main' if fluidPage else 'govuk-grid-column-three-quarters' }}">
 
-    {% if tableWidthExperiment %}
-      <nav class="app-experiment-switcher" aria-label="Table width experiment">
-        <span class="app-experiment-switcher__label">Table width experiment:</span>
-        {% for option in tableWidths %}
-          {% if option.value == tableWidth %}
-            <strong aria-current="true">{{ option.text }}</strong>
-          {% else %}
-            <a class="govuk-link" href="{{ currentPath }}?tableWidth={{ option.value }}">{{ option.text }}</a>
-          {% endif %}
+    {# Experiment switchers: shown once either experiment is set in the URL.
+       The trading layout row only shows on pages that set
+       `tradingLayoutSwitch` (the Area habitats trading summary). #}
+    {% set widthSwitch = { label: "Table width experiment", param: "tableWidth", current: tableWidth, options: tableWidths } %}
+    {% set layoutSwitch = { label: "Trading rules layout", param: "tradingLayout", current: tradingLayout, options: tradingLayouts } %}
+    {% set experiments = [widthSwitch, layoutSwitch] if tradingLayoutSwitch else [widthSwitch] %}
+    {% if tableWidthExperiment or tradingLayoutExperiment %}
+      <div class="app-experiment-switcher">
+        {% for experiment in experiments %}
+          <nav class="app-experiment-switcher__row" aria-label="{{ experiment.label }}">
+            <span class="app-experiment-switcher__label">{{ experiment.label }}:</span>
+            {% for option in experiment.options %}
+              {% if option.value == experiment.current %}
+                <strong aria-current="true">{{ option.text }}</strong>
+              {% else %}
+                <a class="govuk-link" href="{{ currentPath }}?{{ experiment.param }}={{ option.value }}">{{ option.text }}</a>
+              {% endif %}
+            {% endfor %}
+          </nav>
         {% endfor %}
-      </nav>
+      </div>
     {% endif %}
 
     <div class="app-page-header{{ ' app-uncapped' if uncappedTables and tablesOnly }}">

@@ -4,13 +4,39 @@
 {% from "govuk/components/table/macro.njk" import govukTable %}
 {% from "govuk/components/details/macro.njk" import govukDetails %}
 {% from "govuk/components/inset-text/macro.njk" import govukInsetText %}
+{% from "govuk/components/summary-list/macro.njk" import govukSummaryList %}
 {% from "dashboard/macro.njk" import appDashboard %}
+{% from "project-dashboard-v3/_trading-box.html" import tradingBox %}
+
+{# Trading rules layout experiment: Area habitats only (Figma 5495:81649). #}
+{% set tradingLayoutSwitch = tradingBoxes %}
 
 {% block dashboardContent %}
   {% if not complete %}
     {{ govukInsetText({
       html: 'Trading rules are checked against your post-intervention habitats. <a class="govuk-link" href="/project-dashboard-v3/upload/choose">Upload a post-intervention file</a> to see whether they are met.'
     }) }}
+  {% elif tradingBoxes and tradingLayout == "boxes" %}
+    <h2 class="govuk-heading-m">Trading summary</h2>
+    {{ govukTable(tradingStatusTable) }}
+
+    {% for band in tradingBoxes.bands %}
+      <h2 class="govuk-heading-m govuk-!-margin-top-8">{{ band.heading }}</h2>
+      {{ govukSummaryList({
+        classes: "app-summary-list--trading",
+        rows: [
+          { key: { text: "Status" }, value: { html: '<strong class="govuk-tag ' ~ band.tag.classes ~ '">' ~ band.tag.text ~ '</strong>' } },
+          { key: { text: "Trading rule" }, value: { text: band.rule } }
+        ]
+      }) }}
+
+      {% for box in band.boxes %}
+        {{ tradingBox(box) }}
+      {% endfor %}
+    {% endfor %}
+
+    <h2 class="govuk-heading-m govuk-!-margin-top-8">Unit surplus (or deficit)</h2>
+    {{ tradingBox(tradingBoxes.total) }}
   {% else %}
     {{ govukTable(tradingStatusTable) }}
 
