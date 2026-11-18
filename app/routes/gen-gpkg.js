@@ -78,6 +78,16 @@ function groupFlaws(flaws) {
   }
 }
 
+// Re-render the form with an error, keeping the options and the user's input.
+function renderFormError(res, gen, req, error) {
+  return res.status(400).render('gen-gpkg/index', {
+    flawGroups: groupFlaws(gen.listFlaws()),
+    purposes: gen.PERMUTATION_PURPOSES,
+    error,
+    form: req.body
+  })
+}
+
 function sendBuffer(res, { buffer, filenameHint }) {
   res.set('Content-Type', 'application/geopackage+sqlite3')
   res.set('Content-Disposition', `attachment; filename="${filenameHint}"`)
@@ -162,23 +172,32 @@ async function handleSynthetic(req, res, gen) {
 
 async function handleWorkbook(req, res, gen) {
   if (!req.file) {
-    return res.status(400).render('gen-gpkg/index', {
-      error: 'Upload a workbook (.xlsx or .xlsm) to use the workbook flow.'
-    })
+    return renderFormError(
+      res,
+      gen,
+      req,
+      'Upload a workbook (.xlsx or .xlsm) to use the workbook flow.'
+    )
   }
 
   const mode = req.body.mode || gen.MODE_BOTH
   if (!gen.VALID_MODES.has(mode)) {
-    return res.status(400).render('gen-gpkg/index', {
-      error: `Mode must be one of: ${[...gen.VALID_MODES].join(', ')}`
-    })
+    return renderFormError(
+      res,
+      gen,
+      req,
+      `Mode must be one of: ${[...gen.VALID_MODES].join(', ')}`
+    )
   }
 
   const format = req.body.format || gen.FORMAT_LEGACY
   if (!gen.VALID_FORMATS.has(format)) {
-    return res.status(400).render('gen-gpkg/index', {
-      error: `Format must be one of: ${[...gen.VALID_FORMATS].join(', ')}`
-    })
+    return renderFormError(
+      res,
+      gen,
+      req,
+      `Format must be one of: ${[...gen.VALID_FORMATS].join(', ')}`
+    )
   }
 
   const strict = req.body.strict === 'on' || req.body.strict === 'true'
@@ -297,12 +316,7 @@ function registerGenGpkgRoutes(router) {
         // with it. Everything else propagates to the kit's default handler.
         if (err && err.name === 'FlawSelectionError') {
           const gen = await getGenerator()
-          return res.status(400).render('gen-gpkg/index', {
-            flawGroups: groupFlaws(gen.listFlaws()),
-            purposes: gen.PERMUTATION_PURPOSES,
-            error: err.message,
-            form: req.body
-          })
+          return renderFormError(res, gen, req, err.message)
         }
         return next(err)
       }
