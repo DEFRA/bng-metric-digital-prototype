@@ -2,9 +2,25 @@
  * The BNG Service template holds both stages in one file, with an area
  * habitat layer for each stage. The legacy template has one stage per file.
  */
+const STAGE_BASELINE = 'baseline'
+const STAGE_POST_INTERVENTION = 'post-intervention'
+
+/**
+ * Layer names in lower case: compare them with `isStageHabitatLayer`.
+ */
 const STAGE_HABITAT_LAYERS = {
-  baseline: 'area habitats baseline',
-  'post-intervention': 'area habitats post-intervention'
+  [STAGE_BASELINE]: 'area habitats baseline',
+  [STAGE_POST_INTERVENTION]: 'area habitats post-intervention'
+}
+
+/**
+ * Whether a layer is the area habitat layer of a stage, ignoring case.
+ * @param {string} name - The layer name
+ * @param {string} stage - "baseline" or "post-intervention"
+ * @returns {boolean}
+ */
+function isStageHabitatLayer(name, stage) {
+  return name.toLowerCase() === STAGE_HABITAT_LAYERS[stage]
 }
 
 /**
@@ -14,10 +30,7 @@ const STAGE_HABITAT_LAYERS = {
  * @returns {Object|undefined} The layer, or undefined if there is none
  */
 function findHabitatLayer(layers, stage) {
-  const stageLayerName = STAGE_HABITAT_LAYERS[stage]
-  const stageLayer = layers.find(
-    (l) => l.name.toLowerCase() === stageLayerName
-  )
+  const stageLayer = layers.find((l) => isStageHabitatLayer(l.name, stage))
   if (stageLayer) {
     return stageLayer
   }
@@ -32,6 +45,9 @@ function findHabitatLayer(layers, stage) {
 }
 
 module.exports = {
+  STAGE_BASELINE,
+  STAGE_POST_INTERVENTION,
   STAGE_HABITAT_LAYERS,
+  isStageHabitatLayer,
   findHabitatLayer
 }

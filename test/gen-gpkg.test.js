@@ -2,12 +2,12 @@ const test = require('node:test')
 const assert = require('node:assert/strict')
 const { Writable } = require('node:stream')
 const Database = require('better-sqlite3')
-const XLSX = require('xlsx')
 const {
   sendZip,
   permutationsZipFiles,
   registerGenGpkgRoutes
 } = require('../app/routes/gen-gpkg')
+const { makeWorkbookBuffer } = require('./helpers/metric-workbook')
 
 // Capture the POST handler the route registers, so a test can drive it with a
 // fake req/res without standing up the whole prototype-kit server (and its
@@ -49,73 +49,6 @@ function makeFakeRes() {
 
 // Every GeoPackage is a SQLite database, and starts with its header string.
 const SQLITE_MAGIC = Buffer.from('SQLite format 3\0')
-
-// A small metric workbook: one baseline habitat, lost, and one created
-// habitat. It has only the sheets and columns the workbook reader needs.
-function makeWorkbookBuffer() {
-  const significance =
-    'Area/compensation not in local strategy/ no local strategy'
-  const workbook = XLSX.utils.book_new()
-  XLSX.utils.book_append_sheet(
-    workbook,
-    XLSX.utils.aoa_to_sheet([
-      [
-        'Ref',
-        'Broad Habitat',
-        'Habitat Type',
-        'Area (hectares)',
-        'Distinctiveness',
-        'Condition',
-        'Strategic significance',
-        'Area retained',
-        'Area enhanced',
-        'Area habitat lost'
-      ],
-      [],
-      [
-        '1',
-        'Urban',
-        'Artificial unvegetated, unsealed surface',
-        1,
-        'V.Low',
-        'N/A - Other',
-        significance,
-        0,
-        0,
-        1
-      ]
-    ]),
-    'A-1 On-Site Habitat Baseline'
-  )
-  XLSX.utils.book_append_sheet(
-    workbook,
-    XLSX.utils.aoa_to_sheet([
-      [
-        'Ref',
-        'Broad Habitat',
-        'Proposed habitat',
-        'Habitat',
-        'Area (hectares)',
-        'Distinctiveness',
-        'Condition',
-        'Strategic significance'
-      ],
-      [],
-      [
-        '1',
-        'Urban',
-        'Bare ground',
-        'Urban - Bare ground',
-        1,
-        'Low',
-        'Moderate',
-        significance
-      ]
-    ]),
-    'A-2 On-Site Habitat Creation'
-  )
-  return XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' })
-}
 
 // Post a workbook through the route and collect the response.
 async function postWorkbook(body) {

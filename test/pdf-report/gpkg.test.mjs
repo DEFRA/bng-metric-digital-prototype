@@ -13,8 +13,14 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import path from 'node:path'
 
-import { readSite, assertBngSrs } from '../../app/lib/pdf-report/gpkg.mjs'
+import {
+  readSite,
+  assertBngSrs,
+  STAGE_BASELINE,
+  STAGE_POST_INTERVENTION
+} from '../../app/lib/pdf-report/gpkg.mjs'
 import { envelopeOf, polygonAreaSqm, lineLengthMetres } from '../../app/lib/pdf-report/geometry.mjs'
+import { writeBngServiceFile } from '../helpers/metric-workbook.js'
 
 const EXAMPLES = path.resolve(import.meta.dirname, '..', '..', 'example-files')
 const BASELINE = path.join(EXAMPLES, 'Baseline - complete with area refs.gpkg')
@@ -113,4 +119,40 @@ test('reads a post-intervention GeoPackage too', () => {
   const site = readSite(path.join(EXAMPLES, 'Post-intervention - complete.gpkg'))
   assert.equal(site.layers.habitats.features.length, 12)
   assert.ok(site.layers.habitats.features[0].properties['Proposed Habitat Type'])
+})
+
+test('reads each stage of a BNG Service file', async () => {
+  const file = await writeBngServiceFile()
+
+  const baseline = readSite(file, STAGE_BASELINE)
+  assert.equal(baseline.holdsStages, true)
+  assert.ok(baseline.redLine, 'expected a red line boundary')
+  assert.equal(baseline.layers.habitats.name, 'Area Habitats Baseline')
+  assert.deepEqual(
+    baseline.layers.habitats.features.map((f) => f.properties['Baseline Habitat Type']),
+    ['Artificial unvegetated, unsealed surface']
+  )
+
+  const postIntervention = readSite(file, STAGE_POST_INTERVENTION)
+  assert.equal(postIntervention.holdsStages, true)
+  assert.equal(postIntervention.layers.habitats.name, 'Area Habitats Post-Intervention')
+  assert.deepEqual(
+    postIntervention.layers.habitats.features.map((f) => f.properties['Proposed Habitat Type']),
+    ['Bare ground']
+  )
+})
+
+test('reads the baseline stage of a BNG Service file by default', async () => {
+  const site = readSite(await writeBngServiceFile())
+  assert.equal(site.layers.habitats.name, 'Area Habitats Baseline')
+})
+
+test('a legacy file does not hold stages, and gives the same habitats for each stage', () => {
+  const baseline = readSite(BASELINE, STAGE_BASELINE)
+  const postIntervention = readSite(BASELINE, STAGE_POST_INTERVENTION)
+
+  assert.equal(baseline.holdsStages, false)
+  assert.equal(postIntervention.holdsStages, false)
+  assert.equal(postIntervention.layers.habitats.name, 'Habitats')
+  assert.equal(postIntervention.layers.habitats.features.length, 3)
 })

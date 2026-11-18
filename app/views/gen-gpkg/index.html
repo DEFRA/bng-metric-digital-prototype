@@ -116,12 +116,13 @@
             value: "legacy",
             text: "Natural England template (default)",
             hint: { text: "A baseline file and a post-intervention file." },
-            checked: true
+            checked: not form.format or form.format == "legacy"
           },
           {
             value: "bng-service",
             text: "BNG Service template",
-            hint: { text: "One file that holds the baseline and the post-intervention habitats. \"Baseline only\" leaves the post-intervention layers empty; the other two choices give the same file." }
+            hint: { text: "One file that holds the baseline and the post-intervention habitats. \"Baseline only\" leaves the post-intervention layers empty; the other two choices give the same file." },
+            checked: form.format == "bng-service"
           }
         ]
       }) }}

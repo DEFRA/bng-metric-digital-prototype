@@ -84,6 +84,37 @@ test('buildProjectDashboardMapData selects uploaded habitat map layers', () => {
   assert.equal(mapData.trees, featureCollection);
 });
 
+test('buildProjectDashboardMapData selects the habitat layer of the upload kind', () => {
+  const boundary = makeMapData('boundary').siteBoundary;
+  const baselineHabitats = makeMapData('baseline').parcels;
+  const postInterventionHabitats = makeMapData('post-intervention').parcels;
+  const gpkgData = {
+    layers: [
+      { name: 'Red Line Boundary' },
+      { name: 'Area Habitats Baseline' },
+      { name: 'Area Habitats Post-Intervention' }
+    ],
+    geometries: {
+      'Red Line Boundary': boundary,
+      'Area Habitats Baseline': baselineHabitats,
+      'Area Habitats Post-Intervention': postInterventionHabitats
+    }
+  };
+
+  assert.equal(
+    buildProjectDashboardMapData(gpkgData).parcels,
+    baselineHabitats
+  );
+  assert.equal(
+    buildProjectDashboardMapData(gpkgData, 'baseline').parcels,
+    baselineHabitats
+  );
+  assert.equal(
+    buildProjectDashboardMapData(gpkgData, 'post-intervention').parcels,
+    postInterventionHabitats
+  );
+});
+
 test('buildProjectDashboardMapData requires boundary and parcel layers', () => {
   assert.throws(
     () => buildProjectDashboardMapData({ layers: [], geometries: {} }),

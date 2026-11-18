@@ -10,7 +10,10 @@ const {
   calculateLineLength,
   isPolygonSelfIntersecting
 } = require('../lib/geometry-utils')
-const { findHabitatLayer } = require('../lib/habitat-layers')
+const {
+  STAGE_POST_INTERVENTION,
+  findHabitatLayer
+} = require('../lib/habitat-layers')
 
 //const { isWithinUK, getLPA, getNCA, getLNRS } = require('../lib/arcgis-queries')
 const { isWithinUK } = require('../lib/arcgis-queries')
@@ -194,7 +197,7 @@ function registerOnSitePostInterventionRoutes(router) {
         // Find parcels layer and update Units property
         const parcelsLayerInfo = findHabitatLayer(
           gpkgData.layers,
-          'post-intervention'
+          STAGE_POST_INTERVENTION
         )
         
         if (parcelsLayerInfo && gpkgData.geometries[parcelsLayerInfo.name]) {
@@ -247,7 +250,7 @@ function registerOnSitePostInterventionRoutes(router) {
       ) || layers[0]
 
     let habitatParcels =
-      findHabitatLayer(layers, 'post-intervention') ||
+      findHabitatLayer(layers, STAGE_POST_INTERVENTION) ||
       (layers.length > 1 ? layers[1] : layers[0])
 
     // Calculate areas in hectares
@@ -483,7 +486,7 @@ function registerOnSitePostInterventionRoutes(router) {
           l.name.toLowerCase().includes('boundary') ||
           l.name.toLowerCase().includes('site')
       )
-      const parcelsLayerInfo = findHabitatLayer(layers, 'post-intervention')
+      const parcelsLayerInfo = findHabitatLayer(layers, STAGE_POST_INTERVENTION)
 
       const boundaryLayer = boundaryLayerInfo
         ? geometries[boundaryLayerInfo.name]
@@ -904,7 +907,7 @@ function registerOnSitePostInterventionRoutes(router) {
     const geometries = req.session.data['geopackageGeometriesPostIntervention'] || {}
 
     // Find parcels layer
-    const parcelsLayerInfo = findHabitatLayer(layers, 'post-intervention')
+    const parcelsLayerInfo = findHabitatLayer(layers, STAGE_POST_INTERVENTION)
 
     if (!parcelsLayerInfo) {
       return null
@@ -1134,7 +1137,7 @@ function registerOnSitePostInterventionRoutes(router) {
         l.name.toLowerCase().includes('boundary') ||
         l.name.toLowerCase().includes('site')
     )
-    const parcelsLayerInfo = findHabitatLayer(layers, 'post-intervention')
+    const parcelsLayerInfo = findHabitatLayer(layers, STAGE_POST_INTERVENTION)
     const siteBoundary = boundaryLayerInfo && geometries[boundaryLayerInfo.name]
       ? geometries[boundaryLayerInfo.name]
       : null
@@ -1374,7 +1377,7 @@ function registerOnSitePostInterventionRoutes(router) {
         l.name.toLowerCase().includes('boundary') ||
         l.name.toLowerCase().includes('site')
     )
-    const parcelsLayerInfo = findHabitatLayer(layers, 'post-intervention')
+    const parcelsLayerInfo = findHabitatLayer(layers, STAGE_POST_INTERVENTION)
     const siteBoundary = boundaryLayerInfo && geometries[boundaryLayerInfo.name]
       ? geometries[boundaryLayerInfo.name]
       : null
@@ -1422,7 +1425,7 @@ function registerOnSitePostInterventionRoutes(router) {
     const geometries = req.session.data['geopackageGeometriesPostIntervention'] || {}
 
     // Find parcels layer by name (parcel/habitat), or fallback: find any layer containing this parcel ref
-    let parcelsLayerInfo = findHabitatLayer(layers, 'post-intervention')
+    let parcelsLayerInfo = findHabitatLayer(layers, STAGE_POST_INTERVENTION)
     let parcelsLayer = parcelsLayerInfo && geometries[parcelsLayerInfo.name]
       ? geometries[parcelsLayerInfo.name]
       : null

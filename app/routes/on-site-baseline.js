@@ -11,7 +11,7 @@ const {
   isPolygonSelfIntersecting,
   doLineSegmentsIntersect
 } = require('../lib/geometry-utils')
-const { findHabitatLayer } = require('../lib/habitat-layers')
+const { STAGE_BASELINE, findHabitatLayer } = require('../lib/habitat-layers')
 const { isWithinUK, getLPA, getNCA, getLNRS } = require('../lib/arcgis-queries')
 const metricCalcs = require('../lib/metric-calcs')
 const { getBaselineUnits, distinctivenessCategories } = metricCalcs
@@ -705,7 +705,7 @@ function registerOnSiteBaselineRoutes(router) {
       ) || layers[0]
 
     let habitatParcels =
-      findHabitatLayer(layers, 'baseline') ||
+      findHabitatLayer(layers, STAGE_BASELINE) ||
       (layers.length > 1 ? layers[1] : layers[0])
 
     // Calculate areas in hectares
@@ -944,7 +944,7 @@ function registerOnSiteBaselineRoutes(router) {
           l.name.toLowerCase().includes('boundary') ||
           l.name.toLowerCase().includes('site')
       )
-      const parcelsLayerInfo = findHabitatLayer(layers, 'baseline')
+      const parcelsLayerInfo = findHabitatLayer(layers, STAGE_BASELINE)
 
       const boundaryLayer = boundaryLayerInfo
         ? geometries[boundaryLayerInfo.name]
@@ -1457,7 +1457,7 @@ function registerOnSiteBaselineRoutes(router) {
           l.name.toLowerCase().includes('boundary') ||
           l.name.toLowerCase().includes('site')
       )
-      const parcelsLayerInfo = findHabitatLayer(layers, 'baseline')
+      const parcelsLayerInfo = findHabitatLayer(layers, STAGE_BASELINE)
 
       siteBoundaryFeatureCollection = boundaryLayerInfo
         ? geometries[boundaryLayerInfo.name]
@@ -1641,7 +1641,7 @@ function registerOnSiteBaselineRoutes(router) {
     if (isGeoPackageFlow) {
       const layers = req.session.data['geopackageLayers'] || []
       const geometries = req.session.data['geopackageGeometries'] || {}
-      const parcelsLayerInfo = findHabitatLayer(layers, 'baseline')
+      const parcelsLayerInfo = findHabitatLayer(layers, STAGE_BASELINE)
 
       if (!parcelsLayerInfo || !geometries[parcelsLayerInfo.name]) {
         return res.status(404).send('Habitat parcel not found')

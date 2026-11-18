@@ -16,7 +16,14 @@
 
 import Database from 'better-sqlite3'
 
+import {
+  STAGE_BASELINE,
+  STAGE_POST_INTERVENTION,
+  isStageHabitatLayer
+} from '../habitat-layers.js'
 import { gpkgBlobToGeometry } from './wkb.mjs'
+
+export { STAGE_BASELINE, STAGE_POST_INTERVENTION }
 
 export const BNG_SRS_ID = 27700
 
@@ -32,24 +39,17 @@ const LAYER_ROLES = {
   'Urban Trees': 'trees'
 }
 
-export const STAGE_BASELINE = 'baseline'
-export const STAGE_POST_INTERVENTION = 'post-intervention'
-
 /**
  * The BNG Service template holds both stages in one file, with an area
- * habitat layer for each. Only the layer of the stage being read takes the
- * habitats role, so one stage cannot overwrite the other.
+ * habitat layer for each (app/lib/habitat-layers.js). Only the layer of the
+ * stage being read takes the habitats role, so one stage cannot overwrite the
+ * other.
  */
-const STAGE_HABITAT_LAYERS = {
-  [STAGE_BASELINE]: 'Area Habitats Baseline',
-  [STAGE_POST_INTERVENTION]: 'Area Habitats Post-Intervention'
-}
-
 function layerRole(name, stage) {
   if (LAYER_ROLES[name]) {
     return LAYER_ROLES[name]
   }
-  return name === STAGE_HABITAT_LAYERS[stage] ? 'habitats' : null
+  return isStageHabitatLayer(name, stage) ? 'habitats' : null
 }
 
 /**
@@ -162,7 +162,10 @@ export function readSite(filename, stage = STAGE_BASELINE) {
     let holdsStages = false
     for (const layer of readLayers(db, stage)) {
       assertBngSrs(layer.srsId, `layer "${layer.name}"`)
-      if (Object.values(STAGE_HABITAT_LAYERS).includes(layer.name)) {
+      if (
+        isStageHabitatLayer(layer.name, STAGE_BASELINE) ||
+        isStageHabitatLayer(layer.name, STAGE_POST_INTERVENTION)
+      ) {
         holdsStages = true
       }
       if (layer.role) {

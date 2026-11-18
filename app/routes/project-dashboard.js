@@ -23,7 +23,7 @@
 
 const multer = require('multer');
 const { parseGeoPackage } = require('../lib/geopackage-parser');
-const { findHabitatLayer } = require('../lib/habitat-layers');
+const { STAGE_BASELINE, findHabitatLayer } = require('../lib/habitat-layers');
 
 const upload = multer({ storage: multer.memoryStorage() });
 const maxFileSizeMB = 100;
@@ -42,7 +42,7 @@ function findLayer(layers, names) {
   });
 }
 
-function buildProjectDashboardMapData(gpkgData, stage = 'baseline') {
+function buildProjectDashboardMapData(gpkgData, stage = STAGE_BASELINE) {
   const layers = gpkgData.layers || [];
   const geometries = gpkgData.geometries || {};
   const boundaryLayer = findLayer(layers, ['boundary', 'site']);
