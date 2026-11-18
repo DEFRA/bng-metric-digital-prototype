@@ -115,6 +115,57 @@ test('buildProjectDashboardMapData selects the habitat layer of the upload kind'
   );
 });
 
+test('buildProjectDashboardMapData selects the hedgerow, watercourse and tree layers of the upload kind', () => {
+  const boundary = makeMapData('boundary').siteBoundary;
+  const habitats = makeMapData('habitats').parcels;
+  const stageLayers = {};
+  ['Baseline', 'Post-Intervention'].forEach((suffix) => {
+    ['Hedgerows', 'Watercourses', 'Urban Trees'].forEach((prefix) => {
+      stageLayers[`${prefix} ${suffix}`] = makeMapData(
+        `${prefix} ${suffix}`
+      ).parcels;
+    });
+  });
+  const gpkgData = {
+    layers: [
+      { name: 'Red Line Boundary' },
+      { name: 'Area Habitats Baseline' },
+      { name: 'Area Habitats Post-Intervention' },
+      ...Object.keys(stageLayers).map((name) => ({ name }))
+    ],
+    geometries: {
+      'Red Line Boundary': boundary,
+      'Area Habitats Baseline': habitats,
+      'Area Habitats Post-Intervention': habitats,
+      ...stageLayers
+    }
+  };
+
+  const mapData = buildProjectDashboardMapData(gpkgData, 'post-intervention');
+
+  assert.equal(mapData.hedgerows, stageLayers['Hedgerows Post-Intervention']);
+  assert.equal(
+    mapData.watercourses,
+    stageLayers['Watercourses Post-Intervention']
+  );
+  assert.equal(mapData.trees, stageLayers['Urban Trees Post-Intervention']);
+});
+
+test('buildProjectDashboardMapData rejects a BNG Service file without the habitat layer of the upload kind', () => {
+  const gpkgData = {
+    layers: [{ name: 'Red Line Boundary' }, { name: 'Area Habitats Baseline' }],
+    geometries: {
+      'Red Line Boundary': makeMapData('boundary').siteBoundary,
+      'Area Habitats Baseline': makeMapData('baseline').parcels
+    }
+  };
+
+  assert.throws(
+    () => buildProjectDashboardMapData(gpkgData, 'post-intervention'),
+    /boundary and habitat parcel layers/
+  );
+});
+
 test('buildProjectDashboardMapData requires boundary and parcel layers', () => {
   assert.throws(
     () => buildProjectDashboardMapData({ layers: [], geometries: {} }),

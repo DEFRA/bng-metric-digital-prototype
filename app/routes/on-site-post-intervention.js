@@ -12,7 +12,8 @@ const {
 } = require('../lib/geometry-utils')
 const {
   STAGE_POST_INTERVENTION,
-  findHabitatLayer
+  findHabitatLayer,
+  findStageLayer
 } = require('../lib/habitat-layers')
 
 //const { isWithinUK, getLPA, getNCA, getLNRS } = require('../lib/arcgis-queries')
@@ -262,19 +263,17 @@ function registerOnSitePostInterventionRoutes(router) {
       : 0
 
     // Find hedgerow layer
-    let hedgerowLayer = layers.find(
-      (l) =>
-        l.name.toLowerCase().includes('hedgerow') ||
-        l.name.toLowerCase().includes('hedge')
-    )
+    let hedgerowLayer = findStageLayer(layers, STAGE_POST_INTERVENTION, [
+      'hedgerow',
+      'hedge'
+    ])
 
     // Find watercourse layer
-    let watercourseLayer = layers.find(
-      (l) =>
-        l.name.toLowerCase().includes('watercourse') ||
-        l.name.toLowerCase().includes('river') ||
-        l.name.toLowerCase().includes('stream')
-    )
+    let watercourseLayer = findStageLayer(layers, STAGE_POST_INTERVENTION, [
+      'watercourse',
+      'river',
+      'stream'
+    ])
 
     // Calculate hedgerow totals
     let hedgerowTotalLengthM = 0
@@ -665,16 +664,15 @@ function registerOnSitePostInterventionRoutes(router) {
       }
 
       // Find hedgerow and watercourse layers from uploaded GeoPackage
-      const hedgerowLayerInfo = layers.find(
-        (l) =>
-          l.name.toLowerCase().includes('hedgerow') ||
-          l.name.toLowerCase().includes('hedge')
+      const hedgerowLayerInfo = findStageLayer(
+        layers,
+        STAGE_POST_INTERVENTION,
+        ['hedgerow', 'hedge']
       )
-      const watercourseLayerInfo = layers.find(
-        (l) =>
-          l.name.toLowerCase().includes('watercourse') ||
-          l.name.toLowerCase().includes('river') ||
-          l.name.toLowerCase().includes('stream')
+      const watercourseLayerInfo = findStageLayer(
+        layers,
+        STAGE_POST_INTERVENTION,
+        ['watercourse', 'river', 'stream']
       )
 
       const hedgerowLayer = hedgerowLayerInfo

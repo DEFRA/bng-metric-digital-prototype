@@ -11,7 +11,11 @@ const {
   isPolygonSelfIntersecting,
   doLineSegmentsIntersect
 } = require('../lib/geometry-utils')
-const { STAGE_BASELINE, findHabitatLayer } = require('../lib/habitat-layers')
+const {
+  STAGE_BASELINE,
+  findHabitatLayer,
+  findStageLayer
+} = require('../lib/habitat-layers')
 const { isWithinUK, getLPA, getNCA, getLNRS } = require('../lib/arcgis-queries')
 const metricCalcs = require('../lib/metric-calcs')
 const { getBaselineUnits, distinctivenessCategories } = metricCalcs
@@ -717,19 +721,17 @@ function registerOnSiteBaselineRoutes(router) {
       : 0
 
     // Find hedgerow layer
-    let hedgerowLayer = layers.find(
-      (l) =>
-        l.name.toLowerCase().includes('hedgerow') ||
-        l.name.toLowerCase().includes('hedge')
-    )
+    let hedgerowLayer = findStageLayer(layers, STAGE_BASELINE, [
+      'hedgerow',
+      'hedge'
+    ])
 
     // Find watercourse layer
-    let watercourseLayer = layers.find(
-      (l) =>
-        l.name.toLowerCase().includes('watercourse') ||
-        l.name.toLowerCase().includes('river') ||
-        l.name.toLowerCase().includes('stream')
-    )
+    let watercourseLayer = findStageLayer(layers, STAGE_BASELINE, [
+      'watercourse',
+      'river',
+      'stream'
+    ])
 
     // Calculate hedgerow totals
     let hedgerowTotalLengthM = 0
@@ -1029,17 +1031,15 @@ function registerOnSiteBaselineRoutes(router) {
       }
 
       // Find hedgerow and watercourse layers from uploaded GeoPackage
-      const hedgerowLayerInfo = layers.find(
-        (l) =>
-          l.name.toLowerCase().includes('hedgerow') ||
-          l.name.toLowerCase().includes('hedge')
-      )
-      const watercourseLayerInfo = layers.find(
-        (l) =>
-          l.name.toLowerCase().includes('watercourse') ||
-          l.name.toLowerCase().includes('river') ||
-          l.name.toLowerCase().includes('stream')
-      )
+      const hedgerowLayerInfo = findStageLayer(layers, STAGE_BASELINE, [
+        'hedgerow',
+        'hedge'
+      ])
+      const watercourseLayerInfo = findStageLayer(layers, STAGE_BASELINE, [
+        'watercourse',
+        'river',
+        'stream'
+      ])
 
       const hedgerowLayer = hedgerowLayerInfo
         ? geometries[hedgerowLayerInfo.name]
@@ -1466,17 +1466,15 @@ function registerOnSiteBaselineRoutes(router) {
         ? geometries[parcelsLayerInfo.name]
         : null
 
-      const hedgerowLayerInfo = layers.find(
-        (l) =>
-          l.name.toLowerCase().includes('hedgerow') ||
-          l.name.toLowerCase().includes('hedge')
-      )
-      const watercourseLayerInfo = layers.find(
-        (l) =>
-          l.name.toLowerCase().includes('watercourse') ||
-          l.name.toLowerCase().includes('river') ||
-          l.name.toLowerCase().includes('stream')
-      )
+      const hedgerowLayerInfo = findStageLayer(layers, STAGE_BASELINE, [
+        'hedgerow',
+        'hedge'
+      ])
+      const watercourseLayerInfo = findStageLayer(layers, STAGE_BASELINE, [
+        'watercourse',
+        'river',
+        'stream'
+      ])
 
       hedgerowsFeatureCollection = hedgerowLayerInfo
         ? geometries[hedgerowLayerInfo.name]

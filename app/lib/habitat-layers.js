@@ -24,6 +24,50 @@ function isStageHabitatLayer(name, stage) {
 }
 
 /**
+ * The stage of a layer from the suffix of its name, ignoring case. Each
+ * layer of a BNG Service file ends with its stage, for example
+ * "Hedgerows Baseline".
+ * @param {string} name - The layer name
+ * @returns {string|undefined} The stage, or undefined for a legacy layer
+ */
+function layerStage(name) {
+  const lowerName = name.toLowerCase()
+  return [STAGE_BASELINE, STAGE_POST_INTERVENTION].find((stage) =>
+    lowerName.endsWith(' ' + stage)
+  )
+}
+
+/**
+ * Whether the layers come from a BNG Service file, which holds both stages.
+ * @param {Array} layers - Layers, each with a name
+ * @returns {boolean}
+ */
+function hasStageLayers(layers) {
+  return layers.some((l) => layerStage(l.name))
+}
+
+/**
+ * Find the layer of a stage whose name contains one of the keywords.
+ * In a BNG Service file, only a layer of the stage matches, so a missing
+ * layer gives undefined and never the layer of the other stage.
+ * @param {Array} layers - Layers, each with a name
+ * @param {string} stage - "baseline" or "post-intervention"
+ * @param {Array<string>} keywords - Lower case parts of the layer name
+ * @returns {Object|undefined} The layer, or undefined if there is none
+ */
+function findStageLayer(layers, stage, keywords) {
+  const matchesKeyword = (l) =>
+    keywords.some((keyword) => l.name.toLowerCase().includes(keyword))
+
+  if (hasStageLayers(layers)) {
+    return layers.find((l) => layerStage(l.name) === stage && matchesKeyword(l))
+  }
+
+  // Legacy template: the file holds one stage, so take its layer.
+  return layers.find(matchesKeyword)
+}
+
+/**
  * Find the area habitat layer for a stage.
  * @param {Array} layers - Layers, each with a name
  * @param {string} stage - "baseline" or "post-intervention"
@@ -35,8 +79,13 @@ function findHabitatLayer(layers, stage) {
     return stageLayer
   }
 
+  // A BNG Service file without the layer of the stage: do not take the
+  // layer of the other stage.
+  if (hasStageLayers(layers)) {
+    return undefined
+  }
+
   // Legacy template: the file holds one stage, so take its habitat layer.
-  // An unknown stage also uses this rule.
   return layers.find(
     (l) =>
       l.name.toLowerCase().includes('parcel') ||
@@ -49,5 +98,7 @@ module.exports = {
   STAGE_POST_INTERVENTION,
   STAGE_HABITAT_LAYERS,
   isStageHabitatLayer,
+  layerStage,
+  findStageLayer,
   findHabitatLayer
 }

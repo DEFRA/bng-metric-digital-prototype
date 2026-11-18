@@ -23,7 +23,11 @@
 
 const multer = require('multer');
 const { parseGeoPackage } = require('../lib/geopackage-parser');
-const { STAGE_BASELINE, findHabitatLayer } = require('../lib/habitat-layers');
+const {
+  STAGE_BASELINE,
+  findHabitatLayer,
+  findStageLayer
+} = require('../lib/habitat-layers');
 
 const upload = multer({ storage: multer.memoryStorage() });
 const maxFileSizeMB = 100;
@@ -47,13 +51,13 @@ function buildProjectDashboardMapData(gpkgData, stage = STAGE_BASELINE) {
   const geometries = gpkgData.geometries || {};
   const boundaryLayer = findLayer(layers, ['boundary', 'site']);
   const parcelsLayer = findHabitatLayer(layers, stage);
-  const hedgerowsLayer = findLayer(layers, ['hedgerow', 'hedge']);
-  const watercoursesLayer = findLayer(layers, [
+  const hedgerowsLayer = findStageLayer(layers, stage, ['hedgerow', 'hedge']);
+  const watercoursesLayer = findStageLayer(layers, stage, [
     'watercourse',
     'river',
     'stream'
   ]);
-  const treesLayer = findLayer(layers, ['tree']);
+  const treesLayer = findStageLayer(layers, stage, ['tree']);
 
   if (!boundaryLayer || !parcelsLayer) {
     throw new Error(
