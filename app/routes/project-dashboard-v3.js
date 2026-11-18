@@ -1259,6 +1259,12 @@ const TRADING_LAYOUTS = [
   { value: 'boxes', text: 'Unit boxes with details' }
 ]
 
+// Medium rule for private beta (Figma 5495:81649): higher bands aren't part
+// of private beta, so only same-broad-habitat replacement is described. The
+// tested layout and habitat pages keep the round 6 wording as tested.
+const PRIVATE_BETA_MEDIUM_RULE =
+  'Losses must be replaced by area habitat units of other medium band habitats within the same broad habitat type.'
+
 // "deficit" or "surplus", from the sign of the units.
 const surplusOrDeficit = (value) => (value < 0 ? 'deficit' : 'surplus')
 
@@ -1314,9 +1320,7 @@ function areaTradingBoxes(section) {
       {
         heading: 'Medium distinctiveness',
         tag: metTag(bandMet(section, 'Medium')),
-        // Same wording as the tested layout and habitat pages. The Figma's
-        // shorter version leaves out "or any habitat from a higher band".
-        rule: TRADING_RULES[section.id].Medium,
+        rule: PRIVATE_BETA_MEDIUM_RULE,
         boxes: [
           {
             title: 'Medium unit deficit',
