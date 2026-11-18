@@ -13,7 +13,8 @@ const {
 const {
   STAGE_POST_INTERVENTION,
   findHabitatLayer,
-  findStageLayer
+  findStageLayer,
+  hasStageLayers
 } = require('../lib/habitat-layers')
 
 //const { isWithinUK, getLPA, getNCA, getLNRS } = require('../lib/arcgis-queries')
@@ -250,9 +251,15 @@ function registerOnSitePostInterventionRoutes(router) {
           l.name.toLowerCase().includes('redline')
       ) || layers[0]
 
+    // A BNG Service file holds both stages: do not take a layer by position,
+    // as it can be the habitat layer of the other stage.
     let habitatParcels =
       findHabitatLayer(layers, STAGE_POST_INTERVENTION) ||
-      (layers.length > 1 ? layers[1] : layers[0])
+      (hasStageLayers(layers)
+        ? undefined
+        : layers.length > 1
+          ? layers[1]
+          : layers[0])
 
     // Calculate areas in hectares
     const boundaryAreaHa = siteBoundary
@@ -1443,8 +1450,9 @@ function registerOnSitePostInterventionRoutes(router) {
       }
     }
 
-    // Fallback: search all geometry layers for a feature with this parcel ref (e.g. if layer name has no "parcel"/"habitat")
-    if (!feature && geometries && typeof geometries === 'object') {
+    // Fallback: search all geometry layers for a feature with this parcel ref (e.g. if layer name has no "parcel"/"habitat").
+    // Legacy files only: a BNG Service file also holds the baseline layers, which this page must not change.
+    if (!feature && !hasStageLayers(layers) && geometries && typeof geometries === 'object') {
       for (const layerName of Object.keys(geometries)) {
         const layer = geometries[layerName]
         if (!layer || !layer.features || !Array.isArray(layer.features)) continue

@@ -19,7 +19,9 @@ import Database from 'better-sqlite3'
 import {
   STAGE_BASELINE,
   STAGE_POST_INTERVENTION,
-  isStageHabitatLayer
+  isStageHabitatLayer,
+  layerStage,
+  hasStageLayers
 } from '../habitat-layers.js'
 import { gpkgBlobToGeometry } from './wkb.mjs'
 
@@ -40,16 +42,32 @@ const LAYER_ROLES = {
 }
 
 /**
- * The BNG Service template holds both stages in one file, with an area
- * habitat layer for each (app/lib/habitat-layers.js). Only the layer of the
- * stage being read takes the habitats role, so one stage cannot overwrite the
- * other.
+ * The other layers of a BNG Service file, by name without the stage suffix,
+ * in lower case.
+ */
+const STAGE_LAYER_ROLES = {
+  hedgerows: 'hedgerows',
+  watercourses: 'watercourses',
+  'individual trees': 'trees'
+}
+
+/**
+ * The BNG Service template holds both stages in one file, with each layer
+ * named for its stage (app/lib/habitat-layers.js). Only the layers of the
+ * stage being read take a role, so one stage cannot overwrite the other.
  */
 function layerRole(name, stage) {
   if (LAYER_ROLES[name]) {
     return LAYER_ROLES[name]
   }
-  return isStageHabitatLayer(name, stage) ? 'habitats' : null
+  if (isStageHabitatLayer(name, stage)) {
+    return 'habitats'
+  }
+  if (layerStage(name) !== stage) {
+    return null
+  }
+  const baseName = name.slice(0, -(stage.length + 1)).toLowerCase()
+  return STAGE_LAYER_ROLES[baseName] ?? null
 }
 
 /**
@@ -159,15 +177,10 @@ export function readSite(filename, stage = STAGE_BASELINE) {
   const db = new Database(filename, { readonly: true, fileMustExist: true })
   try {
     const layers = {}
-    let holdsStages = false
-    for (const layer of readLayers(db, stage)) {
+    const fileLayers = readLayers(db, stage)
+    const holdsStages = hasStageLayers(fileLayers)
+    for (const layer of fileLayers) {
       assertBngSrs(layer.srsId, `layer "${layer.name}"`)
-      if (
-        isStageHabitatLayer(layer.name, STAGE_BASELINE) ||
-        isStageHabitatLayer(layer.name, STAGE_POST_INTERVENTION)
-      ) {
-        holdsStages = true
-      }
       if (layer.role) {
         layers[layer.role] = { ...layer, features: readFeatures(db, layer) }
       }

@@ -99,6 +99,7 @@ module.exports = {
   STAGE_HABITAT_LAYERS,
   isStageHabitatLayer,
   layerStage,
+  hasStageLayers,
   findStageLayer,
   findHabitatLayer
 }

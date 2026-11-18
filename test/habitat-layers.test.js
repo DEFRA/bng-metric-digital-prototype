@@ -5,6 +5,7 @@ const {
   STAGE_POST_INTERVENTION,
   isStageHabitatLayer,
   layerStage,
+  hasStageLayers,
   findStageLayer,
   findHabitatLayer
 } = require('../app/lib/habitat-layers')
@@ -140,6 +141,18 @@ test('layerStage reads the stage from the end of the layer name', () => {
   )
   assert.equal(layerStage('Hedgerows'), undefined)
   assert.equal(layerStage('Red Line Boundary'), undefined)
+})
+
+test('hasStageLayers is true when any layer is named for a stage', () => {
+  assert.equal(hasStageLayers(bngServiceLayers), true)
+  assert.equal(
+    hasStageLayers([
+      { name: 'Red Line Boundary' },
+      { name: 'Hedgerows Baseline' }
+    ]),
+    true
+  )
+  assert.equal(hasStageLayers(legacyLayers), false)
 })
 
 test('isStageHabitatLayer matches only the layer of the stage', () => {
