@@ -23,6 +23,7 @@
 
 const multer = require('multer');
 const { parseGeoPackage } = require('../lib/geopackage-parser');
+const { findHabitatLayer } = require('../lib/habitat-layers');
 
 const upload = multer({ storage: multer.memoryStorage() });
 const maxFileSizeMB = 100;
@@ -41,11 +42,11 @@ function findLayer(layers, names) {
   });
 }
 
-function buildProjectDashboardMapData(gpkgData) {
+function buildProjectDashboardMapData(gpkgData, stage = 'baseline') {
   const layers = gpkgData.layers || [];
   const geometries = gpkgData.geometries || {};
   const boundaryLayer = findLayer(layers, ['boundary', 'site']);
-  const parcelsLayer = findLayer(layers, ['parcel', 'habitat']);
+  const parcelsLayer = findHabitatLayer(layers, stage);
   const hedgerowsLayer = findLayer(layers, ['hedgerow', 'hedge']);
   const watercoursesLayer = findLayer(layers, [
     'watercourse',
@@ -1072,7 +1073,10 @@ function registerProjectDashboardRoutes(router) {
 
       try {
         const gpkgData = await parseGeoPackage(req.file.buffer);
-        const mapData = buildProjectDashboardMapData(gpkgData);
+        const mapData = buildProjectDashboardMapData(
+          gpkgData,
+          req.params.kind
+        );
         const mapDataByKind =
           req.session.data.projectDashboardMapDataByKind || {};
         const uploadedFilesByKind =

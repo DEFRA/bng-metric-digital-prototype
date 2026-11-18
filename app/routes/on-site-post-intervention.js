@@ -10,6 +10,7 @@ const {
   calculateLineLength,
   isPolygonSelfIntersecting
 } = require('../lib/geometry-utils')
+const { findHabitatLayer } = require('../lib/habitat-layers')
 
 //const { isWithinUK, getLPA, getNCA, getLNRS } = require('../lib/arcgis-queries')
 const { isWithinUK } = require('../lib/arcgis-queries')
@@ -191,10 +192,9 @@ function registerOnSitePostInterventionRoutes(router) {
         }
         
         // Find parcels layer and update Units property
-        const parcelsLayerInfo = gpkgData.layers.find(
-          (l) =>
-            l.name.toLowerCase().includes('parcel') ||
-            l.name.toLowerCase().includes('habitat')
+        const parcelsLayerInfo = findHabitatLayer(
+          gpkgData.layers,
+          'post-intervention'
         )
         
         if (parcelsLayerInfo && gpkgData.geometries[parcelsLayerInfo.name]) {
@@ -247,11 +247,8 @@ function registerOnSitePostInterventionRoutes(router) {
       ) || layers[0]
 
     let habitatParcels =
-      layers.find(
-        (l) =>
-          l.name.toLowerCase().includes('parcel') ||
-          l.name.toLowerCase().includes('habitat')
-      ) || (layers.length > 1 ? layers[1] : layers[0])
+      findHabitatLayer(layers, 'post-intervention') ||
+      (layers.length > 1 ? layers[1] : layers[0])
 
     // Calculate areas in hectares
     const boundaryAreaHa = siteBoundary
@@ -486,11 +483,7 @@ function registerOnSitePostInterventionRoutes(router) {
           l.name.toLowerCase().includes('boundary') ||
           l.name.toLowerCase().includes('site')
       )
-      const parcelsLayerInfo = layers.find(
-        (l) =>
-          l.name.toLowerCase().includes('parcel') ||
-          l.name.toLowerCase().includes('habitat')
-      )
+      const parcelsLayerInfo = findHabitatLayer(layers, 'post-intervention')
 
       const boundaryLayer = boundaryLayerInfo
         ? geometries[boundaryLayerInfo.name]
@@ -911,11 +904,7 @@ function registerOnSitePostInterventionRoutes(router) {
     const geometries = req.session.data['geopackageGeometriesPostIntervention'] || {}
 
     // Find parcels layer
-    const parcelsLayerInfo = layers.find(
-      (l) =>
-        l.name.toLowerCase().includes('parcel') ||
-        l.name.toLowerCase().includes('habitat')
-    )
+    const parcelsLayerInfo = findHabitatLayer(layers, 'post-intervention')
 
     if (!parcelsLayerInfo) {
       return null
@@ -1145,11 +1134,7 @@ function registerOnSitePostInterventionRoutes(router) {
         l.name.toLowerCase().includes('boundary') ||
         l.name.toLowerCase().includes('site')
     )
-    const parcelsLayerInfo = layers.find(
-      (l) =>
-        l.name.toLowerCase().includes('parcel') ||
-        l.name.toLowerCase().includes('habitat')
-    )
+    const parcelsLayerInfo = findHabitatLayer(layers, 'post-intervention')
     const siteBoundary = boundaryLayerInfo && geometries[boundaryLayerInfo.name]
       ? geometries[boundaryLayerInfo.name]
       : null
@@ -1389,11 +1374,7 @@ function registerOnSitePostInterventionRoutes(router) {
         l.name.toLowerCase().includes('boundary') ||
         l.name.toLowerCase().includes('site')
     )
-    const parcelsLayerInfo = layers.find(
-      (l) =>
-        l.name.toLowerCase().includes('parcel') ||
-        l.name.toLowerCase().includes('habitat')
-    )
+    const parcelsLayerInfo = findHabitatLayer(layers, 'post-intervention')
     const siteBoundary = boundaryLayerInfo && geometries[boundaryLayerInfo.name]
       ? geometries[boundaryLayerInfo.name]
       : null
@@ -1441,11 +1422,7 @@ function registerOnSitePostInterventionRoutes(router) {
     const geometries = req.session.data['geopackageGeometriesPostIntervention'] || {}
 
     // Find parcels layer by name (parcel/habitat), or fallback: find any layer containing this parcel ref
-    let parcelsLayerInfo = layers.find(
-      (l) =>
-        l.name.toLowerCase().includes('parcel') ||
-        l.name.toLowerCase().includes('habitat')
-    )
+    let parcelsLayerInfo = findHabitatLayer(layers, 'post-intervention')
     let parcelsLayer = parcelsLayerInfo && geometries[parcelsLayerInfo.name]
       ? geometries[parcelsLayerInfo.name]
       : null

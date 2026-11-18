@@ -32,6 +32,26 @@ const LAYER_ROLES = {
   'Urban Trees': 'trees'
 }
 
+export const STAGE_BASELINE = 'baseline'
+export const STAGE_POST_INTERVENTION = 'post-intervention'
+
+/**
+ * The BNG Service template holds both stages in one file, with an area
+ * habitat layer for each. Only the layer of the stage being read takes the
+ * habitats role, so one stage cannot overwrite the other.
+ */
+const STAGE_HABITAT_LAYERS = {
+  [STAGE_BASELINE]: 'Area Habitats Baseline',
+  [STAGE_POST_INTERVENTION]: 'Area Habitats Post-Intervention'
+}
+
+function layerRole(name, stage) {
+  if (LAYER_ROLES[name]) {
+    return LAYER_ROLES[name]
+  }
+  return name === STAGE_HABITAT_LAYERS[stage] ? 'habitats' : null
+}
+
 /**
  * List the feature layers, with the SRS id declared for each geometry column.
  *
@@ -40,7 +60,7 @@ const LAYER_ROLES = {
  * (`isLikelyBNG` in app/assets/javascripts/map-habitats-summary.js), which is
  * a heuristic that eventually guesses wrong — the file states the answer.
  */
-export function readLayers(db) {
+export function readLayers(db, stage = STAGE_BASELINE) {
   const contents = db
     .prepare(
       `SELECT table_name, identifier FROM gpkg_contents WHERE data_type = 'features'`
@@ -65,7 +85,7 @@ export function readLayers(db) {
     }
     layers.push({
       name: row.table_name,
-      role: LAYER_ROLES[row.table_name] ?? null,
+      role: layerRole(row.table_name, stage),
       geometryColumn: geometry.column_name,
       geometryType: geometry.geometry_type_name,
       srsId: geometry.srs_id
@@ -128,15 +148,23 @@ export function assertBngSrs(srsId, what) {
 /**
  * Read a whole site: the red line, and the habitat layers keyed by role.
  *
+ * `holdsStages` is true for a BNG Service file, which holds both stages; a
+ * legacy file holds one stage, and `stage` does not change what is read.
+ *
  * @param {string} filename path to a .gpkg
- * @returns {{ layers: object, redLine: object|null, siteName: string|null }}
+ * @param {string} [stage] the stage to read from a BNG Service file
+ * @returns {{ layers: object, redLine: object|null, siteName: string|null, holdsStages: boolean }}
  */
-export function readSite(filename) {
+export function readSite(filename, stage = STAGE_BASELINE) {
   const db = new Database(filename, { readonly: true, fileMustExist: true })
   try {
     const layers = {}
-    for (const layer of readLayers(db)) {
+    let holdsStages = false
+    for (const layer of readLayers(db, stage)) {
       assertBngSrs(layer.srsId, `layer "${layer.name}"`)
+      if (Object.values(STAGE_HABITAT_LAYERS).includes(layer.name)) {
+        holdsStages = true
+      }
       if (layer.role) {
         layers[layer.role] = { ...layer, features: readFeatures(db, layer) }
       }
@@ -149,7 +177,8 @@ export function readSite(filename) {
       siteName:
         redLine?.properties?.['Site Name'] ??
         layers.habitats?.features?.[0]?.properties?.['Site Name'] ??
-        null
+        null,
+      holdsStages
     }
   } finally {
     db.close()

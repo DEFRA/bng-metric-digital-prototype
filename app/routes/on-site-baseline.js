@@ -11,6 +11,7 @@ const {
   isPolygonSelfIntersecting,
   doLineSegmentsIntersect
 } = require('../lib/geometry-utils')
+const { findHabitatLayer } = require('../lib/habitat-layers')
 const { isWithinUK, getLPA, getNCA, getLNRS } = require('../lib/arcgis-queries')
 const metricCalcs = require('../lib/metric-calcs')
 const { getBaselineUnits, distinctivenessCategories } = metricCalcs
@@ -704,11 +705,8 @@ function registerOnSiteBaselineRoutes(router) {
       ) || layers[0]
 
     let habitatParcels =
-      layers.find(
-        (l) =>
-          l.name.toLowerCase().includes('parcel') ||
-          l.name.toLowerCase().includes('habitat')
-      ) || (layers.length > 1 ? layers[1] : layers[0])
+      findHabitatLayer(layers, 'baseline') ||
+      (layers.length > 1 ? layers[1] : layers[0])
 
     // Calculate areas in hectares
     const boundaryAreaHa = siteBoundary
@@ -946,11 +944,7 @@ function registerOnSiteBaselineRoutes(router) {
           l.name.toLowerCase().includes('boundary') ||
           l.name.toLowerCase().includes('site')
       )
-      const parcelsLayerInfo = layers.find(
-        (l) =>
-          l.name.toLowerCase().includes('parcel') ||
-          l.name.toLowerCase().includes('habitat')
-      )
+      const parcelsLayerInfo = findHabitatLayer(layers, 'baseline')
 
       const boundaryLayer = boundaryLayerInfo
         ? geometries[boundaryLayerInfo.name]
@@ -1463,11 +1457,7 @@ function registerOnSiteBaselineRoutes(router) {
           l.name.toLowerCase().includes('boundary') ||
           l.name.toLowerCase().includes('site')
       )
-      const parcelsLayerInfo = layers.find(
-        (l) =>
-          l.name.toLowerCase().includes('parcel') ||
-          l.name.toLowerCase().includes('habitat')
-      )
+      const parcelsLayerInfo = findHabitatLayer(layers, 'baseline')
 
       siteBoundaryFeatureCollection = boundaryLayerInfo
         ? geometries[boundaryLayerInfo.name]
@@ -1651,11 +1641,7 @@ function registerOnSiteBaselineRoutes(router) {
     if (isGeoPackageFlow) {
       const layers = req.session.data['geopackageLayers'] || []
       const geometries = req.session.data['geopackageGeometries'] || {}
-      const parcelsLayerInfo = layers.find(
-        (l) =>
-          l.name.toLowerCase().includes('parcel') ||
-          l.name.toLowerCase().includes('habitat')
-      )
+      const parcelsLayerInfo = findHabitatLayer(layers, 'baseline')
 
       if (!parcelsLayerInfo || !geometries[parcelsLayerInfo.name]) {
         return res.status(404).send('Habitat parcel not found')
