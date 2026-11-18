@@ -1259,10 +1259,6 @@ const TRADING_LAYOUTS = [
   { value: 'boxes', text: 'Unit boxes with details' }
 ]
 
-// The new layout words the Medium rule as the Figma does.
-const BOX_MEDIUM_RULE =
-  'Losses must be replaced by area habitat units of other medium band habitats within the same broad habitat type.'
-
 // "deficit" or "surplus", from the sign of the units.
 const surplusOrDeficit = (value) => (value < 0 ? 'deficit' : 'surplus')
 
@@ -1318,7 +1314,9 @@ function areaTradingBoxes(section) {
       {
         heading: 'Medium distinctiveness',
         tag: metTag(bandMet(section, 'Medium')),
-        rule: BOX_MEDIUM_RULE,
+        // Same wording as the tested layout and habitat pages. The Figma's
+        // shorter version leaves out "or any habitat from a higher band".
+        rule: TRADING_RULES[section.id].Medium,
         boxes: [
           {
             title: 'Medium unit deficit',

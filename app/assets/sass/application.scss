@@ -1705,7 +1705,6 @@ $app-wide-page-width: 1280px;
   }
 }
 
-// =========================================================================
 // Trading rules layout experiment (Figma 5495:81649) -----------------------
 // Each band's status and rule as a summary list, then boxes of units. A box
 // with a breakdown is a <details>: its grey header is the toggle.
@@ -1726,12 +1725,12 @@ $app-wide-page-width: 1280px;
   align-items: flex-start;
   gap: govuk-spacing(2) govuk-spacing(4);
   padding: govuk-spacing(4);
-  background-color: govuk-colour("light-grey");
+  background-color: #f3f2f1;
   color: $govuk-text-colour;
 }
 
 .app-trading-box__header--plain {
-  background-color: govuk-colour("white");
+  background-color: #ffffff;
 }
 
 // <summary>: no browser marker; the Show / Hide details text is the cue.
@@ -1798,7 +1797,6 @@ summary.app-trading-box__header {
   padding: govuk-spacing(4) govuk-spacing(4) 0;
 }
 
-
 .app-trading-box__total {
   font-weight: $govuk-font-weight-bold;
 }
@@ -1809,6 +1807,7 @@ summary.app-trading-box__header {
   border-left: 5px solid $govuk-error-colour;
 }
 
+// =========================================================================
 // Project dashboard v2 journey (User Research)
 // =========================================================================
 
