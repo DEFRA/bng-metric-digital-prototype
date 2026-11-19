@@ -34,7 +34,7 @@
     "@govuk-prototype-kit/common-templates": "3.0.1",
     "@ministryofjustice/frontend": "12.0.0",
     "archiver": "^8.0.0",
-    "better-sqlite3": "13.0.3",
+    "better-sqlite3": "13.1.1",
     "bng-library": "github:DEFRA/bng-library#2e073930647ef38df459a36b320ce042a250c512",
     "dotenv": "^18.0.10",
     "govuk-frontend": "6.6.0",
@@ -49,7 +49,7 @@
   },
   "devDependencies": {
     "husky": "9.1.7",
-    "prettier": "3.9.10",
+    "prettier": "3.10.1",
     "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
   },
   "overrides": {
