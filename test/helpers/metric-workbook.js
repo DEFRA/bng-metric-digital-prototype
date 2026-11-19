@@ -5,7 +5,8 @@ const XLSX = require('xlsx')
 
 // A small metric workbook: one baseline habitat, lost, and one created
 // habitat. It has only the sheets and columns the workbook reader needs.
-function makeWorkbookBuffer() {
+// With createdHedgerowOnly, a created hedgerow replaces the created habitat.
+function makeWorkbookBuffer({ createdHedgerowOnly = false } = {}) {
   const significance =
     'Area/compensation not in local strategy/ no local strategy'
   const workbook = XLSX.utils.book_new()
@@ -54,29 +55,51 @@ function makeWorkbookBuffer() {
         'Strategic significance'
       ],
       [],
-      [
-        '1',
-        'Urban',
-        'Bare ground',
-        'Urban - Bare ground',
-        1,
-        'Low',
-        'Moderate',
-        significance
-      ]
+      ...(createdHedgerowOnly
+        ? []
+        : [
+            [
+              '1',
+              'Urban',
+              'Bare ground',
+              'Urban - Bare ground',
+              1,
+              'Low',
+              'Moderate',
+              significance
+            ]
+          ])
     ]),
     'A-2 On-Site Habitat Creation'
   )
+  if (createdHedgerowOnly) {
+    XLSX.utils.book_append_sheet(
+      workbook,
+      XLSX.utils.aoa_to_sheet([
+        [
+          'Ref',
+          'Habitat type',
+          'Length (km)',
+          'Distinctiveness',
+          'Condition',
+          'Strategic significance'
+        ],
+        [],
+        ['1', 'Native hedgerow', 0.1, 'Low', 'Moderate', significance]
+      ]),
+      'B-2 On-Site Hedge Creation'
+    )
+  }
   return XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' })
 }
 
 // Generate a BNG Service GeoPackage from the small workbook, and write it to a
 // temporary file. The file holds both stages; mode "baseline" leaves the
 // post-intervention layers empty.
-async function writeBngServiceFile(mode = 'both') {
+async function writeBngServiceFile(mode = 'both', workbookOptions = {}) {
   const gen = await import('bng-library')
   const result = gen.generateFromWorkbookBuffer({
-    workbookBuffer: makeWorkbookBuffer(),
+    workbookBuffer: makeWorkbookBuffer(workbookOptions),
     workbookFilename: 'metric.xlsx',
     mode,
     format: gen.FORMAT_BNG_SERVICE

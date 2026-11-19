@@ -15,6 +15,8 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 
+import Database from 'better-sqlite3'
+
 import { registerPdfReportRoutes } from '../../app/routes/pdf-report.js'
 import { writeBngServiceFile } from '../helpers/metric-workbook.js'
 
@@ -194,6 +196,21 @@ test('a BNG Service file with an empty post-intervention stage gives a baseline 
 
   assert.equal(res.model.hasPostIntervention, false)
   assert.equal(res.model.stats.habitats, 1)
+})
+
+test('a BNG Service file with only post-intervention hedgerows gives a post-intervention report', async () => {
+  // The post-intervention stage has a hedgerow and no area habitats. The
+  // generator fills lost area with sealed surface, so remove that habitat.
+  const file = await writeBngServiceFile('both', { createdHedgerowOnly: true })
+  const db = new Database(file)
+  db.prepare('DELETE FROM "Area Habitats Post-Intervention"').run()
+  db.close()
+
+  const res = await postReport({ baseline: { path: file } })
+
+  assert.equal(res.model.hasPostIntervention, true)
+  assert.equal(res.model.stats.maps, 2)
+  assert.equal(res.model.stats.habitats, 0)
 })
 
 test('an unknown download id is a page, not a crash', () => {

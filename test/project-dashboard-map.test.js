@@ -120,7 +120,7 @@ test('buildProjectDashboardMapData selects the hedgerow, watercourse and tree la
   const habitats = makeMapData('habitats').parcels;
   const stageLayers = {};
   ['Baseline', 'Post-Intervention'].forEach((suffix) => {
-    ['Hedgerows', 'Watercourses', 'Urban Trees'].forEach((prefix) => {
+    ['Hedgerows', 'Watercourses', 'Individual Trees'].forEach((prefix) => {
       stageLayers[`${prefix} ${suffix}`] = makeMapData(
         `${prefix} ${suffix}`
       ).parcels;
@@ -148,7 +148,7 @@ test('buildProjectDashboardMapData selects the hedgerow, watercourse and tree la
     mapData.watercourses,
     stageLayers['Watercourses Post-Intervention']
   );
-  assert.equal(mapData.trees, stageLayers['Urban Trees Post-Intervention']);
+  assert.equal(mapData.trees, stageLayers['Individual Trees Post-Intervention']);
 });
 
 test('buildProjectDashboardMapData rejects a BNG Service file without the habitat layer of the upload kind', () => {

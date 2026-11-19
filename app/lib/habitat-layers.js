@@ -93,6 +93,22 @@ function findHabitatLayer(layers, stage) {
   )
 }
 
+/**
+ * Find the area habitat layer for a stage, or a layer by position in a
+ * legacy file: the second layer, or the only one. A BNG Service file holds
+ * both stages, so a layer by position can be the layer of the other stage.
+ * @param {Array} layers - Layers, each with a name
+ * @param {string} stage - "baseline" or "post-intervention"
+ * @returns {Object|undefined} The layer, or undefined if there is none
+ */
+function findHabitatLayerOrPosition(layers, stage) {
+  const habitatLayer = findHabitatLayer(layers, stage)
+  if (habitatLayer || hasStageLayers(layers)) {
+    return habitatLayer
+  }
+  return layers.length > 1 ? layers[1] : layers[0]
+}
+
 module.exports = {
   STAGE_BASELINE,
   STAGE_POST_INTERVENTION,
@@ -101,5 +117,6 @@ module.exports = {
   layerStage,
   hasStageLayers,
   findStageLayer,
-  findHabitatLayer
+  findHabitatLayer,
+  findHabitatLayerOrPosition
 }

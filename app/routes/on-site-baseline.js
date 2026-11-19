@@ -14,8 +14,8 @@ const {
 const {
   STAGE_BASELINE,
   findHabitatLayer,
-  findStageLayer,
-  hasStageLayers
+  findHabitatLayerOrPosition,
+  findStageLayer
 } = require('../lib/habitat-layers')
 const { isWithinUK, getLPA, getNCA, getLNRS } = require('../lib/arcgis-queries')
 const metricCalcs = require('../lib/metric-calcs')
@@ -709,15 +709,7 @@ function registerOnSiteBaselineRoutes(router) {
           l.name.toLowerCase().includes('redline')
       ) || layers[0]
 
-    // A BNG Service file holds both stages: do not take a layer by position,
-    // as it can be the habitat layer of the other stage.
-    let habitatParcels =
-      findHabitatLayer(layers, STAGE_BASELINE) ||
-      (hasStageLayers(layers)
-        ? undefined
-        : layers.length > 1
-          ? layers[1]
-          : layers[0])
+    let habitatParcels = findHabitatLayerOrPosition(layers, STAGE_BASELINE)
 
     // Calculate areas in hectares
     const boundaryAreaHa = siteBoundary

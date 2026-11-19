@@ -7,7 +7,8 @@ const {
   layerStage,
   hasStageLayers,
   findStageLayer,
-  findHabitatLayer
+  findHabitatLayer,
+  findHabitatLayerOrPosition
 } = require('../app/lib/habitat-layers')
 
 // The layers of a BNG Service file, which holds both stages.
@@ -166,4 +167,33 @@ test('isStageHabitatLayer matches only the layer of the stage', () => {
   )
   assert.equal(isStageHabitatLayer('Habitats', STAGE_BASELINE), false)
   assert.equal(isStageHabitatLayer('Area Habitats Baseline', undefined), false)
+})
+
+test('findHabitatLayerOrPosition gives the area habitat layer of the stage', () => {
+  assert.equal(
+    findHabitatLayerOrPosition(bngServiceLayers, STAGE_POST_INTERVENTION).name,
+    'Area Habitats Post-Intervention'
+  )
+})
+
+test('findHabitatLayerOrPosition takes no layer by position from a BNG Service file', () => {
+  const layers = [
+    { name: 'Red Line Boundary' },
+    { name: 'Area Habitats Baseline' },
+    { name: 'Hedgerows Post-Intervention' }
+  ]
+  assert.equal(
+    findHabitatLayerOrPosition(layers, STAGE_POST_INTERVENTION),
+    undefined
+  )
+})
+
+test('findHabitatLayerOrPosition takes a layer by position from a legacy file', () => {
+  const boundary = { name: 'Boundary' }
+  const second = { name: 'Layer 2' }
+  assert.equal(
+    findHabitatLayerOrPosition([boundary, second], STAGE_BASELINE),
+    second
+  )
+  assert.equal(findHabitatLayerOrPosition([boundary], STAGE_BASELINE), boundary)
 })

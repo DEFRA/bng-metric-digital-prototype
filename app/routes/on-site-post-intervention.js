@@ -13,6 +13,7 @@ const {
 const {
   STAGE_POST_INTERVENTION,
   findHabitatLayer,
+  findHabitatLayerOrPosition,
   findStageLayer,
   hasStageLayers
 } = require('../lib/habitat-layers')
@@ -251,15 +252,7 @@ function registerOnSitePostInterventionRoutes(router) {
           l.name.toLowerCase().includes('redline')
       ) || layers[0]
 
-    // A BNG Service file holds both stages: do not take a layer by position,
-    // as it can be the habitat layer of the other stage.
-    let habitatParcels =
-      findHabitatLayer(layers, STAGE_POST_INTERVENTION) ||
-      (hasStageLayers(layers)
-        ? undefined
-        : layers.length > 1
-          ? layers[1]
-          : layers[0])
+    let habitatParcels = findHabitatLayerOrPosition(layers, STAGE_POST_INTERVENTION)
 
     // Calculate areas in hectares
     const boundaryAreaHa = siteBoundary
