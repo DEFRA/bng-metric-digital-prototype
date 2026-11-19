@@ -318,9 +318,24 @@ function registerPdfReportRoutes(router) {
         }
 
         const baseline = engine.gpkg.readSite(baselinePath)
-        const postIntervention = postPath
-          ? engine.gpkg.readSite(postPath)
+        let postIntervention = postPath
+          ? engine.gpkg.readSite(postPath, engine.gpkg.STAGE_POST_INTERVENTION)
           : null
+        // A BNG Service file holds both stages, so without a second file its
+        // own post-intervention stage is used, if any habitat layer of that
+        // stage has features.
+        if (!postIntervention && baseline.holdsStages) {
+          const stage = engine.gpkg.readSite(
+            baselinePath,
+            engine.gpkg.STAGE_POST_INTERVENTION
+          )
+          const hasFeatures = Object.entries(stage.layers).some(
+            ([role, layer]) => role !== 'redLine' && layer.features?.length > 0
+          )
+          if (hasFeatures) {
+            postIntervention = stage
+          }
+        }
 
         const { buffer, stats, fonts, basemap, elapsedMs } = await buildReport(
           engine,

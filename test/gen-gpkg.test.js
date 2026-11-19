@@ -1,11 +1,13 @@
 const test = require('node:test')
 const assert = require('node:assert/strict')
 const { Writable } = require('node:stream')
+const Database = require('better-sqlite3')
 const {
   sendZip,
   permutationsZipFiles,
   registerGenGpkgRoutes
 } = require('../app/routes/gen-gpkg')
+const { makeWorkbookBuffer } = require('./helpers/metric-workbook')
 
 // Capture the POST handler the route registers, so a test can drive it with a
 // fake req/res without standing up the whole prototype-kit server (and its
@@ -40,8 +42,38 @@ function makeFakeRes() {
     res.headers[key] = value
     return res
   }
+  res.send = (body) => res.end(body)
   res.body = () => Buffer.concat(chunks)
   return res
+}
+
+// Every GeoPackage is a SQLite database, and starts with its header string.
+const SQLITE_MAGIC = Buffer.from('SQLite format 3\0')
+
+// Post a workbook through the route and collect the response.
+async function postWorkbook(body) {
+  const handler = getPostHandler()
+  const res = makeFakeRes()
+  const finished = new Promise((resolve) => res.on('finish', resolve))
+  const req = {
+    body: { source: 'workbook', ...body },
+    file: { buffer: makeWorkbookBuffer(), originalname: 'metric.xlsx' }
+  }
+
+  await handler(req, res, (err) => {
+    if (err) throw err
+  })
+  await finished
+  return res
+}
+
+function countRows(gpkg, table) {
+  const db = new Database(gpkg)
+  try {
+    return db.prepare(`SELECT COUNT(*) AS n FROM "${table}"`).get().n
+  } finally {
+    db.close()
+  }
 }
 
 // Guards the archiver contract sendZip depends on. archiver 8 (ESM-only)
@@ -150,4 +182,70 @@ test('POST source=permutations streams a zip through the route', async () => {
   assert.deepEqual(res.body().subarray(0, 4), ZIP_MAGIC, 'a zip is streamed')
   assert.equal(res.headers['Content-Type'], 'application/zip')
   assert.match(res.headers['Content-Disposition'], /bng-permutations-\d+\.zip/)
+})
+
+test('POST source=workbook refuses a format the generator does not know', async () => {
+  const handler = getPostHandler()
+  const rendered = {}
+  const res = {
+    status(code) {
+      rendered.status = code
+      return res
+    },
+    render(view, data) {
+      rendered.view = view
+      rendered.data = data
+    }
+  }
+  const req = {
+    body: { source: 'workbook', format: 'shapefile', mode: 'both' },
+    file: { buffer: Buffer.from('not read'), originalname: 'metric.xlsm' }
+  }
+
+  await handler(req, res, (err) => {
+    if (err) throw err
+  })
+
+  assert.equal(rendered.status, 400)
+  assert.equal(rendered.view, 'gen-gpkg/index')
+  assert.match(rendered.data.error, /legacy, bng-service/)
+  assert.deepEqual(rendered.data.form, req.body, 'the form values are kept')
+  assert.ok(rendered.data.purposes.length > 0, 'the purposes are listed')
+  assert.ok(rendered.data.flawGroups.geometric.length > 0, 'flaws are listed')
+})
+
+test('POST source=workbook format=bng-service downloads one GeoPackage with both stages', async () => {
+  const res = await postWorkbook({ format: 'bng-service', mode: 'both' })
+
+  const out = res.body()
+  assert.deepEqual(out.subarray(0, SQLITE_MAGIC.length), SQLITE_MAGIC)
+  assert.equal(res.headers['Content-Type'], 'application/geopackage+sqlite3')
+  assert.match(
+    res.headers['Content-Disposition'],
+    /^attachment; filename="metric-bng-service-[\d-]+\.gpkg"$/
+  )
+  assert.equal(res.headers['Content-Length'], String(out.length))
+  assert.equal(countRows(out, 'Area Habitats Baseline'), 1)
+  assert.equal(countRows(out, 'Area Habitats Post-Intervention'), 1)
+})
+
+test('POST source=workbook format=bng-service mode=baseline leaves the post-intervention layers empty', async () => {
+  const res = await postWorkbook({ format: 'bng-service', mode: 'baseline' })
+
+  const out = res.body()
+  assert.deepEqual(out.subarray(0, SQLITE_MAGIC.length), SQLITE_MAGIC)
+  assert.match(
+    res.headers['Content-Disposition'],
+    /filename="metric-bng-service-baseline-[\d-]+\.gpkg"/
+  )
+  assert.equal(countRows(out, 'Area Habitats Baseline'), 1)
+  assert.equal(countRows(out, 'Area Habitats Post-Intervention'), 0)
+})
+
+test('POST source=workbook with no format keeps the legacy baseline and post-intervention zip', async () => {
+  const res = await postWorkbook({ mode: 'both' })
+
+  assert.deepEqual(res.body().subarray(0, 4), ZIP_MAGIC, 'a zip is streamed')
+  assert.equal(res.headers['Content-Type'], 'application/zip')
+  assert.match(res.headers['Content-Disposition'], /bng-from-workbook-\d+\.zip/)
 })

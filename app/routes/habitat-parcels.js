@@ -3,6 +3,8 @@
  * Handles saving and retrieving habitat parcel data
  */
 
+const { STAGE_BASELINE, findStageLayer } = require('../lib/habitat-layers')
+
 /**
  * Register habitat parcel routes
  * @param {Router} router - Express router instance
@@ -50,10 +52,10 @@ function registerHabitatParcelRoutes(router) {
         !existingHedgerows.features ||
         existingHedgerows.features.length === 0
       ) {
-        const hedgerowLayerInfo = geopackageLayers.find(
-          (l) =>
-            l.name.toLowerCase().includes('hedgerow') ||
-            l.name.toLowerCase().includes('hedge')
+        const hedgerowLayerInfo = findStageLayer(
+          geopackageLayers,
+          STAGE_BASELINE,
+          ['hedgerow', 'hedge']
         )
         if (hedgerowLayerInfo && geopackageGeometries[hedgerowLayerInfo.name]) {
           req.session.data['hedgerows'] =
@@ -68,11 +70,10 @@ function registerHabitatParcelRoutes(router) {
         !existingWatercourses.features ||
         existingWatercourses.features.length === 0
       ) {
-        const watercourseLayerInfo = geopackageLayers.find(
-          (l) =>
-            l.name.toLowerCase().includes('watercourse') ||
-            l.name.toLowerCase().includes('river') ||
-            l.name.toLowerCase().includes('stream')
+        const watercourseLayerInfo = findStageLayer(
+          geopackageLayers,
+          STAGE_BASELINE,
+          ['watercourse', 'river', 'stream']
         )
         if (
           watercourseLayerInfo &&

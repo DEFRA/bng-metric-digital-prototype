@@ -10,6 +10,13 @@ const {
   calculateLineLength,
   isPolygonSelfIntersecting
 } = require('../lib/geometry-utils')
+const {
+  STAGE_POST_INTERVENTION,
+  findHabitatLayer,
+  findHabitatLayerOrPosition,
+  findStageLayer,
+  hasStageLayers
+} = require('../lib/habitat-layers')
 
 //const { isWithinUK, getLPA, getNCA, getLNRS } = require('../lib/arcgis-queries')
 const { isWithinUK } = require('../lib/arcgis-queries')
@@ -191,10 +198,9 @@ function registerOnSitePostInterventionRoutes(router) {
         }
         
         // Find parcels layer and update Units property
-        const parcelsLayerInfo = gpkgData.layers.find(
-          (l) =>
-            l.name.toLowerCase().includes('parcel') ||
-            l.name.toLowerCase().includes('habitat')
+        const parcelsLayerInfo = findHabitatLayer(
+          gpkgData.layers,
+          STAGE_POST_INTERVENTION
         )
         
         if (parcelsLayerInfo && gpkgData.geometries[parcelsLayerInfo.name]) {
@@ -246,12 +252,7 @@ function registerOnSitePostInterventionRoutes(router) {
           l.name.toLowerCase().includes('redline')
       ) || layers[0]
 
-    let habitatParcels =
-      layers.find(
-        (l) =>
-          l.name.toLowerCase().includes('parcel') ||
-          l.name.toLowerCase().includes('habitat')
-      ) || (layers.length > 1 ? layers[1] : layers[0])
+    let habitatParcels = findHabitatLayerOrPosition(layers, STAGE_POST_INTERVENTION)
 
     // Calculate areas in hectares
     const boundaryAreaHa = siteBoundary
@@ -262,19 +263,17 @@ function registerOnSitePostInterventionRoutes(router) {
       : 0
 
     // Find hedgerow layer
-    let hedgerowLayer = layers.find(
-      (l) =>
-        l.name.toLowerCase().includes('hedgerow') ||
-        l.name.toLowerCase().includes('hedge')
-    )
+    let hedgerowLayer = findStageLayer(layers, STAGE_POST_INTERVENTION, [
+      'hedgerow',
+      'hedge'
+    ])
 
     // Find watercourse layer
-    let watercourseLayer = layers.find(
-      (l) =>
-        l.name.toLowerCase().includes('watercourse') ||
-        l.name.toLowerCase().includes('river') ||
-        l.name.toLowerCase().includes('stream')
-    )
+    let watercourseLayer = findStageLayer(layers, STAGE_POST_INTERVENTION, [
+      'watercourse',
+      'river',
+      'stream'
+    ])
 
     // Calculate hedgerow totals
     let hedgerowTotalLengthM = 0
@@ -486,11 +485,7 @@ function registerOnSitePostInterventionRoutes(router) {
           l.name.toLowerCase().includes('boundary') ||
           l.name.toLowerCase().includes('site')
       )
-      const parcelsLayerInfo = layers.find(
-        (l) =>
-          l.name.toLowerCase().includes('parcel') ||
-          l.name.toLowerCase().includes('habitat')
-      )
+      const parcelsLayerInfo = findHabitatLayer(layers, STAGE_POST_INTERVENTION)
 
       const boundaryLayer = boundaryLayerInfo
         ? geometries[boundaryLayerInfo.name]
@@ -669,16 +664,15 @@ function registerOnSitePostInterventionRoutes(router) {
       }
 
       // Find hedgerow and watercourse layers from uploaded GeoPackage
-      const hedgerowLayerInfo = layers.find(
-        (l) =>
-          l.name.toLowerCase().includes('hedgerow') ||
-          l.name.toLowerCase().includes('hedge')
+      const hedgerowLayerInfo = findStageLayer(
+        layers,
+        STAGE_POST_INTERVENTION,
+        ['hedgerow', 'hedge']
       )
-      const watercourseLayerInfo = layers.find(
-        (l) =>
-          l.name.toLowerCase().includes('watercourse') ||
-          l.name.toLowerCase().includes('river') ||
-          l.name.toLowerCase().includes('stream')
+      const watercourseLayerInfo = findStageLayer(
+        layers,
+        STAGE_POST_INTERVENTION,
+        ['watercourse', 'river', 'stream']
       )
 
       const hedgerowLayer = hedgerowLayerInfo
@@ -911,11 +905,7 @@ function registerOnSitePostInterventionRoutes(router) {
     const geometries = req.session.data['geopackageGeometriesPostIntervention'] || {}
 
     // Find parcels layer
-    const parcelsLayerInfo = layers.find(
-      (l) =>
-        l.name.toLowerCase().includes('parcel') ||
-        l.name.toLowerCase().includes('habitat')
-    )
+    const parcelsLayerInfo = findHabitatLayer(layers, STAGE_POST_INTERVENTION)
 
     if (!parcelsLayerInfo) {
       return null
@@ -1145,11 +1135,7 @@ function registerOnSitePostInterventionRoutes(router) {
         l.name.toLowerCase().includes('boundary') ||
         l.name.toLowerCase().includes('site')
     )
-    const parcelsLayerInfo = layers.find(
-      (l) =>
-        l.name.toLowerCase().includes('parcel') ||
-        l.name.toLowerCase().includes('habitat')
-    )
+    const parcelsLayerInfo = findHabitatLayer(layers, STAGE_POST_INTERVENTION)
     const siteBoundary = boundaryLayerInfo && geometries[boundaryLayerInfo.name]
       ? geometries[boundaryLayerInfo.name]
       : null
@@ -1389,11 +1375,7 @@ function registerOnSitePostInterventionRoutes(router) {
         l.name.toLowerCase().includes('boundary') ||
         l.name.toLowerCase().includes('site')
     )
-    const parcelsLayerInfo = layers.find(
-      (l) =>
-        l.name.toLowerCase().includes('parcel') ||
-        l.name.toLowerCase().includes('habitat')
-    )
+    const parcelsLayerInfo = findHabitatLayer(layers, STAGE_POST_INTERVENTION)
     const siteBoundary = boundaryLayerInfo && geometries[boundaryLayerInfo.name]
       ? geometries[boundaryLayerInfo.name]
       : null
@@ -1441,11 +1423,7 @@ function registerOnSitePostInterventionRoutes(router) {
     const geometries = req.session.data['geopackageGeometriesPostIntervention'] || {}
 
     // Find parcels layer by name (parcel/habitat), or fallback: find any layer containing this parcel ref
-    let parcelsLayerInfo = layers.find(
-      (l) =>
-        l.name.toLowerCase().includes('parcel') ||
-        l.name.toLowerCase().includes('habitat')
-    )
+    let parcelsLayerInfo = findHabitatLayer(layers, STAGE_POST_INTERVENTION)
     let parcelsLayer = parcelsLayerInfo && geometries[parcelsLayerInfo.name]
       ? geometries[parcelsLayerInfo.name]
       : null
@@ -1465,8 +1443,9 @@ function registerOnSitePostInterventionRoutes(router) {
       }
     }
 
-    // Fallback: search all geometry layers for a feature with this parcel ref (e.g. if layer name has no "parcel"/"habitat")
-    if (!feature && geometries && typeof geometries === 'object') {
+    // Fallback: search all geometry layers for a feature with this parcel ref (e.g. if layer name has no "parcel"/"habitat").
+    // Legacy files only: a BNG Service file also holds the baseline layers, which this page must not change.
+    if (!feature && !hasStageLayers(layers) && geometries && typeof geometries === 'object') {
       for (const layerName of Object.keys(geometries)) {
         const layer = geometries[layerName]
         if (!layer || !layer.features || !Array.isArray(layer.features)) continue

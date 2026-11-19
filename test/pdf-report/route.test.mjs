@@ -15,7 +15,10 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 
+import Database from 'better-sqlite3'
+
 import { registerPdfReportRoutes } from '../../app/routes/pdf-report.js'
+import { writeBngServiceFile } from '../helpers/metric-workbook.js'
 
 const EXAMPLES = path.resolve(import.meta.dirname, '..', '..', 'example-files')
 
@@ -148,6 +151,66 @@ test('the generated report downloads as a named PDF attachment', async () => {
   assert.equal(res.headers['content-disposition'], 'attachment; filename="test-area-summary.pdf"')
   assert.equal(res.body.subarray(0, 5).toString(), '%PDF-')
   assert.equal(res.headers['content-length'], String(res.body.length))
+})
+
+/** Post the files with fixed options, and return the response. */
+async function postReport(files) {
+  const res = fakeResponse()
+  await handlers()('POST /test-data/pdf-report')(
+    {
+      body: { font: 'noto-sans', basemap: 'synthetic', layout: 'cards' },
+      files: filesFor(files)
+    },
+    res
+  )
+  assert.equal(res.view, 'pdf-report/result', res.model?.error)
+  return res
+}
+
+test('a BNG Service file uploaded as post-intervention supplies its post-intervention stage', async () => {
+  // This file has one baseline habitat and no post-intervention habitats.
+  // The report must show no post-intervention habitats, not the baseline one.
+  const res = await postReport({
+    baseline: upload(BASELINE),
+    postIntervention: { path: await writeBngServiceFile('baseline') }
+  })
+
+  assert.equal(res.model.hasPostIntervention, true)
+  assert.equal(res.model.stats.habitats, 0)
+})
+
+test('a BNG Service file uploaded alone supplies both stages', async () => {
+  const res = await postReport({
+    baseline: { path: await writeBngServiceFile() }
+  })
+
+  assert.equal(res.model.hasPostIntervention, true)
+  assert.equal(res.model.stats.maps, 2)
+  assert.equal(res.model.stats.habitats, 1)
+})
+
+test('a BNG Service file with an empty post-intervention stage gives a baseline report', async () => {
+  const res = await postReport({
+    baseline: { path: await writeBngServiceFile('baseline') }
+  })
+
+  assert.equal(res.model.hasPostIntervention, false)
+  assert.equal(res.model.stats.habitats, 1)
+})
+
+test('a BNG Service file with only post-intervention hedgerows gives a post-intervention report', async () => {
+  // The post-intervention stage has a hedgerow and no area habitats. The
+  // generator fills lost area with sealed surface, so remove that habitat.
+  const file = await writeBngServiceFile('both', { createdHedgerowOnly: true })
+  const db = new Database(file)
+  db.prepare('DELETE FROM "Area Habitats Post-Intervention"').run()
+  db.close()
+
+  const res = await postReport({ baseline: { path: file } })
+
+  assert.equal(res.model.hasPostIntervention, true)
+  assert.equal(res.model.stats.maps, 2)
+  assert.equal(res.model.stats.habitats, 0)
 })
 
 test('an unknown download id is a page, not a crash', () => {

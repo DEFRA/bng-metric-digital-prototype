@@ -16,7 +16,16 @@
 
 import Database from 'better-sqlite3'
 
+import {
+  STAGE_BASELINE,
+  STAGE_POST_INTERVENTION,
+  isStageHabitatLayer,
+  layerStage,
+  hasStageLayers
+} from '../habitat-layers.js'
 import { gpkgBlobToGeometry } from './wkb.mjs'
+
+export { STAGE_BASELINE, STAGE_POST_INTERVENTION }
 
 export const BNG_SRS_ID = 27700
 
@@ -33,6 +42,35 @@ const LAYER_ROLES = {
 }
 
 /**
+ * The other layers of a BNG Service file, by name without the stage suffix,
+ * in lower case.
+ */
+const STAGE_LAYER_ROLES = {
+  hedgerows: 'hedgerows',
+  watercourses: 'watercourses',
+  'individual trees': 'trees'
+}
+
+/**
+ * The BNG Service template holds both stages in one file, with each layer
+ * named for its stage (app/lib/habitat-layers.js). Only the layers of the
+ * stage being read take a role, so one stage cannot overwrite the other.
+ */
+function layerRole(name, stage) {
+  if (LAYER_ROLES[name]) {
+    return LAYER_ROLES[name]
+  }
+  if (isStageHabitatLayer(name, stage)) {
+    return 'habitats'
+  }
+  if (layerStage(name) !== stage) {
+    return null
+  }
+  const baseName = name.slice(0, -(stage.length + 1)).toLowerCase()
+  return STAGE_LAYER_ROLES[baseName] ?? null
+}
+
+/**
  * List the feature layers, with the SRS id declared for each geometry column.
  *
  * The srsId is read rather than inferred. The digital prototype sniffs
@@ -40,7 +78,7 @@ const LAYER_ROLES = {
  * (`isLikelyBNG` in app/assets/javascripts/map-habitats-summary.js), which is
  * a heuristic that eventually guesses wrong — the file states the answer.
  */
-export function readLayers(db) {
+export function readLayers(db, stage = STAGE_BASELINE) {
   const contents = db
     .prepare(
       `SELECT table_name, identifier FROM gpkg_contents WHERE data_type = 'features'`
@@ -65,7 +103,7 @@ export function readLayers(db) {
     }
     layers.push({
       name: row.table_name,
-      role: LAYER_ROLES[row.table_name] ?? null,
+      role: layerRole(row.table_name, stage),
       geometryColumn: geometry.column_name,
       geometryType: geometry.geometry_type_name,
       srsId: geometry.srs_id
@@ -128,14 +166,20 @@ export function assertBngSrs(srsId, what) {
 /**
  * Read a whole site: the red line, and the habitat layers keyed by role.
  *
+ * `holdsStages` is true for a BNG Service file, which holds both stages; a
+ * legacy file holds one stage, and `stage` does not change what is read.
+ *
  * @param {string} filename path to a .gpkg
- * @returns {{ layers: object, redLine: object|null, siteName: string|null }}
+ * @param {string} [stage] the stage to read from a BNG Service file
+ * @returns {{ layers: object, redLine: object|null, siteName: string|null, holdsStages: boolean }}
  */
-export function readSite(filename) {
+export function readSite(filename, stage = STAGE_BASELINE) {
   const db = new Database(filename, { readonly: true, fileMustExist: true })
   try {
     const layers = {}
-    for (const layer of readLayers(db)) {
+    const fileLayers = readLayers(db, stage)
+    const holdsStages = hasStageLayers(fileLayers)
+    for (const layer of fileLayers) {
       assertBngSrs(layer.srsId, `layer "${layer.name}"`)
       if (layer.role) {
         layers[layer.role] = { ...layer, features: readFeatures(db, layer) }
@@ -149,7 +193,8 @@ export function readSite(filename) {
       siteName:
         redLine?.properties?.['Site Name'] ??
         layers.habitats?.features?.[0]?.properties?.['Site Name'] ??
-        null
+        null,
+      holdsStages
     }
   } finally {
     db.close()
