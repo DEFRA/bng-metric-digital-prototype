@@ -2,10 +2,26 @@
   Shared shell for the project-dashboard-v3 side-nav screens (overview,
   flags, area habitats). Child views set `pageName` and fill
   `dashboardContent`; set `hideUploadButton` to drop the header action.
+  Table pages set `hasTables` and include their tables from a partial in
+  either `dashboardContent` or `fullWidthContent`, for the table width
+  experiment (see router.use(BASE) in the route file). Pages with nothing
+  but tables also set `tablesOnly`, so in "fluid-tables" their header spans
+  the table width instead of the 992px cap.
 #}
 {% extends "layouts/main.html" %}
 
-{% set bodyClasses = "app-wide" %}
+{# Table width experiment: "page" and "screen" move the tables below the side
+   nav ("screen" runs them edge to edge, so the page must not scroll
+   sideways); "fluid" widens the whole page and narrows the side nav, and
+   "fluid-tables" then caps everything but the header and tables. #}
+{% set fluidPage = tableWidth in ["fluid", "fluid-tables"] %}
+{% set fullWidthTables = hasTables and tableWidth in ["page", "screen"] %}
+{% set uncappedTables = hasTables and tableWidth == "fluid-tables" %}
+{% if fluidPage %}
+  {% set bodyClasses = "app-fluid" ~ (" app-fluid--capped" if tableWidth == "fluid-tables" else "") %}
+{% else %}
+  {% set bodyClasses = "app-wide" ~ (" app-full-bleed-page" if (fullWidthTables and tableWidth == "screen") else "") %}
+{% endif %}
 
 {% from "govuk/components/button/macro.njk" import govukButton %}
 {% from "dashboard/macro.njk" import appSideNav %}
@@ -17,14 +33,37 @@
 {% endblock %}
 
 {% block content %}
-<div class="govuk-grid-row">
-  <div class="govuk-grid-column-one-quarter">
+<div class="{{ 'app-sidebar-layout' if fluidPage else 'govuk-grid-row' }}">
+  <div class="{{ 'app-sidebar-layout__nav' if fluidPage else 'govuk-grid-column-one-quarter' }}">
     {{ appSideNav(sideNav) }}
   </div>
 
-  <div class="govuk-grid-column-three-quarters">
+  <div class="{{ 'app-sidebar-layout__main' if fluidPage else 'govuk-grid-column-three-quarters' }}">
 
-    <div class="app-page-header">
+    {# Experiment switchers: shown once either experiment is set in the URL.
+       The trading layout row only shows on pages that set
+       `tradingLayoutSwitch` (the Area habitats trading summary). #}
+    {% set widthSwitch = { label: "Table width experiment", param: "tableWidth", current: tableWidth, options: tableWidths } %}
+    {% set layoutSwitch = { label: "Trading rules layout", param: "tradingLayout", current: tradingLayout, options: tradingLayouts } %}
+    {% set experiments = [widthSwitch, layoutSwitch] if tradingLayoutSwitch else [widthSwitch] %}
+    {% if tableWidthExperiment or tradingLayoutExperiment %}
+      <div class="app-experiment-switcher">
+        {% for experiment in experiments %}
+          <nav class="app-experiment-switcher__row" aria-label="{{ experiment.label }}">
+            <span class="app-experiment-switcher__label">{{ experiment.label }}:</span>
+            {% for option in experiment.options %}
+              {% if option.value == experiment.current %}
+                <strong aria-current="true">{{ option.text }}</strong>
+              {% else %}
+                <a class="govuk-link" href="{{ currentPath }}?{{ experiment.param }}={{ option.value }}">{{ option.text }}</a>
+              {% endif %}
+            {% endfor %}
+          </nav>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    <div class="app-page-header{{ ' app-uncapped' if uncappedTables and tablesOnly }}">
       <div>
         {% if not hideCaption %}
           <span class="govuk-caption-l">{{ data.projectName | default("Project name", true) }}</span>
@@ -42,4 +81,14 @@
 
   </div>
 </div>
+
+{# Table pages put their tables here instead of in dashboardContent when the
+   experiment is on, so they span the page below the side nav. #}
+{% if fullWidthTables %}
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-full{{ ' app-full-bleed' if tableWidth == 'screen' }}">
+      {% block fullWidthContent %}{% endblock %}
+    </div>
+  </div>
+{% endif %}
 {% endblock %}

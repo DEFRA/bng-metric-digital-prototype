@@ -121,6 +121,19 @@ function removePostInterventionUnits(sectionData, h) {
 }
 
 const BASE = '/project-dashboard-v3'
+
+// Table width experiment options, in switcher order (see router.use(BASE)).
+const TABLE_WIDTHS = [
+  { value: 'tested', text: 'As tested' },
+  { value: 'page', text: 'Page width' },
+  { value: 'screen', text: 'Browser width' },
+  // Figma 5319:5151 (updated): as "fluid", but everything except the page
+  // header and data tables is capped at 992px, its width on a 1280px screen.
+  { value: 'fluid-tables', text: 'Full-width tables, 188px menu' },
+  // Figma 5319:5151 (first version): the whole page runs to the window edges, with a 188px
+  // side menu and the content (tables included) filling the rest.
+  { value: 'fluid', text: 'Full-width page, 188px menu' }
+]
 const UPLOAD_HREF = `${BASE}/upload/choose`
 
 // Shared appDashboard settings. "app-dashboard--tight" is the Figma tile
@@ -1238,6 +1251,136 @@ function hedgerowTradingBands(section) {
   ]
 }
 
+// --- Trading rules layout experiment (Figma 5495:81649) ----------------------
+
+// Trading rules layout options, in switcher order (see router.use(BASE)).
+const TRADING_LAYOUTS = [
+  { value: 'tested', text: 'As tested' },
+  { value: 'boxes', text: 'Unit boxes with details' }
+]
+
+// Medium rule for private beta (Figma 5495:81649): higher bands aren't part
+// of private beta, so only same-broad-habitat replacement is described. The
+// tested layout and habitat pages keep the round 6 wording as tested.
+const PRIVATE_BETA_MEDIUM_RULE =
+  'Losses must be replaced by area habitat units of other medium band habitats within the same broad habitat type.'
+
+// "deficit" or "surplus", from the sign of the units.
+const surplusOrDeficit = (value) => (value < 0 ? 'deficit' : 'surplus')
+
+// One "{broad habitat} habitat types" table per broad habitat. Losses get a
+// red bar on their total row, as in the Figma.
+function broadHabitatTables(groups) {
+  return groups.map((group) => ({
+    head: [{ text: `${group.broadHabitat} habitat types` }, UNIT_CHANGE_HEAD],
+    rows: group.items
+      .map((i) => [
+        { text: i.habitatType },
+        { text: fixed(i.change), format: 'numeric' }
+      ])
+      .concat([
+        [
+          {
+            text: 'Total broad habitat change',
+            classes:
+              'app-trading-box__total' +
+              (group.total < 0 ? ' app-trading-box__total--loss' : '')
+          },
+          {
+            text: fixed(group.total),
+            format: 'numeric',
+            classes: 'app-trading-box__total'
+          }
+        ]
+      ])
+  }))
+}
+
+/**
+ * Area habitats in the new layout: each band has its status and rule, then
+ * boxes of units. Boxes with `tables` open to show where the units come from.
+ */
+function areaTradingBoxes(section) {
+  const ts = section.data.tradingSummary
+  const groups = [...new Set(ts.medium.items.map((i) => i.broadHabitat))].map(
+    (broadHabitat) => {
+      const items = ts.medium.items.filter(
+        (i) => i.broadHabitat === broadHabitat
+      )
+      return { broadHabitat, items, total: sum(items, 'change') }
+    }
+  )
+  const losses = groups.filter((g) => g.total < 0)
+  const gains = groups.filter((g) => g.total > 0)
+  const surplus = mediumSurplus(section)
+  const cumulative = lowSurplus(section)
+
+  return {
+    bands: [
+      {
+        heading: 'Medium distinctiveness',
+        tag: metTag(bandMet(section, 'Medium')),
+        rule: PRIVATE_BETA_MEDIUM_RULE,
+        boxes: [
+          {
+            title: 'Medium unit deficit',
+            value: units(sum(losses, 'total')),
+            tables: losses.length ? broadHabitatTables(losses) : null
+          },
+          {
+            title: 'Medium unit surplus',
+            hint: 'Units available to offset low distinctiveness losses',
+            value: units(surplus),
+            tables: gains.length ? broadHabitatTables(gains) : null
+          }
+        ]
+      },
+      {
+        heading: 'Low distinctiveness',
+        tag: metTag(bandMet(section, 'Low')),
+        rule: TRADING_RULES[section.id].Low,
+        boxes: [
+          {
+            title: 'Medium units available to offset low distinctiveness',
+            value: units(surplus),
+            plain: true
+          },
+          {
+            title: `Low distinctiveness ${surplusOrDeficit(ts.low.netChange)}`,
+            value: units(ts.low.netChange),
+            tables: [
+              changeTable(
+                [
+                  { text: 'Broad habitat' },
+                  { text: 'Habitat type' },
+                  UNIT_CHANGE_HEAD
+                ],
+                ts.low.items.map((i) => [
+                  { text: i.broadHabitat },
+                  { text: i.habitatType },
+                  { text: fixed(i.change), format: 'numeric' }
+                ]),
+                ts.low.netChange,
+                'Total unit change'
+              )
+            ]
+          },
+          {
+            title: `Cumulative unit ${surplusOrDeficit(cumulative)}`,
+            value: units(cumulative)
+          }
+        ]
+      }
+    ],
+    // Figma: the Low cumulative figure. Medium deficits aren't netted off,
+    // as they have to be fixed separately (see mediumSurplus).
+    total: {
+      title: `Total ${surplusOrDeficit(cumulative)}`,
+      value: units(cumulative)
+    }
+  }
+}
+
 function tradingStatusTable(section) {
   return {
     head: [{ text: 'Distinctiveness group' }, { text: 'Status' }],
@@ -1513,6 +1656,35 @@ function registerProjectDashboardV3Routes(router) {
     res.locals.footerLinks = [
       { href: fileErrorHref(FILE_ERRORS[0]), text: 'File errors' }
     ]
+    // Table width experiment (after round 6). ?tableWidth= is kept in the
+    // session by the kit's auto-store, so it sticks while clicking around:
+    //   page   - tables below the side nav, across the 1280px page
+    //   screen - tables across the whole browser window
+    //   fluid  - the whole page across the window, 188px side menu
+    //   fluid-tables - as fluid, with only the page header and tables wide
+    //   tested - as tested in round 6 (also the default when unset)
+    // The switcher only shows once a value has been set.
+    const tableWidth = req.session.data.tableWidth
+    res.locals.tableWidthExperiment = Boolean(tableWidth)
+    res.locals.tableWidth = TABLE_WIDTHS.some((w) => w.value === tableWidth)
+      ? tableWidth
+      : 'tested'
+    res.locals.tableWidths = TABLE_WIDTHS
+    // Trading rules layout experiment (after round 6, Figma 5495:81649),
+    // switched the same way with ?tradingLayout= on the Area habitats
+    // trading summary:
+    //   boxes  - status and rule per band, then boxes of units that open
+    //            to show their breakdown
+    //   tested - as tested in round 6 (also the default when unset)
+    const tradingLayout = req.session.data.tradingLayout
+    res.locals.tradingLayoutExperiment = Boolean(tradingLayout)
+    res.locals.tradingLayout = TRADING_LAYOUTS.some(
+      (l) => l.value === tradingLayout
+    )
+      ? tradingLayout
+      : 'tested'
+    res.locals.tradingLayouts = TRADING_LAYOUTS
+    res.locals.currentPath = req.originalUrl.split('?')[0]
     next()
   })
 
@@ -1616,6 +1788,8 @@ function registerProjectDashboardV3Routes(router) {
       sectionHref(section, 'trading-summary'),
       render('trading-summary', 'trading-summary', () => ({
         tradingStatusTable: tradingStatusTable(section),
+        tradingBoxes:
+          section.id === 'area-habitats' ? areaTradingBoxes(section) : null,
         bands:
           section.id === 'hedgerows'
             ? hedgerowTradingBands(section)

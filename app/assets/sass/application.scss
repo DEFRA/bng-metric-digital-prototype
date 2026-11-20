@@ -1611,6 +1611,202 @@ $app-wide-page-width: 1280px;
   @include govuk-width-container($app-wide-page-width);
 }
 
+// Table width experiment (project dashboard v3, after round 6) ------------
+// See router.use(BASE) in app/routes/project-dashboard-v3.js.
+
+.app-experiment-switcher {
+  @include govuk-font($size: 16);
+  margin-bottom: govuk-spacing(4);
+  padding: govuk-spacing(2) govuk-spacing(3);
+  border-left: 5px solid #ffdd00;
+  background-color: #f3f2f1;
+}
+
+.app-experiment-switcher__row {
+  > * + * {
+    margin-left: govuk-spacing(3);
+  }
+
+  + .app-experiment-switcher__row {
+    margin-top: govuk-spacing(1);
+  }
+}
+
+.app-experiment-switcher__label {
+  font-weight: bold;
+}
+
+// "Browser width": the section breaks out of the centred 1280px container to
+// the window edges, keeping the usual GOV.UK gutter inside them.
+.app-full-bleed {
+  width: auto;
+  float: none;
+  margin-right: calc(50% - 50vw);
+  margin-left: calc(50% - 50vw);
+  padding-right: govuk-spacing(3);
+  padding-left: govuk-spacing(3);
+
+  @include govuk-media-query($from: tablet) {
+    padding-right: govuk-spacing(6);
+    padding-left: govuk-spacing(6);
+  }
+}
+
+// 100vw includes the vertical scrollbar where it takes up space (Windows),
+// so clip the few pixels of overflow rather than scroll sideways.
+.app-full-bleed-page {
+  overflow-x: clip;
+}
+
+// "Full-width page, 188px menu" (Figma 5319:5151): header, banner, content
+// and footer all run to the window edges with the usual GOV.UK gutters.
+.app-fluid .govuk-width-container {
+  max-width: none;
+  margin-right: govuk-spacing(3);
+  margin-left: govuk-spacing(3);
+
+  @include govuk-media-query($from: tablet) {
+    margin-right: govuk-spacing(6);
+    margin-left: govuk-spacing(6);
+  }
+}
+
+// "Full-width tables, 188px menu" (Figma 5319:5151, updated): only the data
+// tables use the full width. Everything else, including the page heading and
+// Upload file button, keeps the width it would have on a 1280px screen:
+// 1280 - 30 - 188 - 40 - 30 = 992px. On a page with only tables (Flags) the
+// heading is marked .app-uncapped so it lines up with the table instead.
+.app-fluid--capped .app-sidebar-layout__main > :not(.app-uncapped) {
+  max-width: 992px;
+}
+
+// A fixed 188px side menu, 40px gap, and the content filling the rest.
+// Stacks on narrow screens, like the GOV.UK grid columns it replaces.
+.app-sidebar-layout {
+  @include govuk-media-query($from: desktop) {
+    display: flex;
+    gap: 40px;
+  }
+}
+
+.app-sidebar-layout__nav {
+  @include govuk-media-query($from: desktop) {
+    flex: 0 0 188px;
+  }
+}
+
+.app-sidebar-layout__main {
+  // Lets the content shrink below its widest table, so the table scrolls
+  // inside its pane rather than stretching the page.
+  min-width: 0;
+
+  @include govuk-media-query($from: desktop) {
+    flex: 1 1 auto;
+  }
+}
+
+// Trading rules layout experiment (Figma 5495:81649) -----------------------
+// Each band's status and rule as a summary list, then boxes of units. A box
+// with a breakdown is a <details>: its grey header is the toggle.
+
+.app-summary-list--trading .govuk-summary-list__row:last-child {
+  border-bottom: 0;
+}
+
+.app-trading-box {
+  margin-bottom: govuk-spacing(6);
+  border: 1px solid $govuk-border-colour;
+}
+
+.app-trading-box__header {
+  @include govuk-font($size: 19);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: govuk-spacing(2) govuk-spacing(4);
+  padding: govuk-spacing(4);
+  background-color: #f3f2f1;
+  color: $govuk-text-colour;
+}
+
+.app-trading-box__header--plain {
+  background-color: #ffffff;
+}
+
+// <summary>: no browser marker; the Show / Hide details text is the cue.
+summary.app-trading-box__header {
+  cursor: pointer;
+  list-style: none;
+
+  &::-webkit-details-marker {
+    display: none;
+  }
+
+  &:focus-visible {
+    outline: $govuk-focus-width solid $govuk-focus-colour;
+    outline-offset: 0;
+    box-shadow: inset 0 0 0 $govuk-focus-width $govuk-focus-text-colour;
+  }
+
+  &:hover .app-trading-box__toggle {
+    color: $govuk-link-hover-colour;
+  }
+}
+
+.app-trading-box__title {
+  flex: 1 1 20em;
+}
+
+.app-trading-box__heading {
+  display: block;
+  font-weight: $govuk-font-weight-bold;
+}
+
+.app-trading-box__hint {
+  display: block;
+  margin-top: govuk-spacing(1);
+}
+
+.app-trading-box__toggle {
+  display: flex;
+  align-items: center;
+  gap: govuk-spacing(1);
+  color: $govuk-link-colour;
+}
+
+.app-trading-box__value {
+  font-weight: $govuk-font-weight-bold;
+  white-space: nowrap;
+}
+
+.app-trading-box__hide,
+.app-trading-box[open] .app-trading-box__show {
+  display: none;
+}
+
+.app-trading-box[open] .app-trading-box__hide {
+  display: inline;
+}
+
+// The chevron points down while closed, up while open.
+.app-trading-box[open] .govuk-accordion-nav__chevron--down {
+  transform: rotate(0deg);
+}
+
+.app-trading-box__body {
+  padding: govuk-spacing(4) govuk-spacing(4) 0;
+}
+
+.app-trading-box__total {
+  font-weight: $govuk-font-weight-bold;
+}
+
+// A loss: red bar beside the broad habitat's total.
+.app-trading-box__total--loss {
+  padding-left: govuk-spacing(3);
+  border-left: 5px solid $govuk-error-colour;
+}
+
 // =========================================================================
 // Project dashboard v2 journey (User Research)
 // =========================================================================

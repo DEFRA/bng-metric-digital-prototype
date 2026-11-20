@@ -1,0 +1,44 @@
+{#
+  A box of units for the trading rules layout experiment (Figma 5495:81649).
+  box.title, box.value, and optionally:
+    box.hint   - a line under the title
+    box.tables - govukTable params; the box opens to show them ("Show
+                 details" / "Hide details"), closed by default
+    box.plain  - white header instead of grey
+  Built on <details>, so it opens and closes without JavaScript.
+#}
+{% from "govuk/components/table/macro.njk" import govukTable %}
+
+{% macro tradingBox(box) %}
+  {% set header %}
+    <span class="app-trading-box__title">
+      <span class="app-trading-box__heading">{{ box.title }}</span>
+      {% if box.hint %}
+        <span class="app-trading-box__hint">{{ box.hint }}</span>
+      {% endif %}
+    </span>
+    {% if box.tables %}
+      <span class="app-trading-box__toggle">
+        <span class="govuk-accordion-nav__chevron govuk-accordion-nav__chevron--down"></span>
+        <span class="app-trading-box__show">Show details</span>
+        <span class="app-trading-box__hide">Hide details</span>
+      </span>
+    {% endif %}
+    <span class="app-trading-box__value">{{ box.value }}</span>
+  {% endset %}
+
+  {% if box.tables %}
+    <details class="app-trading-box">
+      <summary class="app-trading-box__header">{{ header | safe }}</summary>
+      <div class="app-trading-box__body">
+        {% for table in box.tables %}
+          {{ govukTable(table) }}
+        {% endfor %}
+      </div>
+    </details>
+  {% else %}
+    <div class="app-trading-box">
+      <div class="app-trading-box__header{{ ' app-trading-box__header--plain' if box.plain }}">{{ header | safe }}</div>
+    </div>
+  {% endif %}
+{% endmacro %}
