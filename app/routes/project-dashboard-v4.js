@@ -138,7 +138,12 @@ const UPLOAD_HREF = `${BASE}/upload/choose`
 // Shared appDashboard settings. "app-dashboard--tight" is the Figma tile
 // spacing (4950:34912, 4950:34922): 10px between the number or title and the
 // link or tag that follows, with tags not pinned to the card foot.
-const DASHBOARD = { headingLevel: 3, classes: 'app-dashboard--tight' }
+// Round 7 adds "app-dashboard--compact", the tweaked card padding from
+// Figma 5610:137771.
+const DASHBOARD = {
+  headingLevel: 3,
+  classes: 'app-dashboard--tight app-dashboard--compact'
+}
 
 const TAG_NOT_MET = { text: 'Not met', classes: 'govuk-tag--red' }
 const TAG_MET = { text: 'Met', classes: 'govuk-tag--green' }
