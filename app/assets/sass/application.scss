@@ -1533,6 +1533,9 @@
         left: 100%;
         width: 0.75em;
         background: linear-gradient(to right, rgb(0, 0, 0, 0.2), rgb(0, 0, 0, 0));
+        // Hidden unless the scroll animation shows it: a table that fits
+        // has an inactive scroll timeline, which applies no animation.
+        opacity: 0;
         pointer-events: none;
         animation: app-sticky-column-shadow linear both;
         animation-timeline: scroll(nearest inline);
