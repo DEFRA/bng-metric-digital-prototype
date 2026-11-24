@@ -272,16 +272,16 @@ const sectionHref = (section, page) =>
 // --- Dashboard cards ---------------------------------------------------------
 
 /**
- * The "Results" cards. On the overview, missing post-intervention data
- * prompts an upload; inside a section, the cards link to that section's
- * pages — except the card for the page you are already on (Figma 3200/3300).
+ * The "Results" cards. Missing post-intervention data prompts an upload,
+ * on the overview and inside a section alike (round 7, Figma 3000 / 3200 /
+ * 4000 / 4200); otherwise the cards link to that section's pages — except
+ * the card for the page you are already on.
  * @param {object} section
  * @param {boolean} complete
  * @param {string} page - "overview", "summary", "baseline" or "post-intervention"
  */
 function results(section, complete, page) {
   const r = section.data.results
-  const onOverview = page === 'overview'
   const baselineLink =
     page === 'baseline'
       ? undefined
@@ -290,7 +290,7 @@ function results(section, complete, page) {
           href: sectionHref(section, 'baseline')
         }
   let postLink
-  if (onOverview && !complete) {
+  if (!complete) {
     postLink = { text: 'Upload post intervention file', href: UPLOAD_HREF }
   } else if (page !== 'post-intervention') {
     postLink = {
