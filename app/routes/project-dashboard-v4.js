@@ -744,6 +744,9 @@ function baselineTable(section, complete, hidden = []) {
  * session per section; the form is a GET to the baseline page itself.
  */
 
+// The baseline table section's id, so the filter returns users to it.
+const BASELINE_TABLE_ID = 'habitat-details'
+
 function hiddenBaselineColumns(req, section) {
   const stored = req.session.data.baselineHiddenColumns || {}
   return stored[section.id] || []
@@ -2196,7 +2199,8 @@ function registerProjectDashboardV4Routes(router) {
           )
           // Keep the filter open to show what was applied.
           req.session.baselineFilterOpen = true
-          return res.redirect(href)
+          // Land back on the table, not the top of the page.
+          return res.redirect(`${href}#${BASELINE_TABLE_ID}`)
         }
         if (req.query.showColumn) {
           setHiddenBaselineColumns(
@@ -2209,7 +2213,8 @@ function registerProjectDashboardV4Routes(router) {
                 )
           )
           req.session.baselineFilterOpen = true
-          return res.redirect(href)
+          // Land back on the table, not the top of the page.
+          return res.redirect(`${href}#${BASELINE_TABLE_ID}`)
         }
         next()
       },
