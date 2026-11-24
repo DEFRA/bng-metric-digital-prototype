@@ -6,7 +6,9 @@
   Round 7 layout (Figma 3200, from the round 6 "Full-width tables, 188px
   menu" experiment): the page runs to the window edges with a 188px side
   menu; content is capped at 992px (its width on a 1280px screen) except
-  anything wrapped in `.app-uncapped`, such as the baseline table.
+  anything wrapped in `.app-uncapped` (the baseline and flags tables). A
+  page that is only a table sets `tablesOnly`, so its header spans the
+  table width too.
 #}
 {% extends "layouts/main.html" %}
 
@@ -29,7 +31,7 @@
 
   <div class="app-sidebar-layout__main">
 
-    <div class="app-page-header">
+    <div class="app-page-header{{ ' app-uncapped' if tablesOnly }}">
       <div>
         {% if not hideCaption %}
           <span class="govuk-caption-l">{{ data.projectName | default("Project name", true) }}</span>

@@ -1638,7 +1638,8 @@ $app-wide-page-width: 1280px;
 
 // Content keeps the width it has on a 1280px screen
 // (1280 - 30 - 188 - 40 - 30 = 992px), except .app-uncapped (the baseline
-// table), which uses all the space beside the side menu.
+// and flags tables, and the Flags page header), which uses all the space
+// beside the side menu.
 .app-fluid--capped .app-sidebar-layout__main > :not(.app-uncapped) {
   max-width: 992px;
 }
