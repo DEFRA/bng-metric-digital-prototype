@@ -1,0 +1,35 @@
+{#
+  Trading rules scenario (Figma 6000-6041), one of a standalone series like
+  the dropout pages. `scenario` comes from TRADING_SCENARIOS in the route:
+  each band has its status and rule, then boxes of units.
+#}
+{% extends "project-dashboard-v4/_dashboard-layout.html" %}
+
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/summary-list/macro.njk" import govukSummaryList %}
+{% from "project-dashboard-v4/_unit-box.html" import unitBox %}
+
+{% set pageName = scenario.title %}
+
+{% block dashboardContent %}
+  {% for band in scenario.bands %}
+    <h2 class="govuk-heading-m{{ ' govuk-!-margin-top-8' if not loop.first }}">{{ band.heading }}</h2>
+    {{ govukSummaryList({
+      classes: "app-summary-list--band",
+      rows: [
+        { key: { text: "Status" }, value: { html: '<strong class="govuk-tag ' ~ band.tag.classes ~ '">' ~ band.tag.text ~ '</strong>' } },
+        { key: { text: "Trading rule" }, value: { text: band.rule } }
+      ]
+    }) }}
+
+    {% for box in band.boxes %}
+      {{ unitBox(box) }}
+    {% endfor %}
+  {% endfor %}
+
+  <p class="govuk-body govuk-!-margin-top-8">
+    For help using this service visit the official guidance on <a class="govuk-link" href="https://www.gov.uk/guidance/biodiversity-net-gain">GOV.UK</a>.
+  </p>
+
+  {{ govukButton({ text: "Next", href: nextHref, classes: "govuk-button--secondary" }) }}
+{% endblock %}
