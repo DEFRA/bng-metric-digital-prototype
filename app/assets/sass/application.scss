@@ -1700,6 +1700,13 @@ $app-wide-page-width: 1280px;
   }
 }
 
+// Baseline column filter (MOJ filter component). The MOJ script hides the
+// filter itself, not the layout column holding it, which has a minimum
+// width; hide that too so the table uses the full width while it's closed.
+.app-column-filter .moj-filter-layout__filter:has(.moj-js-hidden) {
+  display: none;
+}
+
 .app-summary-list--band .govuk-summary-list__row:last-child {
   border-bottom: 0;
 }

@@ -612,94 +612,175 @@ const SPLIT_COLUMNS = [
   ['lost', 'Area habitat lost', 'Units lost']
 ]
 
-function baselineTable(section, complete) {
+/**
+ * The baseline table's columns, in order. Each has a `key` (for the column
+ * filter), a `label`, its `head` cell, a `cell(h, i)` builder and an
+ * optional `foot` (totals) cell, so any column but Ref can be left out.
+ */
+function baselineColumns(section, complete) {
   const rows = section.data.baseline
   const measure = section.measure
-  const split = section.showsInterventionSplit
   const splits = rows.map((h) => interventionSplit(h, complete))
-  const head = [
-    { text: 'Ref' },
-    { text: 'Status' },
-    { text: 'Units', format: 'numeric' },
-    { text: measure.label, format: 'numeric' },
-    // Round 7: no Broad habitat or Trading rules columns.
-    { text: 'Habitat type', classes: WRAP_HABITAT_TYPE },
-    { text: 'Distinctiveness' },
-    { text: 'Condition' },
-    { text: 'Strategic significance' }
-  ].concat(
-    split
-      ? SPLIT_COLUMNS.flatMap(([, areaLabel, unitsLabel]) => [
-          { text: areaLabel, format: 'numeric' },
-          { text: unitsLabel, format: 'numeric' }
-        ])
-      : []
+  const habitat = rows.map((h) =>
+    habitatCells(h, h.condition, h.conditionScore)
   )
+  const strong = (text) => ({
+    html: `<strong>${text}</strong>`,
+    format: 'numeric'
+  })
 
-  const splitCells = (values) =>
-    SPLIT_COLUMNS.flatMap(([key]) => [
-      {
-        text: hectares(values[key].area),
-        format: 'numeric',
-        attributes: sortValue(values[key].area)
-      },
-      {
-        text: fixed(values[key].units),
-        format: 'numeric',
-        attributes: sortValue(values[key].units)
-      }
-    ])
-
-  // Totals for the split columns sit after the shared Units / Size totals.
-  const splitTotals = () => {
-    const total = (key, field) =>
-      splits.reduce((acc, sp) => acc + sp[key][field], 0)
-    return SPLIT_COLUMNS.flatMap(([key]) => [
-      {
-        html: `<strong>${hectares(total(key, 'area'))}</strong>`,
-        format: 'numeric'
-      },
-      {
-        html: `<strong>${fixed(total(key, 'units'))}</strong>`,
-        format: 'numeric'
-      }
-    ])
-  }
-
-  return sortable({
-    head: head,
-    rows: rows.map((h, i) =>
-      [
+  const columns = [
+    {
+      key: 'ref',
+      label: 'Ref',
+      head: { text: 'Ref' },
+      cell: (h) =>
         refCell(
           section.hasDetailPages &&
             `${sectionHref(section, 'baseline')}/${slug(h.ref)}`,
           h.ref
         ),
-        statusCell(isIncomplete(h)),
-        unitsCell(h),
-        measureCell(section, h)
-      ]
-        .concat(habitatCells(h, h.condition, h.conditionScore))
-        .concat(split ? splitCells(splits[i]) : [])
-    ),
-    foot: [
-      split
-        ? totalRow(
-            head.length - SPLIT_COLUMNS.length * 2,
-            2,
-            3,
-            sum(rows, 'units'),
-            measure.format(sum(rows, measure.key))
-          ).concat(splitTotals())
-        : totalRow(
-            head.length,
-            2,
-            3,
-            sum(rows, 'units'),
-            measure.format(sum(rows, measure.key))
-          )
-    ]
+      foot: { html: '<strong>Total</strong>' }
+    },
+    {
+      key: 'status',
+      label: 'Status',
+      head: { text: 'Status' },
+      cell: (h) => statusCell(isIncomplete(h))
+    },
+    {
+      key: 'units',
+      label: 'Units',
+      head: { text: 'Units', format: 'numeric' },
+      cell: (h) => unitsCell(h),
+      foot: strong(fixed(sum(rows, 'units')))
+    },
+    {
+      key: 'measure',
+      label: measure.label,
+      head: { text: measure.label, format: 'numeric' },
+      cell: (h) => measureCell(section, h),
+      foot: strong(measure.format(sum(rows, measure.key)))
+    },
+    // Round 7: no Broad habitat or Trading rules columns.
+    ...[
+      ['habitat-type', 'Habitat type', WRAP_HABITAT_TYPE],
+      ['distinctiveness', 'Distinctiveness'],
+      ['condition', 'Condition'],
+      ['strategic-significance', 'Strategic significance']
+    ].map(([key, label, classes], n) => ({
+      key,
+      label,
+      head: { text: label, classes },
+      cell: (h, i) => habitat[i][n]
+    }))
+  ]
+
+  if (section.showsInterventionSplit) {
+    const total = (key, field) =>
+      splits.reduce((acc, sp) => acc + sp[key][field], 0)
+    for (const [key, areaLabel, unitsLabel] of SPLIT_COLUMNS) {
+      columns.push(
+        {
+          key: `${key}-area`,
+          label: areaLabel,
+          head: { text: areaLabel, format: 'numeric' },
+          cell: (h, i) => ({
+            text: hectares(splits[i][key].area),
+            format: 'numeric',
+            attributes: sortValue(splits[i][key].area)
+          }),
+          foot: strong(hectares(total(key, 'area')))
+        },
+        {
+          key: `${key}-units`,
+          label: unitsLabel,
+          head: { text: unitsLabel, format: 'numeric' },
+          cell: (h, i) => ({
+            text: fixed(splits[i][key].units),
+            format: 'numeric',
+            attributes: sortValue(splits[i][key].units)
+          }),
+          foot: strong(fixed(total(key, 'units')))
+        }
+      )
+    }
+  }
+  return columns
+}
+
+/**
+ * @param {object} section
+ * @param {boolean} complete
+ * @param {string[]} [hidden] - keys of columns to leave out (column filter)
+ */
+function baselineTable(section, complete, hidden = []) {
+  const rows = section.data.baseline
+  const columns = baselineColumns(section, complete).filter(
+    (c) => !hidden.includes(c.key)
+  )
+  return sortable({
+    head: columns.map((c) => c.head),
+    rows: rows.map((h, i) => columns.map((c) => c.cell(h, i))),
+    foot: [columns.map((c) => c.foot || {})]
   })
+}
+
+// --- Baseline column filter (round 7) ------------------------------------------
+
+/*
+ * MOJ filter component (design-patterns.service.justice.gov.uk/components/
+ * filter) used to show and hide the baseline table's columns. Ref always
+ * shows, as it links to each habitat. The hidden columns are kept in the
+ * session per section; the form is a GET to the baseline page itself.
+ */
+
+function hiddenBaselineColumns(req, section) {
+  const stored = req.session.data.baselineHiddenColumns || {}
+  return stored[section.id] || []
+}
+
+function setHiddenBaselineColumns(req, section, hidden) {
+  req.session.data.baselineHiddenColumns = {
+    ...(req.session.data.baselineHiddenColumns || {}),
+    [section.id]: hidden
+  }
+}
+
+// View model for the filter: checkboxes for each column but Ref, and the
+// hidden columns as removable tags under "Selected filters".
+function baselineFilter(section, complete, hidden) {
+  const href = sectionHref(section, 'baseline')
+  const optional = baselineColumns(section, complete).filter(
+    (c) => c.key !== 'ref'
+  )
+  const hiddenColumns = optional.filter((c) => hidden.includes(c.key))
+  return {
+    action: href,
+    items: optional.map((c) => ({
+      value: c.key,
+      text: c.label,
+      checked: !hidden.includes(c.key)
+    })),
+    selectedFilters: hiddenColumns.length
+      ? {
+          heading: { text: 'Selected filters' },
+          clearLink: {
+            text: 'Clear filters',
+            href: `${href}?showColumn=all`
+          },
+          categories: [
+            {
+              heading: { text: 'Hidden columns' },
+              items: hiddenColumns.map((c) => ({
+                text: c.label,
+                href: `${href}?showColumn=${c.key}`
+              }))
+            }
+          ]
+        }
+      : null
+  }
 }
 
 // Baseline detail "Intervention / Units (hectares)" table (Figma 3210).
@@ -2087,9 +2168,51 @@ function registerProjectDashboardV4Routes(router) {
 
     router.get(
       sectionHref(section, 'baseline'),
-      render('baseline', 'baseline', (complete) => ({
-        baselineTable: baselineTable(section, complete)
-      }))
+      // Column filter: "Apply filters" and the tags come back here with a
+      // query, which is saved and then dropped with a redirect.
+      function (req, res, next) {
+        const href = sectionHref(section, 'baseline')
+        const optional = baselineColumns(section, isComplete(req))
+          .map((c) => c.key)
+          .filter((key) => key !== 'ref')
+        if (req.query.columnsApplied) {
+          const shown = [].concat(req.query.baselineColumns || [])
+          setHiddenBaselineColumns(
+            req,
+            section,
+            optional.filter((key) => !shown.includes(key))
+          )
+          // Keep the filter open to show what was applied.
+          req.session.baselineFilterOpen = true
+          return res.redirect(href)
+        }
+        if (req.query.showColumn) {
+          setHiddenBaselineColumns(
+            req,
+            section,
+            req.query.showColumn === 'all'
+              ? []
+              : hiddenBaselineColumns(req, section).filter(
+                  (key) => key !== req.query.showColumn
+                )
+          )
+          req.session.baselineFilterOpen = true
+          return res.redirect(href)
+        }
+        next()
+      },
+      function (req, res, next) {
+        const hidden = hiddenBaselineColumns(req, section)
+        const filterOpen = Boolean(req.session.baselineFilterOpen)
+        delete req.session.baselineFilterOpen
+        render('baseline', 'baseline', (complete) => ({
+          baselineTable: baselineTable(section, complete, hidden),
+          baselineFilter: {
+            ...baselineFilter(section, complete, hidden),
+            open: filterOpen
+          }
+        }))(req, res, next)
+      }
     )
 
     router.get(
