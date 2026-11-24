@@ -1707,6 +1707,19 @@ $app-wide-page-width: 1280px;
   display: none;
 }
 
+// MOJ builds its image paths from GOV.UK Frontend's assets folder, so in the
+// prototype kit the filter tags' remove (x) icons 404. Point them at MOJ's
+// own plugin assets.
+$app-moj-images: '/plugin-assets/%40ministryofjustice%2Ffrontend/moj/assets/images/';
+
+.moj-filter__tag::after {
+  background-image: url('#{$app-moj-images}icon-tag-remove-cross.svg');
+}
+
+.moj-filter__tag:hover::after {
+  background-image: url('#{$app-moj-images}icon-tag-remove-cross-white.svg');
+}
+
 .app-summary-list--band .govuk-summary-list__row:last-child {
   border-bottom: 0;
 }
