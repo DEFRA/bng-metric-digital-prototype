@@ -501,12 +501,9 @@ function totalRow(columns, unitsColumn, measureColumn, unitTotal, measure) {
 const WRAP_HABITAT_TYPE = 'app-scrollable-table__wrap'
 
 // Baseline habitat cells. Any value missing from the data shows "No data".
-function habitatCells(section, h, conditionName, conditionScore) {
-  return (
-    section.hasBroadHabitat
-      ? [h.broadHabitat ? { text: h.broadHabitat } : NO_DATA]
-      : []
-  ).concat([
+// Round 7 drops the Broad habitat column from the baseline table.
+function habitatCells(h, conditionName, conditionScore) {
+  return [
     h.habitatType
       ? { text: h.habitatType, classes: WRAP_HABITAT_TYPE }
       : { ...NO_DATA, classes: WRAP_HABITAT_TYPE },
@@ -531,7 +528,7 @@ function habitatCells(section, h, conditionName, conditionScore) {
           attributes: sortValue(h.strategicSignificanceMultiplier)
         }
       : NO_DATA
-  ])
+  ]
 }
 
 // Units the metric couldn't calculate (missing inputs) show "No data".
@@ -624,24 +621,20 @@ function baselineTable(section, complete) {
     { text: 'Ref' },
     { text: 'Status' },
     { text: 'Units', format: 'numeric' },
-    { text: measure.label, format: 'numeric' }
-  ]
-    .concat(section.hasBroadHabitat ? [{ text: 'Broad habitat' }] : [])
-    .concat([
-      { text: 'Habitat type', classes: WRAP_HABITAT_TYPE },
-      { text: 'Distinctiveness' },
-      { text: 'Condition' },
-      { text: 'Strategic significance' },
-      { text: 'Trading rules' }
-    ])
-    .concat(
-      split
-        ? SPLIT_COLUMNS.flatMap(([, areaLabel, unitsLabel]) => [
-            { text: areaLabel, format: 'numeric' },
-            { text: unitsLabel, format: 'numeric' }
-          ])
-        : []
-    )
+    { text: measure.label, format: 'numeric' },
+    // Round 7: no Broad habitat or Trading rules columns.
+    { text: 'Habitat type', classes: WRAP_HABITAT_TYPE },
+    { text: 'Distinctiveness' },
+    { text: 'Condition' },
+    { text: 'Strategic significance' }
+  ].concat(
+    split
+      ? SPLIT_COLUMNS.flatMap(([, areaLabel, unitsLabel]) => [
+          { text: areaLabel, format: 'numeric' },
+          { text: unitsLabel, format: 'numeric' }
+        ])
+      : []
+  )
 
   const splitCells = (values) =>
     SPLIT_COLUMNS.flatMap(([key]) => [
@@ -686,12 +679,7 @@ function baselineTable(section, complete) {
         unitsCell(h),
         measureCell(section, h)
       ]
-        .concat(habitatCells(section, h, h.condition, h.conditionScore))
-        .concat([
-          tradingRuleCopy(section, h).short
-            ? { text: tradingRuleCopy(section, h).short }
-            : NO_DATA
-        ])
+        .concat(habitatCells(h, h.condition, h.conditionScore))
         .concat(split ? splitCells(splits[i]) : [])
     ),
     foot: [
