@@ -679,29 +679,38 @@ function baselineColumns(section, complete) {
   if (section.showsInterventionSplit) {
     const total = (key, field) =>
       splits.reduce((acc, sp) => acc + sp[key][field], 0)
+    // Without a post-intervention file the split can't be calculated, so
+    // its cells show "No data" and have no total (always so in round 7).
+    const noData = { ...NO_DATA, format: 'numeric' }
     for (const [key, areaLabel, unitsLabel] of SPLIT_COLUMNS) {
       columns.push(
         {
           key: `${key}-area`,
           label: areaLabel,
           head: { text: areaLabel, format: 'numeric' },
-          cell: (h, i) => ({
-            text: hectares(splits[i][key].area),
-            format: 'numeric',
-            attributes: sortValue(splits[i][key].area)
-          }),
-          foot: strong(hectares(total(key, 'area')))
+          cell: (h, i) =>
+            complete
+              ? {
+                  text: hectares(splits[i][key].area),
+                  format: 'numeric',
+                  attributes: sortValue(splits[i][key].area)
+                }
+              : noData,
+          foot: complete ? strong(hectares(total(key, 'area'))) : undefined
         },
         {
           key: `${key}-units`,
           label: unitsLabel,
           head: { text: unitsLabel, format: 'numeric' },
-          cell: (h, i) => ({
-            text: fixed(splits[i][key].units),
-            format: 'numeric',
-            attributes: sortValue(splits[i][key].units)
-          }),
-          foot: strong(fixed(total(key, 'units')))
+          cell: (h, i) =>
+            complete
+              ? {
+                  text: fixed(splits[i][key].units),
+                  format: 'numeric',
+                  attributes: sortValue(splits[i][key].units)
+                }
+              : noData,
+          foot: complete ? strong(fixed(total(key, 'units'))) : undefined
         }
       )
     }
@@ -795,7 +804,10 @@ function interventionSplitTable(h, complete) {
       ['lost', 'Habitat lost']
     ].map(([key, label]) => [
       { text: label, classes: 'govuk-!-font-weight-bold' },
-      { text: `${fixed(split[key].units)} (${hectares(split[key].area)})` }
+      // As in the baseline table: no post-intervention file, no split.
+      complete
+        ? { text: `${fixed(split[key].units)} (${hectares(split[key].area)})` }
+        : NO_DATA
     ])
   }
 }
