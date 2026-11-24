@@ -9,8 +9,11 @@
 
   <hr class="govuk-section-break govuk-section-break--l govuk-section-break--visible">
 
+  {# Full width: the table uses all the space beside the side menu. #}
+  <div class="app-uncapped">
   <h2 class="govuk-heading-m">{{ section.detailsHeading }}</h2>
   <div class="moj-scrollable-pane app-scrollable-table app-scrollable-table--sticky-first" role="region" tabindex="0" aria-label="{{ section.detailsHeading }}, scroll horizontally to see more columns">
     {{ appTable(baselineTable) }}
+  </div>
   </div>
 {% endblock %}

@@ -1333,66 +1333,6 @@ const PROJECT_DETAIL_FIELDS = [
   'localPlanningAuthority'
 ]
 
-// --- File errors (dropout pages) ---------------------------------------------
-
-const METRIC_TOOL_HREF =
-  'https://www.gov.uk/government/publications/statutory-biodiversity-metric-tools-and-guides'
-
-/**
- * Dropout pages shown when an uploaded file can't be used (Figma 6000-6080),
- * in Figma order. Each is keyed by the service's error code. Errors with a
- * `category` can be fixed and re-uploaded; the rest are a single paragraph.
- * Shown as a standalone series for research: "Next" steps through them and
- * the upload flow itself always succeeds.
- */
-const FILE_ERRORS = [
-  {
-    code: '34',
-    category: 'Habitat parcels',
-    // Figma uses "{Habitat ref} / {Tree ref}"; a ref from the data reads
-    // more naturally in research.
-    message:
-      'AH-003-1 has both advance and delay years. Enter either advance or delay years, not both.'
-  },
-  {
-    code: '39',
-    html: `Your project contains habitats that have been enhanced to a level which is not yet included in this service. Use the <a class="govuk-link" href="${METRIC_TOOL_HREF}">metric tool (spreadsheet)</a> to calculate biodiversity value.`
-  },
-  {
-    code: '5',
-    category: 'Geopackage layers',
-    message: 'A layer uses the wrong map projection.'
-  },
-  {
-    code: '6',
-    category: 'Geopackage layers',
-    message:
-      "A layer's shape column is missing, misnamed, duplicated or of the wrong type."
-  },
-  {
-    code: '7',
-    category: 'Template',
-    message: 'A column is missing or set up differently from the template.'
-  },
-  {
-    code: '13',
-    category: 'Geometry',
-    message:
-      'Your hedgerows or watercourses cannot be read, or are not drawn as lines.'
-  },
-  { code: '15', html: "There was a problem with your file's metadata." },
-  {
-    code: '37',
-    html: 'Your habitat data does not match the required structure. Check your file against the Natural England template.'
-  },
-  {
-    code: '42',
-    html: 'Your file contains a comment which uses invalid characters. Comments can only use UTF8 characters.'
-  }
-]
-
-const fileErrorHref = (error) => `${BASE}/file-error/${error.code}`
-
 // --- Trading rules scenarios (round 7) ---------------------------------------
 
 /*
@@ -1886,23 +1826,18 @@ function tradingScenarioView(scenario) {
   }
 }
 
-// Side nav for a scenario: its section open at the trading page. Watercourses
-// isn't a section in this journey, so it gets an item of its own.
+// Side nav for a scenario: its section is the current item (the side menu
+// has no trading rules link). Watercourses isn't a section in this journey,
+// so it gets an item of its own.
 function scenarioSideNav(scenario) {
   if (scenario.section !== 'watercourses') {
-    return sideNav(scenario.section, 'trading-summary')
+    return sideNav(scenario.section)
   }
   const nav = sideNav('watercourses')
   nav.items.splice(nav.items.length - 1, 0, {
     text: 'Watercourses',
     href: tradingScenarioHref(scenario),
-    items: [
-      {
-        text: 'Trading summary',
-        href: tradingScenarioHref(scenario),
-        current: true
-      }
-    ]
+    current: true
   })
   return nav
 }
@@ -1912,7 +1847,10 @@ function scenarioSideNav(scenario) {
 /**
  * @param {string} current - "overview", "flags", "project-details" or a
  *   section id
- * @param {string} [sub] - "trading-summary", "baseline" or "post-intervention"
+ * @param {string} [sub] - "baseline"
+ *
+ * Round 7 (Figma 3200) lists only Baseline under each section: the trading
+ * summary and post-intervention pages aren't part of the baseline flow.
  */
 function sideNav(current, sub) {
   const sectionItem = (section) => ({
@@ -1921,15 +1859,13 @@ function sideNav(current, sub) {
     current: current === section.id && !sub,
     items:
       current === section.id
-        ? ['trading-summary', 'baseline', 'post-intervention'].map((page) => ({
-            text: {
-              'trading-summary': 'Trading summary',
-              baseline: 'Baseline',
-              'post-intervention': 'Post intervention'
-            }[page],
-            href: sectionHref(section, page),
-            current: sub === page
-          }))
+        ? [
+            {
+              text: 'Baseline',
+              href: sectionHref(section, 'baseline'),
+              current: sub === 'baseline'
+            }
+          ]
         : undefined
   })
 
@@ -2037,9 +1973,10 @@ function registerProjectDashboardV4Routes(router) {
     res.locals.serviceName = 'Calculate biodiversity net gain'
     // The service name links back to the start of the round 7 prototype.
     res.locals.serviceNameHref = BASE
-    // Lets facilitators open the dropout pages from anywhere in the journey.
+    // Lets facilitators open the trading rules pages from anywhere.
+    // (Round 6's file error pages were tested in round 6, so they aren't
+    // carried over.)
     res.locals.footerLinks = [
-      { href: fileErrorHref(FILE_ERRORS[0]), text: 'File errors' },
       {
         href: tradingScenarioHref(TRADING_SCENARIOS[0]),
         text: 'Trading rules'
@@ -2374,28 +2311,6 @@ function registerProjectDashboardV4Routes(router) {
       res.redirect(returnTo(req, postList).href)
     })
   }
-
-  // Dropout pages (Figma 6000-6080) as a standalone series.
-  router.get(`${BASE}/file-error`, function (req, res) {
-    res.redirect(fileErrorHref(FILE_ERRORS[0]))
-  })
-
-  router.get(`${BASE}/file-error/:code`, function (req, res, next) {
-    const index = FILE_ERRORS.findIndex((e) => e.code === req.params.code)
-    if (index === -1) {
-      return next() // unknown code: fall through to the 404 handler
-    }
-    const previous = FILE_ERRORS[index - 1]
-    const following = FILE_ERRORS[index + 1]
-    res.render('project-dashboard-v4/file-error', {
-      error: FILE_ERRORS[index],
-      // The first page has no back link in Figma (6000); the last "Next"
-      // returns to the research homepage.
-      backHref: previous ? fileErrorHref(previous) : null,
-      nextHref: following ? fileErrorHref(following) : '/',
-      uploadHref: UPLOAD_HREF
-    })
-  })
 
   // Trading rules scenarios (Figma 6000-6041) as a standalone series.
   router.get(`${BASE}/trading-rules`, function (req, res) {

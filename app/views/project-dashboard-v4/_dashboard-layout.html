@@ -2,10 +2,15 @@
   Shared shell for the project-dashboard-v4 side-nav screens (overview,
   flags, area habitats). Child views set `pageName` and fill
   `dashboardContent`; set `hideUploadButton` to drop the header action.
+
+  Round 7 layout (Figma 3200, from the round 6 "Full-width tables, 188px
+  menu" experiment): the page runs to the window edges with a 188px side
+  menu; content is capped at 992px (its width on a 1280px screen) except
+  anything wrapped in `.app-uncapped`, such as the baseline table.
 #}
 {% extends "layouts/main.html" %}
 
-{% set bodyClasses = "app-wide" %}
+{% set bodyClasses = "app-fluid app-fluid--capped" %}
 
 {% from "govuk/components/button/macro.njk" import govukButton %}
 {% from "dashboard/macro.njk" import appSideNav %}
@@ -17,12 +22,12 @@
 {% endblock %}
 
 {% block content %}
-<div class="govuk-grid-row">
-  <div class="govuk-grid-column-one-quarter">
+<div class="app-sidebar-layout">
+  <div class="app-sidebar-layout__nav">
     {{ appSideNav(sideNav) }}
   </div>
 
-  <div class="govuk-grid-column-three-quarters">
+  <div class="app-sidebar-layout__main">
 
     <div class="app-page-header">
       <div>
