@@ -123,6 +123,14 @@ function removePostInterventionUnits(sectionData, h) {
 const BASE = '/project-dashboard-v3'
 const UPLOAD_HREF = `${BASE}/upload/choose`
 
+// The blank Statutory Biodiversity Metric 1.1.1 on GOV.UK, in its two forms
+// (statutory-biodiversity-metric-tools-and-guides). The macro-free URL is the
+// one bng-library pins as its published template.
+const METRIC_MACRO_ENABLED_HREF =
+  'https://assets.publishing.service.gov.uk/media/6af2e011d6bb0a40c4a5c8b3/The_Statutory_Metric_Macro_Enabled_1.1.1.xlsm'
+const METRIC_MACRO_DISABLED_HREF =
+  'https://assets.publishing.service.gov.uk/media/6af2e02a8b63641b15a5c8bb/The_Statutory_Metric_Macro_Disabled_1.1.1.xlsx'
+
 // Shared appDashboard settings. "app-dashboard--tight" is the Figma tile
 // spacing (4950:34912, 4950:34922): 10px between the number or title and the
 // link or tag that follows, with tags not pinned to the card foot.
@@ -1472,13 +1480,13 @@ function overviewActions(req, complete) {
       }
     })
   }
-  // Replaces v2's Export page. No real workbook is generated this round, so
-  // both links are placeholders.
+  // Replaces v2's Export page. No filled-in workbook is generated this round,
+  // so both links download the blank Metric from GOV.UK.
   actions.push({
     description: 'Download spreadsheet',
     links: [
-      { text: 'Macro enabled', href: '#' },
-      { text: 'Macro disabled', href: '#' }
+      { text: 'Macro enabled', href: METRIC_MACRO_ENABLED_HREF },
+      { text: 'Macro disabled', href: METRIC_MACRO_DISABLED_HREF }
     ]
   })
   return {
