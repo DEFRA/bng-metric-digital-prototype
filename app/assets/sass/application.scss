@@ -1360,6 +1360,12 @@
     margin: 12px 0;
   }
 
+  // A card that opens with its value (no label above it), like Trading
+  // rules: no gap above the value, just the card padding.
+  .app-dashboard__value:first-child {
+    margin-top: 0;
+  }
+
   .app-dashboard__caption {
     margin: 0;
   }
