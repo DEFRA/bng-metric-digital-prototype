@@ -184,9 +184,14 @@ const V4_PAGES = ONBOARDING.concat([
   ['4210-baseline-hedgerow-detail-HR-01', '/hedgerows/baseline/hr-01'],
   ['5000-project-details', '/project-details'],
   ['6000-trading-rules-scenarios', '/trading-rules'],
-  ...['6000', '6010', '6020', '6030', '6040'].map((code, i) => [
-    `${code}-trading-rules-scenario-${i + 1}`,
-    `/trading-rules/${code}`
+  // Each scenario as it loads, then with every box open to show its tables.
+  ...['6000', '6010', '6020', '6030', '6040'].flatMap((code, i) => [
+    [`${code}-trading-rules-scenario-${i + 1}`, `/trading-rules/${code}`],
+    [
+      `${code}-trading-rules-scenario-${i + 1}-all-open`,
+      `/trading-rules/${code}`,
+      OPEN_DETAILS
+    ]
   ])
 ])
 
