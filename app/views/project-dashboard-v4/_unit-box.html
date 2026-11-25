@@ -3,7 +3,9 @@
   box.kind:
     "deficit" / "surplus" - grey header that opens ("Show details" /
                             "Hide details") to show box.tables; closed by
-                            default. box.alert adds the red bar.
+                            default. box.alert (a deficit in a band that's
+                            not met) adds the red bar and opens it (Figma
+                            5654:161579).
     "result"              - white box with a heavy border, no details
   Built on <details>, so it opens and closes without JavaScript.
 #}
@@ -27,7 +29,7 @@
       </div>
     </div>
   {% else %}
-    <details class="app-unit-box{{ ' app-unit-box--alert' if box.alert }}">
+    <details class="app-unit-box{{ ' app-unit-box--alert' if box.alert }}"{{ ' open' if box.alert }}>
       <summary class="app-unit-box__header">
         {{ title | safe }}
         <span class="app-unit-box__toggle">
