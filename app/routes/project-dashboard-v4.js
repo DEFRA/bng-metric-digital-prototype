@@ -2471,7 +2471,8 @@ function registerProjectDashboardV4Routes(router) {
     const scenario = TRADING_SCENARIOS[index]
     res.render('project-dashboard-v4/trading-scenario', {
       scenario: tradingScenarioView(scenario),
-      sideNav: scenarioSideNav(scenario)
+      sideNav: scenarioSideNav(scenario),
+      backHref: `${BASE}/trading-rules`
     })
   })
 

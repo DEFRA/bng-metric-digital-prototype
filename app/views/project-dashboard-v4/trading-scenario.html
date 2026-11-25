@@ -5,6 +5,7 @@
 #}
 {% extends "project-dashboard-v4/_dashboard-layout.html" %}
 
+{% from "govuk/components/button/macro.njk" import govukButton %}
 {% from "govuk/components/summary-list/macro.njk" import govukSummaryList %}
 {% from "project-dashboard-v4/_unit-box.html" import unitBox %}
 
@@ -29,4 +30,7 @@
   <p class="govuk-body govuk-!-margin-top-8">
     For help using this service visit the official guidance on <a class="govuk-link" href="https://www.gov.uk/guidance/biodiversity-net-gain">GOV.UK</a>.
   </p>
+
+  {# Back to the scenarios index (Figma 5674:165980). #}
+  {{ govukButton({ text: "Back", href: backHref, classes: "govuk-button--secondary" }) }}
 {% endblock %}
