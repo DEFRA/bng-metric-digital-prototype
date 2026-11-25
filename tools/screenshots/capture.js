@@ -5,13 +5,15 @@
  *   npm run dev                                # in another terminal
  *   npm run screenshots                        # v2 (UR round 5)
  *   npm run screenshots -- --journey=v3        # v3 (UR round 6)
- *   node tools/screenshots/capture.js [--journey=v2|v3] [baseUrl]
+ *   npm run screenshots -- --journey=v4        # v4 (UR round 7)
+ *   node tools/screenshots/capture.js [--journey=v2|v3|v4] [baseUrl]
  *
  * Drives the locally installed Google Chrome in headless mode over the
  * DevTools protocol (Node's built-in WebSocket) — no Puppeteer/Playwright
  * download. Each page is captured at 1280px wide and its full scroll height.
  * Files are prefixed with the Figma frame number they reconstruct, and split
- * into the two dashboard states (Complete project / Baseline only).
+ * into the two dashboard states (Complete project / Baseline only); v4 is
+ * baseline only, so it has one set.
  *
  * Output: ~/Downloads/project-dashboard-<journey>-screens-<YYYY-MM-DD>/ (+ .zip)
  */
@@ -144,12 +146,58 @@ const V3_FILE_ERRORS = [
   ['6080', '42']
 ].map(([frame, code]) => [`${frame}-file-error-${code}`, `/file-error/${code}`])
 
+// v4 (UR round 7): the baseline flow only — no post intervention, trading
+// summary or file errors — plus the baseline column filter and the trading
+// rules scenarios, tested one at a time from their index.
+const SHOW_FILTER = {
+  script: "document.querySelector('.moj-action-bar__filter button').click()"
+}
+
+// Apply the filter with the six retained / enhanced / lost columns hidden.
+// Kept last of the area baseline captures: hidden columns stay in the session.
+const HIDE_SPLIT_COLUMNS = `/area-habitats/baseline?columnsApplied=true&${[
+  'status',
+  'units',
+  'measure',
+  'habitat-type',
+  'distinctiveness',
+  'condition',
+  'strategic-significance'
+]
+  .map((key) => `baselineColumns=${key}`)
+  .join('&')}`
+
+const V4_PAGES = ONBOARDING.concat([
+  ['1000-overview', '/overview'],
+  ['2000-flags', '/flags'],
+  ['3000-area-habitats', '/area-habitats'],
+  ['3200-area-habitats-baseline', '/area-habitats/baseline'],
+  [
+    '3200-area-habitats-baseline-filter-open',
+    '/area-habitats/baseline',
+    SHOW_FILTER
+  ],
+  ['3200-area-habitats-baseline-columns-hidden', HIDE_SPLIT_COLUMNS],
+  ['3210-baseline-habitat-detail-AH-001', '/area-habitats/baseline/ah-001'],
+  ['4000-hedgerows', '/hedgerows'],
+  ['4200-hedgerows-baseline', '/hedgerows/baseline'],
+  ['4210-baseline-hedgerow-detail-HR-01', '/hedgerows/baseline/hr-01'],
+  ['5000-project-details', '/project-details'],
+  ['6000-trading-rules-scenarios', '/trading-rules'],
+  ...['6000', '6010', '6020', '6030', '6040'].map((code, i) => [
+    `${code}-trading-rules-scenario-${i + 1}`,
+    `/trading-rules/${code}`
+  ])
+])
+
 const PAGES = {
   v2: { dashboard: DASHBOARD, completeOnly: COMPLETE_ONLY },
   v3: {
     dashboard: V3_DASHBOARD,
     completeOnly: V3_COMPLETE_ONLY.concat(V3_FILE_ERRORS)
-  }
+  },
+  // One set, no dashboard state to choose.
+  v4: { runs: [['baseline-only', null, V4_PAGES]] }
 }
 
 function fail(message) {
@@ -271,6 +319,9 @@ async function capture(cdp, url, file, options = {}) {
   }
   // Fonts and govuk-frontend JS (tabs, file upload) settle after load.
   await evaluate(cdp, 'document.fonts.ready.then(() => true)')
+  // A #fragment (e.g. after the column filter) scrolls the page; capture
+  // from the top.
+  await evaluate(cdp, 'window.scrollTo(0, 0) || true')
   await new Promise((resolve) => setTimeout(resolve, 300))
   const height = await evaluate(
     cdp,
@@ -309,9 +360,9 @@ async function setState(cdp, choice) {
 
 async function main() {
   if (!PAGES[VERSION]) {
-    fail(`unknown journey "${VERSION}" — use --journey=v2 or --journey=v3`)
+    fail(`unknown journey "${VERSION}" — use --journey=v2, v3 or v4`)
   }
-  const { dashboard, completeOnly } = PAGES[VERSION]
+  const { dashboard, completeOnly, runs: journeyRuns } = PAGES[VERSION]
   try {
     await fetch(`${BASE_URL}${JOURNEY}`)
   } catch {
@@ -333,7 +384,7 @@ async function main() {
   const cdp = await connect(chrome.port)
   await cdp.send('Page.enable')
 
-  const runs = [
+  const runs = journeyRuns || [
     ['complete', 'complete', ONBOARDING.concat(dashboard, completeOnly)],
     ['baseline-only', 'baseline', dashboard]
   ]
@@ -345,7 +396,7 @@ async function main() {
       fs.mkdirSync(dir, { recursive: true })
       for (const [name, pagePath, options] of pages) {
         // Onboarding pages come first, so set the state before the dashboard.
-        if (pagePath === '/overview') {
+        if (pagePath === '/overview' && choice) {
           await setState(cdp, choice)
         }
         const file = path.join(dir, `${name}.png`)
