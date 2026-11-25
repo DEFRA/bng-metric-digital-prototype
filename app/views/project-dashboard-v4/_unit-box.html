@@ -1,0 +1,49 @@
+{#
+  A box of units on the trading rules pages (Figma 6000-6041).
+  box.kind:
+    "deficit" / "surplus" - grey header that opens ("Show details" /
+                            "Hide details") to show box.tables; closed by
+                            default. box.alert (a deficit in a band that's
+                            not met) adds the red bar and opens it (Figma
+                            5654:161579).
+    "result"              - white box with a heavy border, no details
+  Built on <details>, so it opens and closes without JavaScript.
+#}
+{% from "govuk/components/table/macro.njk" import govukTable %}
+
+{% macro unitBox(box) %}
+  {% set title %}
+    <span class="app-unit-box__title">
+      <span class="app-unit-box__heading">{{ box.title }}</span>
+      {% if box.hint %}
+        <span class="app-unit-box__hint">{{ box.hint }}</span>
+      {% endif %}
+    </span>
+  {% endset %}
+
+  {% if box.kind == "result" %}
+    <div class="app-unit-box app-unit-box--result">
+      <div class="app-unit-box__header">
+        {{ title | safe }}
+        <span class="app-unit-box__value">{{ box.value }}</span>
+      </div>
+    </div>
+  {% else %}
+    <details class="app-unit-box{{ ' app-unit-box--alert' if box.alert }}"{{ ' open' if box.alert }}>
+      <summary class="app-unit-box__header">
+        {{ title | safe }}
+        <span class="app-unit-box__toggle">
+          <span class="govuk-accordion-nav__chevron govuk-accordion-nav__chevron--down"></span>
+          <span class="app-unit-box__show">Show details</span>
+          <span class="app-unit-box__hide">Hide details</span>
+        </span>
+        <span class="app-unit-box__value">{{ box.value }}</span>
+      </summary>
+      <div class="app-unit-box__body">
+        {% for table in box.tables %}
+          {{ govukTable(table) }}
+        {% endfor %}
+      </div>
+    </details>
+  {% endif %}
+{% endmacro %}

@@ -12,6 +12,8 @@
     items      (array) each: {
                  text, href,
                  current: true,            # marks aria-current="page" + active styling
+                 ariaCurrent: "location",  # optional: aria-current value when the
+                                           # item is the current section, not page
                  items: [ { text, href, current } ]   # optional one level of sub-items
                }
 #}
@@ -20,12 +22,12 @@
   <ul class="app-side-nav__list">
     {% for item in params.items %}
       <li class="app-side-nav__item{{ ' app-side-nav__item--current' if item.current }}{{ ' app-side-nav__item--open' if item.items }}">
-        <a class="{{ linkClasses }}" href="{{ item.href }}"{{ ' aria-current="page"' | safe if item.current }}>{{ item.text }}</a>
+        <a class="{{ linkClasses }}" href="{{ item.href }}"{{ (' aria-current="' ~ (item.ariaCurrent or 'page') ~ '"') | safe if item.current }}>{{ item.text }}</a>
         {% if item.items %}
           <ul class="app-side-nav__sub-list">
             {% for sub in item.items %}
               <li class="app-side-nav__sub-item{{ ' app-side-nav__sub-item--current' if sub.current }}">
-                <a class="{{ linkClasses }}" href="{{ sub.href }}"{{ ' aria-current="page"' | safe if sub.current }}>{{ sub.text }}</a>
+                <a class="{{ linkClasses }}" href="{{ sub.href }}"{{ (' aria-current="' ~ (sub.ariaCurrent or 'page') ~ '"') | safe if sub.current }}>{{ sub.text }}</a>
               </li>
             {% endfor %}
           </ul>

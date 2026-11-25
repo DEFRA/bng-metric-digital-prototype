@@ -1,0 +1,15 @@
+{% extends "project-dashboard-v4/_dashboard-layout.html" %}
+
+{% from "table/macro.njk" import appTable %}
+
+{% set pageName = "Flags" %}
+{# The page is only a table, so the heading spans the table width too. #}
+{% set tablesOnly = true %}
+
+{% block dashboardContent %}
+  <div class="app-uncapped">
+  <div class="moj-scrollable-pane app-scrollable-table app-scrollable-table--wrap" role="region" tabindex="0" aria-label="Flags, scroll horizontally to see more columns">
+    {{ appTable(flagsTable) }}
+  </div>
+  </div>
+{% endblock %}

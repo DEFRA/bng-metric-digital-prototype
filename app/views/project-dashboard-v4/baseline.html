@@ -1,0 +1,60 @@
+{# Baseline — Area habitats (Figma 3200) and Hedgerows (4200). #}
+{% extends "project-dashboard-v4/_dashboard-layout.html" %}
+
+{% from "table/macro.njk" import appTable %}
+{% from "dashboard/macro.njk" import appDashboard %}
+{% from "govuk/components/checkboxes/macro.njk" import govukCheckboxes %}
+{% from "moj/components/filter/macro.njk" import mojFilter %}
+
+{% block dashboardContent %}
+  {% include "project-dashboard-v4/_results.html" %}
+
+  {# No section break (as on the overview): 60px above the heading instead. #}
+  {# Full width: the table uses all the space beside the side menu. #}
+  {# id: the column filter redirects back to here (#habitat-details). #}
+  <div class="app-uncapped" id="habitat-details">
+  <h2 class="govuk-heading-m govuk-!-margin-top-9">{{ section.detailsHeading }}</h2>
+
+  {# Column filter: the MOJ "filter a list" layout, with the filter beside
+     the table. The MOJ filter script adds the "Show filter" button to the
+     action bar and starts the filter closed (open after applying). #}
+  <div class="moj-filter-layout app-column-filter">
+    <div class="moj-filter-layout__filter">
+      <form method="get" action="{{ baselineFilter.action }}" novalidate>
+        <input type="hidden" name="columnsApplied" value="true">
+
+        {% set optionsHtml %}
+          {{ govukCheckboxes({
+            idPrefix: "baselineColumns",
+            name: "baselineColumns",
+            classes: "govuk-checkboxes--small",
+            fieldset: {
+              legend: { text: "Columns", classes: "govuk-fieldset__legend--s" }
+            },
+            hint: { text: "Select the columns to show. Ref is always shown." },
+            items: baselineFilter.items
+          }) }}
+        {% endset %}
+
+        {{ mojFilter({
+          heading: { text: "Filter" },
+          selectedFilters: baselineFilter.selectedFilters,
+          submit: { text: "Apply filters" },
+          optionsHtml: optionsHtml,
+          attributes: { "data-start-hidden": "false" } if baselineFilter.open else {}
+        }) }}
+      </form>
+    </div>
+
+    <div class="moj-filter-layout__content">
+      <div class="moj-action-bar">
+        <div class="moj-action-bar__filter"></div>
+      </div>
+
+      <div class="moj-scrollable-pane app-scrollable-table app-scrollable-table--sticky-first" role="region" tabindex="0" aria-label="{{ section.detailsHeading }}, scroll horizontally to see more columns">
+        {{ appTable(baselineTable) }}
+      </div>
+    </div>
+  </div>
+  </div>
+{% endblock %}
