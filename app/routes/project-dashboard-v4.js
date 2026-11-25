@@ -1352,6 +1352,12 @@ function tradingStatusTable(section) {
 // --- Select options ----------------------------------------------------------
 
 function toItems(values, selected, placeholder) {
+  // A value saved in another journey (the session is shared) may not be one
+  // of these options. Keep it as an option so the select still shows it and
+  // saving the form doesn't clear it.
+  if (selected && !values.includes(selected)) {
+    values = [...values, selected]
+  }
   const items = values.map((v) => ({
     value: v,
     text: v,
