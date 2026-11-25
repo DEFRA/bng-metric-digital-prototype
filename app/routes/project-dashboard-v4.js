@@ -2110,15 +2110,15 @@ function registerProjectDashboardV4Routes(router) {
 
   router.get(`${BASE}/upload/choose`, function (req, res) {
     res.render('project-dashboard-v4/upload-choose', {
-      error: req.query.error || null
+      // ?error=1 from the POST below; the message itself stays here so a
+      // link can't put its own text in the error summary.
+      error: req.query.error ? 'Select what you would like to upload' : null
     })
   })
 
   router.post(`${BASE}/upload/choose`, function (req, res) {
     if (!req.body.uploadChoice) {
-      return res.redirect(
-        `${BASE}/upload/choose?error=Select what you would like to upload`
-      )
+      return res.redirect(`${BASE}/upload/choose?error=1`)
     }
     res.redirect(`${BASE}/upload`)
   })
