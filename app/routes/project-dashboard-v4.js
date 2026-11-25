@@ -2073,7 +2073,7 @@ function registerProjectDashboardV4Routes(router) {
     // carried over.)
     res.locals.footerLinks = [
       {
-        href: tradingScenarioHref(TRADING_SCENARIOS[0]),
+        href: `${BASE}/trading-rules`,
         text: 'Trading rules'
       }
     ]
@@ -2452,8 +2452,15 @@ function registerProjectDashboardV4Routes(router) {
   }
 
   // Trading rules scenarios (Figma 6000-6041) as a standalone series.
+  // Index of the scenarios (Figma 5674:165980), so the researcher can pick
+  // one rather than stepping through them in order.
   router.get(`${BASE}/trading-rules`, function (req, res) {
-    res.redirect(tradingScenarioHref(TRADING_SCENARIOS[0]))
+    res.render('project-dashboard-v4/trading-rules', {
+      scenarios: TRADING_SCENARIOS.map((scenario, i) => ({
+        text: `Scenario ${i + 1}`,
+        href: tradingScenarioHref(scenario)
+      }))
+    })
   })
 
   router.get(`${BASE}/trading-rules/:code`, function (req, res, next) {
@@ -2462,12 +2469,9 @@ function registerProjectDashboardV4Routes(router) {
       return next() // unknown code: fall through to the 404 handler
     }
     const scenario = TRADING_SCENARIOS[index]
-    const following = TRADING_SCENARIOS[index + 1]
     res.render('project-dashboard-v4/trading-scenario', {
       scenario: tradingScenarioView(scenario),
-      sideNav: scenarioSideNav(scenario),
-      // The last "Next" returns to the research homepage.
-      nextHref: following ? tradingScenarioHref(following) : '/'
+      sideNav: scenarioSideNav(scenario)
     })
   })
 
