@@ -9,9 +9,8 @@
 {% block dashboardContent %}
   {% include "project-dashboard-v4/_results.html" %}
 
-  <hr class="govuk-section-break govuk-section-break--l govuk-section-break--visible">
-
-  <h2 class="govuk-heading-m">{{ section.detailsHeading }}</h2>
+  {# No section break (as on the overview): 60px above the heading instead. #}
+  <h2 class="govuk-heading-m govuk-!-margin-top-9">{{ section.detailsHeading }}</h2>
 
   {% if not complete %}
     {{ govukInsetText({
