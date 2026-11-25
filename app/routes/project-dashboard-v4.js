@@ -1926,7 +1926,15 @@ function tradingScenarioView(scenario) {
 // so it gets an item of its own.
 function scenarioSideNav(scenario) {
   if (scenario.section !== 'watercourses') {
-    return sideNav(scenario.section)
+    // The section is highlighted, but this page isn't its summary: tell
+    // screen readers it's the current section ("location"), not the page.
+    const nav = sideNav(scenario.section)
+    for (const item of nav.items) {
+      if (item.current) {
+        item.ariaCurrent = 'location'
+      }
+    }
+    return nav
   }
   const nav = sideNav('watercourses')
   nav.items.splice(nav.items.length - 1, 0, {
@@ -2331,10 +2339,13 @@ function registerProjectDashboardV4Routes(router) {
         : habitat.intervention
       const answer = (field, stored) =>
         submitted && field in submitted ? submitted[field] : stored
-      const storedStrategicSignificance = strategicSignificance(
-        habitat.strategicSignificance,
-        habitat.strategicSignificanceMultiplier
-      )
+      // No band: no answer (as condition() does), not "undefined (undefined)".
+      const storedStrategicSignificance = habitat.strategicSignificance
+        ? strategicSignificance(
+            habitat.strategicSignificance,
+            habitat.strategicSignificanceMultiplier
+          )
+        : ''
       const baseline = section.data.baseline.find(
         (h) => h.ref === habitat.baselineRef
       )
